@@ -38,3 +38,23 @@ def test_persona_is_added_to_system_prompt():
     pol = LLMAgentPolicy(llm=llm, model="m", persona="You are a risk-taking theorist.")
     pol.act({"step": 0, "last_result": {}})
     assert "risk-taking theorist" in llm.calls[0]["system"]
+
+
+def test_parses_add_links_action():
+    reply = json.dumps({"action": "add_links",
+                        "args": {"src_id": "W1", "dst_ids": ["W2"]}})
+    pol = LLMAgentPolicy(llm=FakeLLM(responses=[reply]), model="m")
+    action = pol.act({"step": 0, "last_result": {}})
+    assert action.name == "add_links"
+    assert action.args["dst_ids"] == ["W2"]
+
+
+def test_memory_is_fifo_with_default_20():
+    llm = FakeLLM(default=json.dumps({"action": "sample_frontier", "args": {}}))
+    pol = LLMAgentPolicy(llm=llm, model="m")
+    assert pol.memory.maxlen == 20
+    for i in range(25):
+        pol.act({"step": i, "last_result": {"n": i}})
+    assert len(pol.memory) == 20
+    # FIFO: the oldest surviving entry carries the result from call 5
+    assert '"n": 5' in pol.memory[0][1]

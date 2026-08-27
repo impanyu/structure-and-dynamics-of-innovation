@@ -56,3 +56,22 @@ def test_communities_cover_all_nodes():
     comm = g.communities()
     assert set(comm) == {"W1", "W2", "W3"}
     assert all(isinstance(c, int) for c in comm.values())
+
+
+def test_add_links_typed_dedup_and_validation():
+    g = small_graph()
+    # W3 already cites W2; W3->W1 is new; W3->W3 is a self-loop
+    res = g.add_links("W3", ["W1", "W2", "W3"], meta={"agent_id": "a0"})
+    assert res == {"added": ["W1"], "skipped": ["W2", "W3"]}
+    assert g.edge_type("W3", "W1") == "agent_link"
+    assert g.edge_type("W3", "W2") == "citation"
+    with pytest.raises(KeyError):
+        g.add_links("W3", ["missing"])
+    with pytest.raises(KeyError):
+        g.add_links("missing", ["W1"])
+
+
+def test_generate_edges_are_typed():
+    g = small_graph()
+    g.add_idea("gen:r:0", "t", ["W1"])
+    assert g.edge_type("gen:r:0", "W1") == "generated"

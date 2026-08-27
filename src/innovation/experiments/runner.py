@@ -24,7 +24,7 @@ def build_policy(spec: dict, *, llm, model, graph, rng):
     kind = spec["policy"]
     if kind == "llm":
         return LLMAgentPolicy(llm=llm, model=model,
-                              memory_size=spec.get("memory_size", 6),
+                              memory_size=spec.get("memory_size", 20),
                               persona=spec.get("persona", ""))
     if kind == "nonav":
         return NoNavLLMPolicy(llm=llm, model=model, graph=graph, rng=rng,

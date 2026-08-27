@@ -73,3 +73,18 @@ def test_restore_replays_generate_events_without_relogging(tmp_path):
     assert env2.event_log.read_all() == []          # restore does not log
     res = env2.execute("a0", 1, Action("generate", {"text": "next", "cited_ids": ["W1"]}))
     assert res["node_id"] == "gen:r1:1"             # counter continues
+
+
+def test_add_links_action_logs_and_restores(tmp_path):
+    env = make_env(tmp_path)
+    res = env.execute("a0", 0, Action("add_links", {"src_id": "W1", "dst_ids": ["W2"]}))
+    assert res == {"added": ["W2"], "skipped": []}
+    res2 = env.execute("a0", 1, Action("add_links", {"src_id": "nope", "dst_ids": ["W1"]}))
+    assert "error" in res2
+    events = env.event_log.read_all()
+    assert [e["action"] for e in events] == ["add_links", "add_links"]
+    # restore replays only the successful add_links, without logging
+    env2 = make_env(tmp_path / "fresh")
+    env2.restore(events)
+    assert "W2" in env2.graph.citations_out("W1")
+    assert env2.event_log.read_all() == []

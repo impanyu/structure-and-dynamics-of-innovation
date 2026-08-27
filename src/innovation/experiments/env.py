@@ -65,6 +65,11 @@ class Environment:
         self.generation_budget -= 1
         return {"node_id": node_id}
 
+    def _do_add_links(self, *, agent_id, step, src_id: str, dst_ids: list[str]) -> dict:
+        return self.graph.add_links(src_id, dst_ids,  # KeyError -> error result
+                                    meta={"run_id": self.run_id,
+                                          "agent_id": agent_id, "step": step})
+
     # --- shared by generate and restore ---
     def _apply_generate(self, text: str, cited_ids: list[str], meta: dict) -> str:
         node_id = f"gen:{self.run_id}:{self._gen_counter}"
@@ -74,7 +79,9 @@ class Environment:
         return node_id
 
     def restore(self, events: list[dict]) -> None:
-        """Replay generate events to rebuild state (spec §3.3); no logging."""
+        """Replay graph-mutating events (generate, add_links) to rebuild state
+        (spec §3.3); no logging. Events replay in order, so links to nodes
+        generated earlier in the trace resolve correctly."""
         for e in events:
             if e["action"] == "generate" and "node_id" in e.get("result", {}):
                 self._apply_generate(e["args"]["text"], e["args"]["cited_ids"],
@@ -82,6 +89,11 @@ class Environment:
                                            "agent_id": e["agent_id"],
                                            "step": e["step"]})
                 self.generation_budget -= 1
+            elif e["action"] == "add_links" and "added" in e.get("result", {}):
+                self.graph.add_links(e["args"]["src_id"], e["result"]["added"],
+                                     meta={"run_id": e["run_id"],
+                                           "agent_id": e["agent_id"],
+                                           "step": e["step"]})
 
     def generated_ids(self) -> list[str]:
         return self.graph.node_ids(source="generated")

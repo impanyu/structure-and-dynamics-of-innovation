@@ -93,8 +93,14 @@ eval/         Anticipation score + structural observables
   - `browse(node_id)` — read an idea plus its in/out citation neighbors
   - `sample_frontier()` — sample an entry point (random or structure-guided)
   - `generate(text, cited_ids)` — write a new idea node, citing declared bases
+  - `add_links(src_id, dst_ids)` — add missing reference edges between
+    existing ideas. Agent-added edges are typed `agent_link` (originals are
+    `citation`, generation edges are `generated`) so analysis can always
+    separate the observed literature from agent rewiring.
 - Agents have a step budget per episode and decide **for themselves** when to
   generate — generation timing is part of the dynamics, not forced each step.
+- **Short-term memory:** each LLM agent keeps a FIFO queue of its last 20
+  (action, result) pairs, rendered into its prompt each step.
 - **Policies:**
   1. **LLM agent** — tool-calling loop (Sonnet-class model), bounded context
      memory of recent observations.
