@@ -40,3 +40,12 @@ def test_embeddings_roundtrip(tmp_path):
 def test_empty_index_returns_no_hits():
     idx = VectorIndex(8)
     assert idx.search(np.zeros(8, dtype=np.float32), k=3) == []
+
+
+def test_vector_index_lookup_by_id():
+    e = FakeEmbedder()
+    idx = VectorIndex(e.dim)
+    vecs = e.encode(["x", "y"])
+    idx.add(["x", "y"], vecs)
+    np.testing.assert_allclose(idx.vec("x"), vecs[0])
+    assert idx.vec("missing") is None

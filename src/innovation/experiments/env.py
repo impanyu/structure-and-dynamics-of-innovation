@@ -2,6 +2,8 @@
 from collections import Counter
 from dataclasses import dataclass, field
 
+import numpy as np
+
 
 def _preview(graph, node_id: str) -> dict:
     return {"node_id": node_id, "text": graph.node(node_id).text[:200]}
@@ -16,10 +18,16 @@ class Action:
 @dataclass
 class AgentScope:
     """Behavioral constraints modeling researcher profiles (spec §3.4-3.5).
-    read/write are sets of community ids; None means unrestricted."""
-    read: set | None = None
+    Each of read/write is defined by ONE mechanism: a set of community ids
+    (read/write) or a semantic region (topic anchor embeddings + cosine-distance
+    radius). None everywhere means unrestricted."""
+    read: set | None = None            # community ids
     write: set | None = None
     allow_jump: bool = True
+    read_anchors: object | None = None   # (m, d) topic embeddings
+    read_radius: float = 0.0
+    write_anchors: object | None = None
+    write_radius: float = 0.0
 
 
 class Environment:
@@ -38,17 +46,33 @@ class Environment:
         self._gen_counter = 0
 
     # --- scope checks ---
+    def _in_semantic_region(self, anchors, radius: float, node_id: str) -> bool:
+        v = self.index.vec(node_id)
+        if v is None:
+            return False
+        return float(np.max(anchors @ v)) >= 1.0 - radius
+
     def _readable(self, agent_id: str, node_id: str) -> bool:
         scope = self.scopes.get(agent_id)
-        if scope is None or scope.read is None:
+        if scope is None:
             return True
-        return self.community_of.get(node_id) in scope.read
+        if scope.read is not None:
+            return self.community_of.get(node_id) in scope.read
+        if scope.read_anchors is not None:
+            return self._in_semantic_region(scope.read_anchors,
+                                            scope.read_radius, node_id)
+        return True
 
     def _writable(self, agent_id: str, node_id: str) -> bool:
         scope = self.scopes.get(agent_id)
-        if scope is None or scope.write is None:
+        if scope is None:
             return True
-        return self.community_of.get(node_id) in scope.write
+        if scope.write is not None:
+            return self.community_of.get(node_id) in scope.write
+        if scope.write_anchors is not None:
+            return self._in_semantic_region(scope.write_anchors,
+                                            scope.write_radius, node_id)
+        return True
 
     # --- public entry point: execute + log ---
     def execute(self, agent_id: str, step: int, action: Action) -> dict:
@@ -102,6 +126,12 @@ class Environment:
         blocked = [c for c in cited_ids if not self._writable(agent_id, c)]
         if blocked:
             return {"error": f"cannot write outside your region; blocked cites: {blocked}"}
+        scope = self.scopes.get(agent_id)
+        if scope is not None and scope.write_anchors is not None:
+            # Semantic write scope also binds the new idea's OWN content.
+            v = self.embedder.encode([text])[0]
+            if float(np.max(scope.write_anchors @ v)) < 1.0 - scope.write_radius:
+                return {"error": "the idea itself is outside your writable topic region"}
         node_id = self._apply_generate(text, cited_ids,
                                        meta={"run_id": self.run_id,
                                              "agent_id": agent_id, "step": step})

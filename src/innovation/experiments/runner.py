@@ -34,18 +34,32 @@ def build_policy(spec: dict, *, llm, model, graph, rng):
     raise ValueError(f"unknown policy kind: {kind}")
 
 
-def build_scope(spec: dict) -> AgentScope | None:
-    """Agent behavioral profile from its config dict (spec §3.4-3.5):
-    read_communities / write_communities (lists of community ids; absent =
-    unrestricted) and allow_jump (default True)."""
+def build_scope(spec: dict, embedder=None) -> AgentScope | None:
+    """Agent behavioral profile from its config dict (spec §3.4-3.5). Each of
+    read/write uses ONE mechanism: community ids (read_communities /
+    write_communities) or a semantic region (read_topics + read_radius /
+    write_topics + write_radius; topics are embedded as anchors). allow_jump
+    defaults to True."""
     read = spec.get("read_communities")
     write = spec.get("write_communities")
+    read_topics = spec.get("read_topics")
+    write_topics = spec.get("write_topics")
+    if read is not None and read_topics:
+        raise ValueError("read scope: give communities OR topics, not both")
+    if write is not None and write_topics:
+        raise ValueError("write scope: give communities OR topics, not both")
     allow_jump = spec.get("allow_jump", True)
-    if read is None and write is None and allow_jump:
+    if (read is None and write is None and not read_topics
+            and not write_topics and allow_jump):
         return None
-    return AgentScope(read=set(read) if read is not None else None,
-                      write=set(write) if write is not None else None,
-                      allow_jump=allow_jump)
+    return AgentScope(
+        read=set(read) if read is not None else None,
+        write=set(write) if write is not None else None,
+        allow_jump=allow_jump,
+        read_anchors=embedder.encode(read_topics) if read_topics else None,
+        read_radius=spec.get("read_radius", 0.3),
+        write_anchors=embedder.encode(write_topics) if write_topics else None,
+        write_radius=spec.get("write_radius", 0.3))
 
 
 def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
@@ -53,7 +67,7 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
     rng = np.random.default_rng(cfg.seed)
     run_dir = Path(out_dir) / cfg.run_id
     scopes = {a["agent_id"]: s for a in cfg.agents
-              if (s := build_scope(a)) is not None}
+              if (s := build_scope(a, embedder)) is not None}
     needs_communities = any(s.read is not None or s.write is not None
                             for s in scopes.values())
     communities = graph.communities() if needs_communities else None

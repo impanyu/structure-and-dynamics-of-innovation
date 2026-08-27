@@ -161,3 +161,43 @@ def test_scoped_write_constrains_generate_and_links(tmp_path):
     assert "error" not in res
     assert "error" in env.execute("a0", 3, Action("add_links", {"src_id": "B1", "dst_ids": ["A1"]}))
     assert "error" in env.execute("a0", 4, Action("remove_links", {"src_id": "B1", "dst_ids": ["A1"]}))
+
+
+def test_semantic_radius_scope_read_and_write(tmp_path):
+    from innovation.experiments.env import AgentScope
+    emb = FakeEmbedder()
+    # Anchor = exact text of A1's idea; tiny radius admits only that node.
+    anchors = emb.encode(["alpha one"])
+    scopes = {"a0": AgentScope(read_anchors=anchors, read_radius=1e-6,
+                               write_anchors=anchors, write_radius=1e-6)}
+    env = make_scoped_env(tmp_path, scopes, communities=None)
+    hits = env.execute("a0", 0, Action("search", {"query": "alpha one", "k": 3}))
+    assert {h["node_id"] for h in hits["hits"]} == {"A1"}
+    assert "error" in env.execute("a0", 1, Action("browse", {"node_id": "B1"}))
+    assert "error" not in env.execute("a0", 2, Action("browse", {"node_id": "A1"}))
+    res = env.execute("a0", 3, Action("sample_frontier", {}))
+    assert res["node_id"] == "A1"  # only readable node
+    # write: citing outside the semantic region is blocked
+    assert "error" in env.execute("a0", 4, Action("generate", {"text": "alpha one",
+                                                               "cited_ids": ["A2"]}))
+    res = env.execute("a0", 5, Action("generate", {"text": "alpha one",
+                                                   "cited_ids": ["A1"]}))
+    assert res["node_id"] == "gen:r1:0"
+    # the generated node's own embedding places it inside the region
+    assert "error" not in env.execute("a0", 6, Action("browse", {"node_id": "gen:r1:0"}))
+
+
+def test_semantic_write_scope_binds_generated_text(tmp_path):
+    from innovation.experiments.env import AgentScope
+    emb = FakeEmbedder()
+    anchors = emb.encode(["alpha one"])
+    scopes = {"a0": AgentScope(write_anchors=anchors, write_radius=1e-6)}
+    env = make_scoped_env(tmp_path, scopes, communities=None)
+    # citations are inside the region proxy is irrelevant here: A1 is writable
+    # (its text IS the anchor), but the new idea's own text is off-topic.
+    res = env.execute("a0", 0, Action("generate", {"text": "totally different",
+                                                   "cited_ids": ["A1"]}))
+    assert res == {"error": "the idea itself is outside your writable topic region"}
+    res = env.execute("a0", 1, Action("generate", {"text": "alpha one",
+                                                   "cited_ids": ["A1"]}))
+    assert "node_id" in res

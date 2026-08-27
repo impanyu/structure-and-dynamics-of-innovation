@@ -82,3 +82,32 @@ def test_agent_scopes_flow_from_config(tmp_path):
     assert out["generated"] == []  # every generate blocked by write scope
     events = load_events(tmp_path / "rs" / "events.jsonl")
     assert all("error" in e["result"] for e in events if e["action"] == "generate")
+
+
+def test_topic_scope_flows_from_config(tmp_path):
+    """read_topics in an agent spec becomes semantic anchors in the env."""
+    import json
+    import pytest
+    from innovation.experiments.runner import build_scope
+    from innovation.ideas.embed import FakeEmbedder
+    from innovation.llm import FakeLLM
+
+    emb = FakeEmbedder()
+    scope = build_scope({"read_topics": ["idea 0"], "read_radius": 1e-6}, emb)
+    assert scope.read_anchors.shape == (1, emb.dim)
+    assert scope.read is None
+    with pytest.raises(ValueError):
+        build_scope({"read_communities": [0], "read_topics": ["x"]}, emb)
+
+    # End-to-end: an agent whose readable region is only "idea 0" can only
+    # sample-jump to W0 (fixtures name node texts "idea 0".."idea 5").
+    graph, index, _ = fixtures()
+    llm = FakeLLM(default=json.dumps({"action": "sample_frontier", "args": {}}))
+    cfg = RunConfig(run_id="rt", seed=0, total_steps=4, generation_budget=1,
+                    agents=[{"agent_id": "a0", "policy": "llm",
+                             "read_topics": ["idea 0"], "read_radius": 1e-6}])
+    run_simulation(cfg, graph=graph, index=index, embedder=emb,
+                   llm=llm, model="m", out_dir=tmp_path)
+    events = load_events(tmp_path / "rt" / "events.jsonl")
+    jumps = [e for e in events if e["action"] == "sample_frontier"]
+    assert jumps and all(e["result"]["node_id"] == "W0" for e in jumps)
