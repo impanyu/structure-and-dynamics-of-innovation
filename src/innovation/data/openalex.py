@@ -40,21 +40,18 @@ def find_source_id(name: str, *, mailto: str, cache_dir: Path, http_get=None) ->
     return full_id.rsplit("/", 1)[-1]
 
 
-def fetch_source_works(source_id: str, year_from: int, year_to: int, *,
-                       mailto: str, cache_dir: Path, http_get=None) -> list[dict]:
-    """All works of a source in [year_from, year_to], cursor-paginated, page-cached."""
-    http_get = http_get or requests.get
+def _fetch_works(filter_str: str, cache_key: str, *, mailto: str,
+                 cache_dir: Path, http_get) -> list[dict]:
+    """Cursor-paginate /works for a filter, caching each page on disk."""
     works: list[dict] = []
     cursor, page_i = "*", 0
     while cursor:
-        cache_file = (Path(cache_dir)
-                      / f"works_{source_id}_{year_from}_{year_to}_p{page_i}.json")
+        cache_file = Path(cache_dir) / f"works_{cache_key}_p{page_i}.json"
 
         def fetch(cursor=cursor):
             r = http_get(f"{OPENALEX_BASE}/works", params={
-                "filter": (f"primary_location.source.id:{source_id},"
-                           f"publication_year:{year_from}-{year_to}"),
-                "per-page": 200, "cursor": cursor, "mailto": mailto})
+                "filter": filter_str, "per-page": 200,
+                "cursor": cursor, "mailto": mailto})
             r.raise_for_status()
             return r.json()
 
@@ -63,3 +60,27 @@ def fetch_source_works(source_id: str, year_from: int, year_to: int, *,
         cursor = page["meta"].get("next_cursor")
         page_i += 1
     return works
+
+
+def fetch_source_works(source_id: str, year_from: int, year_to: int, *,
+                       mailto: str, cache_dir: Path, http_get=None) -> list[dict]:
+    """All works of a source in [year_from, year_to]."""
+    return _fetch_works(
+        (f"primary_location.source.id:{source_id},"
+         f"publication_year:{year_from}-{year_to}"),
+        f"{source_id}_{year_from}_{year_to}",
+        mailto=mailto, cache_dir=cache_dir, http_get=http_get or requests.get)
+
+
+def fetch_field_works(query: str, year_from: int, year_to: int, *,
+                      mailto: str, cache_dir: Path, http_get=None,
+                      min_citations: int = 0) -> list[dict]:
+    """All works matching a small-field keyword query in [year_from, year_to].
+    min_citations > 0 adds a cited_by_count floor to bound corpus size."""
+    filter_str = (f"title_and_abstract.search:{query},"
+                  f"publication_year:{year_from}-{year_to}")
+    if min_citations > 0:
+        filter_str += f",cited_by_count:>{min_citations}"
+    cache_key = f"field_{query.replace(' ', '_')}_{year_from}_{year_to}_c{min_citations}"
+    return _fetch_works(filter_str, cache_key, mailto=mailto,
+                        cache_dir=cache_dir, http_get=http_get or requests.get)

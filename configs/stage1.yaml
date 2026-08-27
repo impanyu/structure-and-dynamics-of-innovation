@@ -1,8 +1,18 @@
 # Stage 1 (spec §2): NeurIPS + ICLR slice, cutoff aligned to model training cutoff.
 mailto: impanyu@gmail.com
 data_dir: data/stage1
+# Initial graph: one small, coherent subfield (spec §2) so innovation dynamics
+# are observable on a dense, bounded network. Evaluation still searches the
+# WHOLE literature (spec §3.6). Switch corpus.mode to "venues" to use the venue
+# list below instead.
+corpus:
+  mode: field
+  field_query: "federated learning"
+  min_citations: 10        # bounds corpus size; tune after inspecting counts
+# Venue list: used for corpus when corpus.mode != field, and always for the
+# recall-denominator population count.
 venues: ["Neural Information Processing Systems", "International Conference on Learning Representations"]
-year_from: 2013
+year_from: 2016
 cutoff_year: 2024        # last full year in the graph
 cutoff_date: "2025-01-01"  # anticipation boundary = agent model training cutoff
 models:

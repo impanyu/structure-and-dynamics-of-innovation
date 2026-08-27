@@ -221,3 +221,29 @@ def test_cmd_fetch_and_summarize_wiring(tmp_path, monkeypatch):
     cli.cmd_summarize(cfg)
     assert (Path(cfg["data_dir"]) / "ideas.parquet").exists()
     assert (Path(cfg["data_dir"]) / "embeddings.npy").exists()
+
+
+def test_cmd_fetch_field_mode(tmp_path, monkeypatch):
+    """corpus.mode=field routes through fetch_field_works."""
+    import innovation.cli as cli
+
+    cfg = {"data_dir": str(tmp_path / "data"), "mailto": "t@t",
+           "year_from": 2016, "cutoff_year": 2024,
+           "corpus": {"mode": "field", "field_query": "federated learning",
+                      "min_citations": 5}}
+    works = [{"id": "https://openalex.org/W1", "title": "T1",
+              "publication_year": 2020,
+              "abstract_inverted_index": {"fl": [0]}, "referenced_works": []}]
+    captured = {}
+
+    def fake_field(query, y0, y1, **kw):
+        captured["query"] = query
+        captured["min_citations"] = kw.get("min_citations")
+        return works
+
+    monkeypatch.setattr(cli, "fetch_field_works", fake_field)
+    cli.cmd_fetch(cfg)
+    assert captured == {"query": "federated learning", "min_citations": 5}
+    assert (Path(cfg["data_dir"]) / "papers.parquet").exists()
+    papers = pd.read_parquet(Path(cfg["data_dir"]) / "papers.parquet")
+    assert papers.iloc[0]["venue"] == "field:federated learning"

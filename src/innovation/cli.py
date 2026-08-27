@@ -9,7 +9,8 @@ import numpy as np
 
 from innovation.config import load_config
 from innovation.data.corpus import build_corpus, load_corpus, save_corpus
-from innovation.data.openalex import fetch_source_works, find_source_id
+from innovation.data.openalex import (fetch_field_works, fetch_source_works,
+                                      find_source_id)
 from innovation.eval.metrics import (aggregate_run, arxiv_population_filter,
                                      past_dup_flag, openalex_population_count,
                                      venue_population_filter)
@@ -29,13 +30,24 @@ def _llm(cfg):
 
 def cmd_fetch(cfg):
     cache = Path(cfg["data_dir"]) / "openalex_cache"
-    works_by_venue = {}
-    for name in cfg["venues"]:
-        sid = find_source_id(name, mailto=cfg["mailto"], cache_dir=cache)
-        print(f"{name} -> {sid}")
-        works_by_venue[name] = fetch_source_works(
-            sid, cfg["year_from"], cfg["cutoff_year"],
-            mailto=cfg["mailto"], cache_dir=cache)
+    corpus_cfg = cfg.get("corpus", {})
+    if corpus_cfg.get("mode") == "field":
+        # Small-field initial graph (spec §2): one coherent subfield, so the
+        # innovation dynamics are observable on a dense, bounded network.
+        query = corpus_cfg["field_query"]
+        works = fetch_field_works(
+            query, cfg["year_from"], cfg["cutoff_year"],
+            mailto=cfg["mailto"], cache_dir=cache,
+            min_citations=corpus_cfg.get("min_citations", 0))
+        works_by_venue = {f"field:{query}": works}
+    else:
+        works_by_venue = {}
+        for name in cfg["venues"]:
+            sid = find_source_id(name, mailto=cfg["mailto"], cache_dir=cache)
+            print(f"{name} -> {sid}")
+            works_by_venue[name] = fetch_source_works(
+                sid, cfg["year_from"], cfg["cutoff_year"],
+                mailto=cfg["mailto"], cache_dir=cache)
     papers, edges = build_corpus(works_by_venue)
     save_corpus(papers, edges, cfg["data_dir"])
     print(f"papers={len(papers)} edges={len(edges)}")
