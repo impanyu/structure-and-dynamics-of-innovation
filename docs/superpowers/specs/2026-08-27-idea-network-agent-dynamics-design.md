@@ -18,10 +18,10 @@ growing network is a dynamical system; we study how initial structure and agent
 configuration shape the innovation it produces.
 
 **Headline evaluation:** hold out the future. Initialize the network with papers up
-to cutoff T, let agents grow it, and measure how well generated ideas anticipate
-the real post-T literature. **T is aligned with the agent LLM's training cutoff
-(~early 2025)** so that post-T hits cannot be pretraining recall; the held-out set
-is the real ~2025–2026 literature.
+to cutoff T, let agents grow it, and verify generated ideas by literature search:
+an idea scores only if a real paper published after T realizes it. **T is aligned
+with the agent LLM's training cutoff (~early 2025)** so that hits cannot be
+pretraining recall; the reference is the real ~2025–2026 literature.
 
 ## 2. Scope and Staging
 
@@ -131,31 +131,14 @@ into the repo.
 - **Cutoff choice:** T is aligned with the agent LLM's training cutoff (~early
   2025). Rationale: for papers published before the model's cutoff, a "hit" may
   be pretraining recall rather than innovation; only post-cutoff hits exclude
-  memorization. The held-out set is the real ~2025–2026 literature.
-- **Anticipation score (headline, tier 1 — embedding matching):** network
-  initialized at T; real post-T papers (summarized identically) form the
-  held-out set.
-  - **Asymmetric corpus design:** the ≤T network is narrow (selected venues,
-    needs citation edges), but the >T held-out set is **broad** — a wide AI/ML
-    venue list (NeurIPS/ICML/ICLR/ACL/EMNLP/CVPR/ICCV/AAAI/KDD/…) plus arXiv
-    cs.LG/cs.CL/cs.CV post-T. The held-out set needs no citation edges and
-    never enters the graph, so widening it costs only summarization + embedding
-    (same template, same embedding model, for representational comparability).
-    This prevents penalizing agents for anticipating ideas published outside the
-    seed venues.
-  - *Precision-like:* fraction of generated ideas whose max cosine similarity to
-    a held-out idea (broad set) exceeds threshold τ, **while** remaining below a
-    ceiling similarity to the ≤T corpus (anti-plagiarism-of-the-past condition).
-  - *Recall-like:* reported at two scopes — narrow (future papers of the seed
-    venues; the fairest in-domain coverage measure) and broad (honest but
-    expectedly low; reported for reference).
-- **Realization check (tier 2 — literature-search verification):** each
-  generated idea (or a large sample) is verified against the *whole* literature,
-  with no time restriction:
-  - Pipeline: idea → extracted search queries → Semantic Scholar / OpenAlex
-    search API (NOT Google Scholar — no API, anti-scraping) → candidate papers →
-    LLM judge decides whether a candidate genuinely realizes the idea → human
-    spot-check of judgments.
+  memorization.
+- **Search-verified realization (the sole evaluation channel).** No held-out
+  corpus is downloaded or embedded; each generated idea is verified against the
+  live literature indexes:
+  - Pipeline: idea → several extracted search-query formulations → Semantic
+    Scholar + OpenAlex search APIs (NOT Google Scholar — no API, anti-scraping)
+    → top-k candidate papers per query → LLM judge decides whether a candidate
+    genuinely realizes the idea → human spot-check of judgments.
   - All search responses cached to disk with timestamps (live indexes drift;
     this keeps the evaluation replayable).
   - **Only anticipation counts as a hit:** a hit requires the realizing paper
@@ -163,9 +146,22 @@ into the repo.
     pretraining recall. Matches to papers published before the cutoff
     (rediscoveries) score zero — they are logged with an `excluded_pre_cutoff`
     flag for later inspection, but never counted in any metric.
-  - Residual limitation: ideas realized entirely outside CS (e.g. physics
-    journals) can still be missed; stated as a limitation, mitigated by human
-    inspection of matched/unmatched samples.
+- **Precision:** fraction of generated ideas judged realized by a post-cutoff
+  paper.
+- **Recall:** (number of *distinct* realized papers hit across all generated
+  ideas) ÷ (estimated post-cutoff relevant population). The denominator needs
+  no downloads: an OpenAlex metadata *count* query over (a) post-cutoff papers
+  in the venue list (NeurIPS/ICML/ICLR/ACL/EMNLP/CVPR/ICCV/AAAI/KDD/…) plus
+  (b) post-cutoff arXiv-only papers above a citation threshold (threshold in
+  config).
+- **Anti-plagiarism-of-the-past:** generated ideas must stay below a ceiling
+  similarity to the ≤T corpus (whose embeddings exist anyway for the agents'
+  `search` action); near-duplicates of the past are flagged and excluded from
+  precision's numerator.
+- Known limitations, stated in the paper: search-engine misses deflate
+  precision (mitigated by multi-query + dual APIs; miss rate estimated via
+  human audit of a sample of unmatched ideas); ideas realized entirely outside
+  CS can be missed.
   - Threshold τ calibrated against a real-vs-real similarity distribution;
     matched pairs sampled for human inspection.
 - **Process observables (all runs):** novelty (embedding distance to cited nodes
