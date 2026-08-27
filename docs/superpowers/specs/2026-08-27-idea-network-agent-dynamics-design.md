@@ -127,12 +127,24 @@ into the repo.
 ### 3.6 Evaluation (`eval/`)
 
 - **Anticipation score (headline):** network initialized at T = 2022; real
-  2023–2024 papers (summarized identically) form the held-out set.
+  post-T papers (summarized identically) form the held-out set.
+  - **Asymmetric corpus design:** the ≤T network is narrow (selected venues,
+    needs citation edges), but the >T held-out set is **broad** — a wide AI/ML
+    venue list (NeurIPS/ICML/ICLR/ACL/EMNLP/CVPR/ICCV/AAAI/KDD/…) plus arXiv
+    cs.LG/cs.CL/cs.CV 2023–2024. The held-out set needs no citation edges and
+    never enters the graph, so widening it costs only summarization + embedding
+    (same template, same embedding model, for representational comparability).
+    This prevents penalizing agents for anticipating ideas published outside the
+    seed venues.
   - *Precision-like:* fraction of generated ideas whose max cosine similarity to
-    a held-out idea exceeds threshold τ, **while** remaining below a ceiling
-    similarity to the ≤T corpus (anti-plagiarism-of-the-past condition).
-  - *Recall-like:* fraction of held-out future ideas matched by at least one
-    generated idea.
+    a held-out idea (broad set) exceeds threshold τ, **while** remaining below a
+    ceiling similarity to the ≤T corpus (anti-plagiarism-of-the-past condition).
+  - *Recall-like:* reported at two scopes — narrow (future papers of the seed
+    venues; the fairest in-domain coverage measure) and broad (honest but
+    expectedly low; reported for reference).
+  - Residual limitation: ideas realized entirely outside CS (e.g. physics
+    journals) can still be missed; stated as a limitation, mitigated by human
+    inspection of matched/unmatched samples.
   - Threshold τ calibrated against a real-vs-real similarity distribution;
     matched pairs sampled for human inspection.
 - **Process observables (all runs):** novelty (embedding distance to cited nodes
