@@ -88,3 +88,18 @@ def test_add_links_action_logs_and_restores(tmp_path):
     env2.restore(events)
     assert "W2" in env2.graph.citations_out("W1")
     assert env2.event_log.read_all() == []
+
+
+def test_remove_links_action_logs_and_restores(tmp_path):
+    env = make_env(tmp_path)
+    # W2->W1 exists in the fixture
+    res = env.execute("a0", 0, Action("remove_links", {"src_id": "W2", "dst_ids": ["W1"]}))
+    assert res["removed"] == [{"dst_id": "W1", "etype": "citation"}]
+    assert "W1" not in env.graph.citations_out("W2")
+    res2 = env.execute("a0", 1, Action("remove_links", {"src_id": "nope", "dst_ids": ["W1"]}))
+    assert "error" in res2
+    events = env.event_log.read_all()
+    env2 = make_env(tmp_path / "fresh")
+    env2.restore(events)
+    assert "W1" not in env2.graph.citations_out("W2")
+    assert env2.event_log.read_all() == []

@@ -6,7 +6,8 @@ from innovation.agents.policy import Policy
 from innovation.experiments.env import Action
 from innovation.llm import LLM
 
-VALID_ACTIONS = {"search", "browse", "sample_frontier", "generate", "add_links"}
+VALID_ACTIONS = {"search", "browse", "sample_frontier", "generate",
+                 "add_links", "remove_links"}
 
 AGENT_SYSTEM = """You are a research agent exploring a network of research ideas \
 distilled from published papers. Ideas cite the ideas they build on. Your goal is to \
@@ -21,7 +22,8 @@ ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing 
 {"action": "browse", "args": {"node_id": "<id>"}} -- read an idea and its citation neighbors
 {"action": "sample_frontier", "args": {}} -- jump to a random idea
 {"action": "generate", "args": {"text": "<3-4 sentence new idea paragraph>", "cited_ids": ["<id>", ...]}} -- add your new idea, citing the existing ideas it builds on
-{"action": "add_links", "args": {"src_id": "<id>", "dst_ids": ["<id>", ...]}} -- add missing reference links from one existing idea to ideas it builds on"""
+{"action": "add_links", "args": {"src_id": "<id>", "dst_ids": ["<id>", ...]}} -- add missing reference links from one existing idea to ideas it builds on
+{"action": "remove_links", "args": {"src_id": "<id>", "dst_ids": ["<id>", ...]}} -- remove reference links from an idea that do not actually support it"""
 
 
 class LLMAgentPolicy(Policy):

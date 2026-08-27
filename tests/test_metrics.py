@@ -60,3 +60,8 @@ def test_aggregate_run():
     agg = aggregate_run(verdicts(), dup, population=10)
     assert agg == {"precision": 0.5, "recall": 0.2, "n_ideas": 4,
                    "n_hits": 3, "n_dup_flagged": 1}
+
+
+def test_empty_edge_cases():
+    assert precision([], {}) == 0.0
+    assert diversity(np.array([[1.0, 0.0]], dtype=np.float32)) == 0.0

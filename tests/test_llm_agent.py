@@ -58,3 +58,16 @@ def test_memory_is_fifo_with_default_20():
     assert len(pol.memory) == 20
     # FIFO: the oldest surviving entry carries the result from call 5
     assert '"n": 5' in pol.memory[0][1]
+
+
+def test_malformed_json_falls_back():
+    pol = LLMAgentPolicy(llm=FakeLLM(responses=["{not valid json}"]), model="m")
+    assert pol.act({"step": 0, "last_result": {}}).name == "sample_frontier"
+
+
+def test_parses_remove_links_action():
+    reply = json.dumps({"action": "remove_links",
+                        "args": {"src_id": "W1", "dst_ids": ["W2"]}})
+    pol = LLMAgentPolicy(llm=FakeLLM(responses=[reply]), model="m")
+    action = pol.act({"step": 0, "last_result": {}})
+    assert action.name == "remove_links"

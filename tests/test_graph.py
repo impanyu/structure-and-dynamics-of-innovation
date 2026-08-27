@@ -75,3 +75,16 @@ def test_generate_edges_are_typed():
     g = small_graph()
     g.add_idea("gen:r:0", "t", ["W1"])
     assert g.edge_type("gen:r:0", "W1") == "generated"
+
+
+def test_remove_links_records_etype_and_validates():
+    g = small_graph()
+    # W3->W2 exists (citation); W3->W1 does not
+    res = g.remove_links("W3", ["W2", "W1"])
+    assert res == {"removed": [{"dst_id": "W2", "etype": "citation"}],
+                   "skipped": ["W1"]}
+    assert "W2" not in g.citations_out("W3")
+    with pytest.raises(KeyError):
+        g.remove_links("missing", ["W1"])
+    with pytest.raises(KeyError):
+        g.remove_links("W3", ["missing"])

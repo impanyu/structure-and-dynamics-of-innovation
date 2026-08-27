@@ -90,6 +90,25 @@ class IdeaGraph:
                 added.append(d)
         return {"added": added, "skipped": skipped}
 
+    def remove_links(self, src_id: str, dst_ids: list[str]) -> dict:
+        """Remove reference edges src->dst. The removed edge's etype is returned
+        so the event log preserves what was deleted; canonical tables are never
+        touched, so the original network stays reconstructible."""
+        if not self._g.has_node(src_id):
+            raise KeyError(f"source id not in graph: {src_id}")
+        missing = [d for d in dst_ids if not self._g.has_node(d)]
+        if missing:
+            raise KeyError(f"link targets not in graph: {missing}")
+        removed, skipped = [], []
+        for d in dst_ids:
+            if self._g.has_edge(src_id, d):
+                removed.append({"dst_id": d,
+                                "etype": self._g.edges[src_id, d].get("etype")})
+                self._g.remove_edge(src_id, d)
+            else:
+                skipped.append(d)
+        return {"removed": removed, "skipped": skipped}
+
     def edge_type(self, src_id: str, dst_id: str) -> str | None:
         return self._g.edges[src_id, dst_id].get("etype")
 

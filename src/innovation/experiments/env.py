@@ -70,6 +70,9 @@ class Environment:
                                     meta={"run_id": self.run_id,
                                           "agent_id": agent_id, "step": step})
 
+    def _do_remove_links(self, *, agent_id, step, src_id: str, dst_ids: list[str]) -> dict:
+        return self.graph.remove_links(src_id, dst_ids)  # KeyError -> error result
+
     # --- shared by generate and restore ---
     def _apply_generate(self, text: str, cited_ids: list[str], meta: dict) -> str:
         node_id = f"gen:{self.run_id}:{self._gen_counter}"
@@ -94,6 +97,10 @@ class Environment:
                                      meta={"run_id": e["run_id"],
                                            "agent_id": e["agent_id"],
                                            "step": e["step"]})
+            elif e["action"] == "remove_links" and "removed" in e.get("result", {}):
+                self.graph.remove_links(
+                    e["args"]["src_id"],
+                    [r["dst_id"] for r in e["result"]["removed"]])
 
     def generated_ids(self) -> list[str]:
         return self.graph.node_ids(source="generated")

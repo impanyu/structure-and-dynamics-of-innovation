@@ -195,3 +195,29 @@ def test_cmd_run_refuses_to_overwrite_existing_run(tmp_path, monkeypatch):
     cmd_run(cfg)
     with pytest.raises(SystemExit):
         cmd_run(cfg)
+
+
+def test_cmd_fetch_and_summarize_wiring(tmp_path, monkeypatch):
+    """Drive cmd_fetch and cmd_summarize offline with fakes."""
+    import innovation.cli as cli
+
+    cfg = {"data_dir": str(tmp_path / "data"), "mailto": "t@t",
+           "venues": ["VenueA"], "year_from": 2020, "cutoff_year": 2024,
+           "models": {"summarizer": "m"}, "embedding_model": "fake"}
+
+    works = [{"id": f"https://openalex.org/W{i}", "title": f"T{i}",
+              "publication_year": 2020,
+              "abstract_inverted_index": {"hello": [0], str(i): [1]},
+              "referenced_works": ["https://openalex.org/W0"] if i else []}
+             for i in range(3)]
+    monkeypatch.setattr(cli, "find_source_id", lambda name, **kw: "S1")
+    monkeypatch.setattr(cli, "fetch_source_works", lambda sid, y0, y1, **kw: works)
+    cli.cmd_fetch(cfg)
+    assert (Path(cfg["data_dir"]) / "papers.parquet").exists()
+    assert (Path(cfg["data_dir"]) / "edges.parquet").exists()
+
+    monkeypatch.setattr(cli, "_llm", lambda c: FakeLLM(default="An idea."))
+    monkeypatch.setattr(cli, "Embedder", lambda name: FakeEmbedder())
+    cli.cmd_summarize(cfg)
+    assert (Path(cfg["data_dir"]) / "ideas.parquet").exists()
+    assert (Path(cfg["data_dir"]) / "embeddings.npy").exists()

@@ -35,3 +35,8 @@ def test_embeddings_roundtrip(tmp_path):
     ids, loaded = load_embeddings(tmp_path)
     assert ids == ["x", "y"]
     np.testing.assert_allclose(loaded, vecs)
+
+
+def test_empty_index_returns_no_hits():
+    idx = VectorIndex(8)
+    assert idx.search(np.zeros(8, dtype=np.float32), k=3) == []

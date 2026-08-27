@@ -97,6 +97,10 @@ eval/         Anticipation score + structural observables
     existing ideas. Agent-added edges are typed `agent_link` (originals are
     `citation`, generation edges are `generated`) so analysis can always
     separate the observed literature from agent rewiring.
+  - `remove_links(src_id, dst_ids)` — remove reference edges an agent judges
+    unsupported. The event log records each removed edge with its etype, and
+    canonical tables are immutable, so the original network is always
+    reconstructible from tables + event replay.
 - Agents have a step budget per episode and decide **for themselves** when to
   generate — generation timing is part of the dynamics, not forced each step.
 - **Short-term memory:** each LLM agent keeps a FIFO queue of its last 20

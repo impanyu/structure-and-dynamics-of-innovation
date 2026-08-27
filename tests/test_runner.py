@@ -53,3 +53,12 @@ def test_mixed_policies_and_determinism(tmp_path):
     e2 = load_events(tmp_path / "y" / "r2" / "events.jsonl")
     assert [ev["args"] for ev in e1] == [ev["args"] for ev in e2]  # same seed, same trace
     assert len(out1["generated"]) == len(out2["generated"]) == 4
+
+
+def test_build_policy_rejects_unknown_kind():
+    import numpy as np
+    import pytest
+    from innovation.experiments.runner import build_policy
+    with pytest.raises(ValueError):
+        build_policy({"policy": "quantum"}, llm=None, model="m",
+                     graph=None, rng=np.random.default_rng(0))
