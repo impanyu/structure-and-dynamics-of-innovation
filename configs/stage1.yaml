@@ -1,0 +1,29 @@
+# Stage 1 (spec §2): NeurIPS + ICLR slice, cutoff aligned to model training cutoff.
+mailto: impanyu@gmail.com
+data_dir: data/stage1
+venues: ["Neural Information Processing Systems", "International Conference on Learning Representations"]
+year_from: 2013
+cutoff_year: 2024        # last full year in the graph
+cutoff_date: "2025-01-01"  # anticipation boundary = agent model training cutoff
+models:
+  summarizer: claude-haiku-4-5-20251001
+  agent: claude-sonnet-5
+  judge: claude-sonnet-5
+embedding_model: BAAI/bge-small-en-v1.5
+eval:
+  n_queries: 3
+  top_k: 5
+  dup_ceiling: 0.95
+  arxiv_min_citations: 10
+run:
+  run_id: stage1-pilot
+  seed: 0
+  total_steps: 200
+  generation_budget: 20
+  agents:
+    - {agent_id: a0, policy: llm}
+    - {agent_id: a1, policy: llm}
+    - {agent_id: a2, policy: llm}
+    - {agent_id: a3, policy: llm}
+    - {agent_id: a4, policy: llm}
+out_dir: runs
