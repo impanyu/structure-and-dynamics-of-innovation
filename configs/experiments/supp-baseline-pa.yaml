@@ -1,0 +1,19 @@
+# Supplementary — validity anchor: preferential-attachment structural null
+# (no LLM; structural metrics only, spec §3.4).
+extends: ../stage1.yaml
+run:
+  run_id: supp-baseline-pa
+  seed: 0
+  total_steps: 400
+  generation_budget: 40
+  agents:
+    - {agent_id: p0, policy: pa}
+    - {agent_id: p1, policy: pa}
+    - {agent_id: p2, policy: pa}
+    - {agent_id: p3, policy: pa}
+    - {agent_id: p4, policy: pa}
+    - {agent_id: p5, policy: pa}
+    - {agent_id: p6, policy: pa}
+    - {agent_id: p7, policy: pa}
+    - {agent_id: p8, policy: pa}
+    - {agent_id: p9, policy: pa}

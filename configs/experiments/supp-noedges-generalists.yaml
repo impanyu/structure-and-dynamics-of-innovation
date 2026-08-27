@@ -1,0 +1,7 @@
+# Supplementary — initial-graph ablation: same as C1 but the initial network
+# has NO edges (independent idea nodes). Isolates the value of the citation
+# structure itself; browse returns no neighbors, PA-style signals vanish.
+extends: core-generalists.yaml
+run:
+  run_id: supp-noedges-generalists
+  init_edges: none

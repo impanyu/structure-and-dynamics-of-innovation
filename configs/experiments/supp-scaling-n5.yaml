@@ -1,0 +1,14 @@
+# Supplementary — scaling: 5 generalists, SAME total steps and generation
+# budget as the core matrix (equal compute, equal output; N=10 point = C1).
+extends: ../stage1.yaml
+run:
+  run_id: supp-scaling-n5
+  seed: 0
+  total_steps: 400
+  generation_budget: 40
+  agents:
+    - {agent_id: g0, policy: llm}
+    - {agent_id: g1, policy: llm}
+    - {agent_id: g2, policy: llm}
+    - {agent_id: g3, policy: llm}
+    - {agent_id: g4, policy: llm}

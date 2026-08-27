@@ -257,3 +257,67 @@ def test_cmd_fetch_field_mode(tmp_path, monkeypatch):
     papers = pd.read_parquet(Path(cfg["data_dir"]) / "papers.parquet")
     assert sorted(papers["paper_id"]) == ["W1", "W2"]  # W1 deduped
     assert papers.iloc[0]["venue"] == "field:federated learning"
+
+
+def test_load_config_extends_and_deep_merges(tmp_path):
+    (tmp_path / "base.yaml").write_text(
+        "a: 1\nrun:\n  seed: 0\n  total_steps: 100\n  agents: [{agent_id: x}]\n")
+    (tmp_path / "child.yaml").write_text(
+        "extends: base.yaml\nrun:\n  seed: 7\n  agents: [{agent_id: y}]\n")
+    cfg = load_config(tmp_path / "child.yaml")
+    assert cfg["a"] == 1                       # inherited
+    assert cfg["run"]["seed"] == 7             # overridden
+    assert cfg["run"]["total_steps"] == 100    # deep-merged
+    assert cfg["run"]["agents"] == [{"agent_id": "y"}]  # lists replace
+    assert "extends" not in cfg
+
+
+def test_cmd_run_no_edges_and_seed_override(tmp_path, monkeypatch):
+    import innovation.cli as cli
+    from innovation.experiments.events import load_events
+
+    papers = pd.DataFrame([
+        {"paper_id": f"W{i}", "title": f"T{i}", "abstract": f"A{i}",
+         "year": 2020, "venue": "V"} for i in range(4)])
+    edges = pd.DataFrame([{"src": "W1", "dst": "W0"}, {"src": "W2", "dst": "W1"}])
+    ideas = papers.rename(columns={"abstract": "idea_text"})[
+        ["paper_id", "idea_text", "year", "venue"]]
+    data_dir = tmp_path / "data"
+    save_corpus(papers, edges, data_dir)
+    save_ideas(ideas, data_dir)
+    emb = FakeEmbedder()
+    save_embeddings(list(ideas["paper_id"]), emb.encode(list(ideas["idea_text"])), data_dir)
+
+    cfg = {"data_dir": str(data_dir), "out_dir": str(tmp_path / "runs"),
+           "embedding_model": "fake",
+           "models": {"agent": "m"},
+           "run": {"run_id": "ne", "seed": 0, "total_steps": 2,
+                   "generation_budget": 1, "init_edges": "none",
+                   "agents": [{"agent_id": "a0", "policy": "pa", "m": 1}]}}
+    monkeypatch.setattr(cli, "Embedder", lambda name: FakeEmbedder())
+    monkeypatch.setattr(cli, "_llm", lambda c: FakeLLM())
+    cli.cmd_run(cfg, seed=9, run_id="ne-s9")
+    events = load_events(Path(cfg["out_dir"]) / "ne-s9" / "events.jsonl")
+    assert events and all(e["run_id"] == "ne-s9" for e in events)
+    # with init_edges: none the PA policy still works (degrees all 0 -> uniform)
+    gen = [e for e in events if e["action"] == "generate"]
+    assert gen and "node_id" in gen[0]["result"]
+
+
+def test_all_experiment_configs_load_and_scopes_build():
+    from innovation.experiments.runner import build_scope
+    from innovation.ideas.embed import FakeEmbedder
+
+    emb = FakeEmbedder()
+    exp_dir = Path("configs/experiments")
+    files = sorted(exp_dir.glob("*.yaml"))
+    assert len(files) >= 10
+    for f in files:
+        cfg = load_config(f)
+        run = cfg["run"]
+        assert run["run_id"] == f.stem
+        assert run["total_steps"] == 400 and run["generation_budget"] == 40
+        for spec in run["agents"]:
+            build_scope(spec, emb)  # must not raise
+        if f.stem.startswith("core-"):
+            assert len(run["agents"]) == 10

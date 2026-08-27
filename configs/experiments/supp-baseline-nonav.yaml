@@ -1,0 +1,18 @@
+# Supplementary — validity anchor: no-navigation LLM baseline (spec §3.4).
+extends: ../stage1.yaml
+run:
+  run_id: supp-baseline-nonav
+  seed: 0
+  total_steps: 400
+  generation_budget: 40
+  agents:
+    - {agent_id: n0, policy: nonav}
+    - {agent_id: n1, policy: nonav}
+    - {agent_id: n2, policy: nonav}
+    - {agent_id: n3, policy: nonav}
+    - {agent_id: n4, policy: nonav}
+    - {agent_id: n5, policy: nonav}
+    - {agent_id: n6, policy: nonav}
+    - {agent_id: n7, policy: nonav}
+    - {agent_id: n8, policy: nonav}
+    - {agent_id: n9, policy: nonav}

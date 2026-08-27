@@ -1,0 +1,20 @@
+# C3 — 多博览专写: 10 T-shaped agents — read the WHOLE graph, write only inside
+# their own semantic region (2 per subfield topic). Jumps allowed (whole graph,
+# since read is unrestricted).
+extends: ../stage1.yaml
+run:
+  run_id: core-broad
+  seed: 0
+  total_steps: 400
+  generation_budget: 40
+  agents:
+    - {agent_id: b0, policy: llm, write_topics: ["federated learning privacy and differential privacy"], write_radius: 0.3}
+    - {agent_id: b1, policy: llm, write_topics: ["federated learning privacy and differential privacy"], write_radius: 0.3}
+    - {agent_id: b2, policy: llm, write_topics: ["communication-efficient federated learning"], write_radius: 0.3}
+    - {agent_id: b3, policy: llm, write_topics: ["communication-efficient federated learning"], write_radius: 0.3}
+    - {agent_id: b4, policy: llm, write_topics: ["personalized federated learning"], write_radius: 0.3}
+    - {agent_id: b5, policy: llm, write_topics: ["personalized federated learning"], write_radius: 0.3}
+    - {agent_id: b6, policy: llm, write_topics: ["federated learning robustness and security"], write_radius: 0.3}
+    - {agent_id: b7, policy: llm, write_topics: ["federated learning robustness and security"], write_radius: 0.3}
+    - {agent_id: b8, policy: llm, write_topics: ["federated learning applications in healthcare"], write_radius: 0.3}
+    - {agent_id: b9, policy: llm, write_topics: ["federated learning applications in healthcare"], write_radius: 0.3}

@@ -1,0 +1,15 @@
+# Supplementary — jump ablation: C1 without sample_frontier (serendipity off).
+extends: core-generalists.yaml
+run:
+  run_id: supp-nojump-generalists
+  agents:
+    - {agent_id: g0, policy: llm, allow_jump: false}
+    - {agent_id: g1, policy: llm, allow_jump: false}
+    - {agent_id: g2, policy: llm, allow_jump: false}
+    - {agent_id: g3, policy: llm, allow_jump: false}
+    - {agent_id: g4, policy: llm, allow_jump: false}
+    - {agent_id: g5, policy: llm, allow_jump: false}
+    - {agent_id: g6, policy: llm, allow_jump: false}
+    - {agent_id: g7, policy: llm, allow_jump: false}
+    - {agent_id: g8, policy: llm, allow_jump: false}
+    - {agent_id: g9, policy: llm, allow_jump: false}

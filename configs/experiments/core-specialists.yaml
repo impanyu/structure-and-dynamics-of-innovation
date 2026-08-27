@@ -1,0 +1,20 @@
+# C2 — 多专精: 10 specialists, 2 per subfield topic; each reads AND writes only
+# inside its semantic region (jumps allowed, scoped to the readable region).
+# Topics are tentative FL subfields — revisit after inspecting the real corpus.
+extends: ../stage1.yaml
+run:
+  run_id: core-specialists
+  seed: 0
+  total_steps: 400
+  generation_budget: 40
+  agents:
+    - {agent_id: s0, policy: llm, read_topics: ["federated learning privacy and differential privacy"], read_radius: 0.3, write_topics: ["federated learning privacy and differential privacy"], write_radius: 0.3}
+    - {agent_id: s1, policy: llm, read_topics: ["federated learning privacy and differential privacy"], read_radius: 0.3, write_topics: ["federated learning privacy and differential privacy"], write_radius: 0.3}
+    - {agent_id: s2, policy: llm, read_topics: ["communication-efficient federated learning"], read_radius: 0.3, write_topics: ["communication-efficient federated learning"], write_radius: 0.3}
+    - {agent_id: s3, policy: llm, read_topics: ["communication-efficient federated learning"], read_radius: 0.3, write_topics: ["communication-efficient federated learning"], write_radius: 0.3}
+    - {agent_id: s4, policy: llm, read_topics: ["personalized federated learning"], read_radius: 0.3, write_topics: ["personalized federated learning"], write_radius: 0.3}
+    - {agent_id: s5, policy: llm, read_topics: ["personalized federated learning"], read_radius: 0.3, write_topics: ["personalized federated learning"], write_radius: 0.3}
+    - {agent_id: s6, policy: llm, read_topics: ["federated learning robustness and security"], read_radius: 0.3, write_topics: ["federated learning robustness and security"], write_radius: 0.3}
+    - {agent_id: s7, policy: llm, read_topics: ["federated learning robustness and security"], read_radius: 0.3, write_topics: ["federated learning robustness and security"], write_radius: 0.3}
+    - {agent_id: s8, policy: llm, read_topics: ["federated learning applications in healthcare"], read_radius: 0.3, write_topics: ["federated learning applications in healthcare"], write_radius: 0.3}
+    - {agent_id: s9, policy: llm, read_topics: ["federated learning applications in healthcare"], read_radius: 0.3, write_topics: ["federated learning applications in healthcare"], write_radius: 0.3}

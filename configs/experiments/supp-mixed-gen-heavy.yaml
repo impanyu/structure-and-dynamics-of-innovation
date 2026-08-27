@@ -1,0 +1,15 @@
+# Supplementary — composition sweep: generalist-heavy mix (3 spec + 7 gen).
+extends: core-mixed.yaml
+run:
+  run_id: supp-mixed-gen-heavy
+  agents:
+    - {agent_id: s0, policy: llm, read_topics: ["federated learning privacy and differential privacy"], read_radius: 0.3, write_topics: ["federated learning privacy and differential privacy"], write_radius: 0.3}
+    - {agent_id: s1, policy: llm, read_topics: ["personalized federated learning"], read_radius: 0.3, write_topics: ["personalized federated learning"], write_radius: 0.3}
+    - {agent_id: s2, policy: llm, read_topics: ["federated learning robustness and security"], read_radius: 0.3, write_topics: ["federated learning robustness and security"], write_radius: 0.3}
+    - {agent_id: g0, policy: llm}
+    - {agent_id: g1, policy: llm}
+    - {agent_id: g2, policy: llm}
+    - {agent_id: g3, policy: llm}
+    - {agent_id: g4, policy: llm}
+    - {agent_id: g5, policy: llm}
+    - {agent_id: g6, policy: llm}

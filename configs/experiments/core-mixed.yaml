@@ -1,0 +1,19 @@
+# C4 — 混编团队: 4 specialists (4 distinct topics) + 3 broad writers + 3
+# generalists. Each agent jumps within its own readable scope.
+extends: ../stage1.yaml
+run:
+  run_id: core-mixed
+  seed: 0
+  total_steps: 400
+  generation_budget: 40
+  agents:
+    - {agent_id: s0, policy: llm, read_topics: ["federated learning privacy and differential privacy"], read_radius: 0.3, write_topics: ["federated learning privacy and differential privacy"], write_radius: 0.3}
+    - {agent_id: s1, policy: llm, read_topics: ["communication-efficient federated learning"], read_radius: 0.3, write_topics: ["communication-efficient federated learning"], write_radius: 0.3}
+    - {agent_id: s2, policy: llm, read_topics: ["personalized federated learning"], read_radius: 0.3, write_topics: ["personalized federated learning"], write_radius: 0.3}
+    - {agent_id: s3, policy: llm, read_topics: ["federated learning robustness and security"], read_radius: 0.3, write_topics: ["federated learning robustness and security"], write_radius: 0.3}
+    - {agent_id: b0, policy: llm, write_topics: ["federated learning privacy and differential privacy"], write_radius: 0.3}
+    - {agent_id: b1, policy: llm, write_topics: ["personalized federated learning"], write_radius: 0.3}
+    - {agent_id: b2, policy: llm, write_topics: ["federated learning applications in healthcare"], write_radius: 0.3}
+    - {agent_id: g0, policy: llm}
+    - {agent_id: g1, policy: llm}
+    - {agent_id: g2, policy: llm}

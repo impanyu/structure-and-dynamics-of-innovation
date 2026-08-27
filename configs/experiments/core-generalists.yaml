@@ -1,0 +1,19 @@
+# C1 — 多通才: 10 generalist LLM agents, unrestricted read/write, jumps within
+# (unrestricted) readable scope. The dynamics reference condition.
+extends: ../stage1.yaml
+run:
+  run_id: core-generalists
+  seed: 0
+  total_steps: 400
+  generation_budget: 40
+  agents:
+    - {agent_id: g0, policy: llm}
+    - {agent_id: g1, policy: llm}
+    - {agent_id: g2, policy: llm}
+    - {agent_id: g3, policy: llm}
+    - {agent_id: g4, policy: llm}
+    - {agent_id: g5, policy: llm}
+    - {agent_id: g6, policy: llm}
+    - {agent_id: g7, policy: llm}
+    - {agent_id: g8, policy: llm}
+    - {agent_id: g9, policy: llm}

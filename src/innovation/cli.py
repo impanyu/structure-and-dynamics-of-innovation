@@ -74,6 +74,10 @@ def cmd_summarize(cfg):
 def _load_world(cfg):
     _, edges = load_corpus(cfg["data_dir"])
     ideas = load_ideas(cfg["data_dir"])
+    if cfg.get("run", {}).get("init_edges", "citations") == "none":
+        # Ablation (supplementary experiments): independent nodes, no edges —
+        # isolates the value of the citation structure itself.
+        edges = edges.iloc[0:0]
     graph = IdeaGraph.from_tables(ideas, edges)
     ids, vecs = load_embeddings(cfg["data_dir"])
     emb = Embedder(cfg["embedding_model"])
@@ -82,8 +86,12 @@ def _load_world(cfg):
     return graph, index, emb, dict(zip(ids, vecs))
 
 
-def cmd_run(cfg):
+def cmd_run(cfg, seed=None, run_id=None):
     r = cfg["run"]
+    if seed is not None:
+        r["seed"] = seed
+    if run_id is not None:
+        r["run_id"] = run_id
     events_path = Path(cfg["out_dir"]) / r["run_id"] / "events.jsonl"
     if events_path.exists():
         raise SystemExit(
@@ -151,10 +159,19 @@ def main():
     parser.add_argument("command",
                         choices=["fetch", "summarize", "run", "evaluate"])
     parser.add_argument("--config", required=True)
+    parser.add_argument("--seed", type=int, default=None,
+                        help="override run.seed (for multi-seed sweeps)")
+    parser.add_argument("--run-id", default=None,
+                        help="override run.run_id (for multi-seed sweeps)")
     args = parser.parse_args()
     cfg = load_config(args.config)
+    if args.command == "run":
+        cmd_run(cfg, seed=args.seed, run_id=args.run_id)
+        return
+    if args.command == "evaluate" and args.run_id is not None:
+        cfg["run"]["run_id"] = args.run_id
     {"fetch": cmd_fetch, "summarize": cmd_summarize,
-     "run": cmd_run, "evaluate": cmd_evaluate}[args.command](cfg)
+     "evaluate": cmd_evaluate}[args.command](cfg)
 
 
 if __name__ == "__main__":
