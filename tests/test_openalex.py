@@ -74,3 +74,14 @@ def test_fetch_field_works_filters_by_search_and_citations(tmp_path):
     fetch_field_works("federated learning", 2016, 2024, mailto="a@b.c",
                       cache_dir=tmp_path / "b", http_get=fake_get2)
     assert "cited_by_count" not in fake_get2.calls[0]["params"]["filter"]
+
+
+def test_fetch_field_works_with_source_ids(tmp_path):
+    page1 = {"results": [{"id": "W1"}], "meta": {"next_cursor": None}}
+    fake_get = make_fake_get([page1])
+    fetch_field_works("federated learning", 2016, 2024, mailto="a@b.c",
+                      cache_dir=tmp_path, http_get=fake_get,
+                      source_ids=["S1", "S2"])
+    f = fake_get.calls[0]["params"]["filter"]
+    assert "primary_location.source.id:S1|S2" in f
+    assert "cited_by_count" not in f

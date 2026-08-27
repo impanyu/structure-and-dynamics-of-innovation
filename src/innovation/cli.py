@@ -32,14 +32,22 @@ def cmd_fetch(cfg):
     cache = Path(cfg["data_dir"]) / "openalex_cache"
     corpus_cfg = cfg.get("corpus", {})
     if corpus_cfg.get("mode") == "field":
-        # Small-field initial graph (spec §2): one coherent subfield, so the
-        # innovation dynamics are observable on a dense, bounded network.
+        # Small-field initial graph (spec §2). Admission rule: within the
+        # field query and year range, a paper qualifies if it appeared in the
+        # top-venue list OR its citations exceed the floor. OpenAlex cannot OR
+        # across attributes, so we union two queries; build_corpus dedupes.
         query = corpus_cfg["field_query"]
-        works = fetch_field_works(
+        source_ids = [find_source_id(v, mailto=cfg["mailto"], cache_dir=cache)
+                      for v in cfg["venues"]]
+        in_venues = fetch_field_works(
+            query, cfg["year_from"], cfg["cutoff_year"],
+            mailto=cfg["mailto"], cache_dir=cache, source_ids=source_ids)
+        min_citations = corpus_cfg.get("min_citations", 0)
+        high_cited = fetch_field_works(
             query, cfg["year_from"], cfg["cutoff_year"],
             mailto=cfg["mailto"], cache_dir=cache,
-            min_citations=corpus_cfg.get("min_citations", 0))
-        works_by_venue = {f"field:{query}": works}
+            min_citations=min_citations) if min_citations > 0 else []
+        works_by_venue = {f"field:{query}": in_venues + high_cited}
     else:
         works_by_venue = {}
         for name in cfg["venues"]:

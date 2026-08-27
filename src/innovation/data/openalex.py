@@ -74,13 +74,21 @@ def fetch_source_works(source_id: str, year_from: int, year_to: int, *,
 
 def fetch_field_works(query: str, year_from: int, year_to: int, *,
                       mailto: str, cache_dir: Path, http_get=None,
-                      min_citations: int = 0) -> list[dict]:
-    """All works matching a small-field keyword query in [year_from, year_to].
-    min_citations > 0 adds a cited_by_count floor to bound corpus size."""
+                      min_citations: int = 0,
+                      source_ids: list[str] | None = None) -> list[dict]:
+    """Works matching a small-field keyword query in [year_from, year_to],
+    restricted to either a venue list (source_ids) or a citation floor
+    (min_citations). OpenAlex filters cannot OR across attributes, so the
+    caller unions one call per restriction (dedup happens in build_corpus)."""
     filter_str = (f"title_and_abstract.search:{query},"
                   f"publication_year:{year_from}-{year_to}")
+    key_suffix = ""
+    if source_ids:
+        filter_str += f",primary_location.source.id:{'|'.join(source_ids)}"
+        key_suffix += "_s" + "-".join(source_ids)
     if min_citations > 0:
         filter_str += f",cited_by_count:>{min_citations}"
-    cache_key = f"field_{query.replace(' ', '_')}_{year_from}_{year_to}_c{min_citations}"
+        key_suffix += f"_c{min_citations}"
+    cache_key = f"field_{query.replace(' ', '_')}_{year_from}_{year_to}{key_suffix}"
     return _fetch_works(filter_str, cache_key, mailto=mailto,
                         cache_dir=cache_dir, http_get=http_get or requests.get)

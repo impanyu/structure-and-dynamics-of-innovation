@@ -228,22 +228,32 @@ def test_cmd_fetch_field_mode(tmp_path, monkeypatch):
     import innovation.cli as cli
 
     cfg = {"data_dir": str(tmp_path / "data"), "mailto": "t@t",
-           "year_from": 2016, "cutoff_year": 2024,
+           "year_from": 2016, "cutoff_year": 2024, "venues": ["V1", "V2"],
            "corpus": {"mode": "field", "field_query": "federated learning",
                       "min_citations": 5}}
-    works = [{"id": "https://openalex.org/W1", "title": "T1",
-              "publication_year": 2020,
-              "abstract_inverted_index": {"fl": [0]}, "referenced_works": []}]
-    captured = {}
+
+    def work(wid):
+        return {"id": f"https://openalex.org/{wid}", "title": wid,
+                "publication_year": 2020,
+                "abstract_inverted_index": {"fl": [0]}, "referenced_works": []}
+
+    calls = []
 
     def fake_field(query, y0, y1, **kw):
-        captured["query"] = query
-        captured["min_citations"] = kw.get("min_citations")
-        return works
+        calls.append({"query": query, "source_ids": kw.get("source_ids"),
+                      "min_citations": kw.get("min_citations", 0)})
+        # venue-scoped call returns W1; citation-scoped returns W1 (dup) + W2
+        return [work("W1")] if kw.get("source_ids") else [work("W1"), work("W2")]
 
+    monkeypatch.setattr(cli, "find_source_id", lambda name, **kw: f"S_{name}")
     monkeypatch.setattr(cli, "fetch_field_works", fake_field)
     cli.cmd_fetch(cfg)
-    assert captured == {"query": "federated learning", "min_citations": 5}
-    assert (Path(cfg["data_dir"]) / "papers.parquet").exists()
+    # Admission rule = (in venue list) OR (citations > floor): two calls, unioned
+    assert calls == [
+        {"query": "federated learning", "source_ids": ["S_V1", "S_V2"],
+         "min_citations": 0},
+        {"query": "federated learning", "source_ids": None, "min_citations": 5},
+    ]
     papers = pd.read_parquet(Path(cfg["data_dir"]) / "papers.parquet")
+    assert sorted(papers["paper_id"]) == ["W1", "W2"]  # W1 deduped
     assert papers.iloc[0]["venue"] == "field:federated learning"

@@ -8,7 +8,7 @@ data_dir: data/stage1
 corpus:
   mode: field
   field_query: "federated learning"
-  min_citations: 10        # bounds corpus size; tune after inspecting counts
+  min_citations: 10        # admission: in top-venue list OR citations > this floor
 # Venue list: used for corpus when corpus.mode != field, and always for the
 # recall-denominator population count.
 venues: ["Neural Information Processing Systems", "International Conference on Learning Representations"]

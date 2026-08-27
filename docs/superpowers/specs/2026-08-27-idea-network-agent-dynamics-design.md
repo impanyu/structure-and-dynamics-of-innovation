@@ -26,9 +26,11 @@ pretraining recall; the reference is the real ~2025–2026 literature.
 ## 2. Scope and Staging
 
 - **Stage 1 (pipeline validation + first dynamics study):** the initial graph
-  is ONE small, coherent subfield (config-chosen keyword query on OpenAlex,
-  e.g. "federated learning", optionally bounded by a citation floor), up to
-  cutoff T (~early 2025). A compact, dense field makes the innovation
+  is ONE small, coherent subfield, up to cutoff T (~early 2025). **Admission
+  rule:** within the field keyword query and year range, a paper enters the
+  graph iff it was published in the top-venue list OR its citation count
+  exceeds a configured floor (implemented as the union of two OpenAlex
+  queries; deduped downstream). A compact, dense field makes the innovation
   dynamics observable; evaluation still searches the WHOLE literature (§3.6),
   so agents get credit wherever their ideas were realized. All code paths, metrics, and at least one full experiment run
   end-to-end.
