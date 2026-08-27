@@ -37,6 +37,13 @@ def test_add_idea_appends_generated_node_with_provenance():
         g.add_idea("gen:r1:1", "bad", ["W_missing"])
 
 
+def test_add_idea_rejects_duplicate_node_id():
+    g = small_graph()
+    g.add_idea("gen:r1:0", "new idea", ["W1"])
+    with pytest.raises(ValueError):
+        g.add_idea("gen:r1:0", "new idea again", ["W2"])
+
+
 def test_network_at_slices_by_year():
     g = small_graph()
     g2020 = g.network_at(2020)

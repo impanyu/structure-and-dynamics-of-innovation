@@ -1,5 +1,3 @@
-import json
-
 from innovation.data.openalex import (fetch_source_works, find_source_id,
                                       reconstruct_abstract)
 

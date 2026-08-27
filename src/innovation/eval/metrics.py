@@ -15,7 +15,10 @@ def precision(verdicts, dup_flags: dict[str, bool]) -> float:
 
 
 def recall(verdicts, population: int) -> float:
-    papers = {v.paper["paper_id"] for v in verdicts if v.hit}
+    # Dedupe by normalized title so the same paper found via S2 (sha id) and
+    # OpenAlex (W-id) doesn't double-count; fall back to paper_id when no title.
+    papers = {(v.paper.get("title") or "").strip().lower() or v.paper["paper_id"]
+             for v in verdicts if v.hit}
     return len(papers) / population if population else 0.0
 
 

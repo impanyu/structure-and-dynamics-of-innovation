@@ -74,7 +74,7 @@ def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> lis
     payload = _cached_get(OPENALEX_BASE,
                           {"search": query, "per-page": 10, "mailto": mailto},
                           Path(cache_dir), http_get)
-    return [{"paper_id": w.get("id", "").rsplit("/", 1)[-1],
+    return [{"paper_id": (w.get("id") or "").rsplit("/", 1)[-1],
              "title": w.get("title") or "",
              "abstract": reconstruct_abstract(w.get("abstract_inverted_index")),
              "pub_date": w.get("publication_date") or "", "source_api": "openalex"}

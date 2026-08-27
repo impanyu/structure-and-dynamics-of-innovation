@@ -1,7 +1,6 @@
 """Test CLI commands and config loader."""
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -91,8 +90,13 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
     def fake_verify_idea(llm, **kwargs):
         return Verdict(idea_id=kwargs["idea_id"], hit=False, paper=None)
 
-    def fake_openalex_population_count(filter_dict, **kwargs):
-        return 10
+    population_calls = []
+
+    def fake_openalex_population_count(filter_str, **kwargs):
+        population_calls.append(filter_str)
+        # First call is the venue population, second is the arXiv population
+        # (spec §3.6: population = venue + arXiv-above-citation-threshold).
+        return 10 if len(population_calls) == 1 else 5
 
     monkeypatch.setattr("innovation.cli.Embedder", fake_embedder_factory)
     monkeypatch.setattr("innovation.cli._llm", fake_llm_factory)
@@ -118,3 +122,76 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
     required_keys = {"precision", "recall", "n_ideas", "n_hits", "n_dup_flagged"}
     assert set(metrics.keys()) >= required_keys, \
         f"metrics missing keys. Expected {required_keys}, got {set(metrics.keys())}"
+
+    # Population = venue (10) + arXiv (5) = 15; n_hits is 0 in this test (all
+    # fake verdicts are misses), so recall stays 0.0 regardless of population.
+    assert len(population_calls) == 2
+    assert metrics["n_hits"] == 0
+    assert metrics["recall"] == 0.0
+
+    # 9) Assert verdicts.json exists with one entry per generated idea.
+    verdicts_file = Path(cfg["out_dir"]) / "t1" / "verdicts.json"
+    assert verdicts_file.exists(), f"verdicts.json not found at {verdicts_file}"
+    verdict_records = json.loads(verdicts_file.read_text())
+    assert len(verdict_records) == metrics["n_ideas"]
+    required_verdict_keys = {"idea_id", "hit", "paper", "excluded_pre_cutoff",
+                             "unknown_date", "dup_flag"}
+    for rec in verdict_records:
+        assert set(rec.keys()) >= required_verdict_keys
+
+
+def test_cmd_run_refuses_to_overwrite_existing_run(tmp_path, monkeypatch):
+    """Second cmd_run with the same run_id must raise SystemExit, not clobber events."""
+    papers = pd.DataFrame([
+        {"paper_id": f"W{i}", "title": f"T{i}", "abstract": f"A{i}",
+         "year": 2020 + (i % 3), "venue": "V"}
+        for i in range(6)
+    ])
+    edges = pd.DataFrame([
+        {"src": f"W{i}", "dst": f"W{i-1}"}
+        for i in range(1, 6)
+    ])
+
+    data_dir = tmp_path / "data"
+    save_corpus(papers, edges, data_dir)
+
+    ideas = pd.DataFrame([
+        {"paper_id": f"W{i}", "idea_text": f"Idea {i}", "year": 2020 + (i % 3), "venue": "V"}
+        for i in range(6)
+    ])
+    save_ideas(ideas, data_dir)
+
+    emb = FakeEmbedder()
+    vecs = emb.encode([f"Idea {i}" for i in range(6)])
+    save_embeddings([f"W{i}" for i in range(6)], vecs, data_dir)
+
+    cfg = {
+        "data_dir": str(data_dir),
+        "out_dir": str(tmp_path / "runs"),
+        "mailto": "t@t",
+        "cutoff_date": "2025-01-01",
+        "embedding_model": "BAAI/bge-small-en-v1.5",
+        "eval": {"n_queries": 1, "top_k": 3, "dup_ceiling": 0.95, "arxiv_min_citations": 10},
+        "models": {"summarizer": "m", "agent": "m", "judge": "m"},
+        "venues": ["V"],
+        "run": {
+            "run_id": "t2",
+            "seed": 0,
+            "total_steps": 4,
+            "generation_budget": 2,
+            "agents": [{"agent_id": "a0", "policy": "pa", "m": 2}]
+        }
+    }
+
+    def fake_embedder_factory(name):
+        return FakeEmbedder()
+
+    def fake_llm_factory(cfg):
+        return FakeLLM(default="q")
+
+    monkeypatch.setattr("innovation.cli.Embedder", fake_embedder_factory)
+    monkeypatch.setattr("innovation.cli._llm", fake_llm_factory)
+
+    cmd_run(cfg)
+    with pytest.raises(SystemExit):
+        cmd_run(cfg)

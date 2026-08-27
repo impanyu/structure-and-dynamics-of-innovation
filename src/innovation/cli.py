@@ -1,5 +1,7 @@
 """CLI: fetch -> summarize -> run -> evaluate, all driven by one YAML config."""
 import argparse
+import dataclasses
+import datetime
 import json
 from pathlib import Path
 
@@ -8,8 +10,8 @@ import numpy as np
 from innovation.config import load_config
 from innovation.data.corpus import build_corpus, load_corpus, save_corpus
 from innovation.data.openalex import fetch_source_works, find_source_id
-from innovation.eval.metrics import (aggregate_run, past_dup_flag,
-                                     openalex_population_count,
+from innovation.eval.metrics import (aggregate_run, arxiv_population_filter,
+                                     past_dup_flag, openalex_population_count,
                                      venue_population_filter)
 from innovation.eval.search_verify import verify_idea
 from innovation.experiments.events import load_events
@@ -61,8 +63,13 @@ def _load_world(cfg):
 
 
 def cmd_run(cfg):
-    graph, index, emb, _ = _load_world(cfg)
     r = cfg["run"]
+    events_path = Path(cfg["out_dir"]) / r["run_id"] / "events.jsonl"
+    if events_path.exists():
+        raise SystemExit(
+            f"run '{r['run_id']}' already has events at {events_path}; "
+            "delete it or choose a new run_id — resuming is not yet supported")
+    graph, index, emb, _ = _load_world(cfg)
     run_cfg = RunConfig(run_id=r["run_id"], seed=r["seed"],
                         total_steps=r["total_steps"],
                         generation_budget=r["generation_budget"],
@@ -94,11 +101,28 @@ def cmd_evaluate(cfg):
     cache = Path(cfg["data_dir"]) / "openalex_cache"
     source_ids = [find_source_id(v, mailto=cfg["mailto"], cache_dir=cache)
                   for v in cfg["venues"]]
-    population = openalex_population_count(
-        venue_population_filter(source_ids, cfg["cutoff_date"]),
-        mailto=cfg["mailto"])
+    # Hits require pub_date strictly > cutoff_date, but from_publication_date
+    # is inclusive, so start the population window one day after the cutoff.
+    from_date = (datetime.date.fromisoformat(cfg["cutoff_date"])
+                + datetime.timedelta(days=1)).isoformat()
+    arxiv_sid = find_source_id(cfg["eval"].get("arxiv_source_name", "arXiv"),
+                               mailto=cfg["mailto"], cache_dir=cache)
+    # Population = post-cutoff venue papers + post-cutoff arXiv papers above a
+    # citation threshold (spec §3.6). This approximates "arXiv-only": overlap
+    # between the arXiv set and the venue list is not subtracted.
+    population = (
+        openalex_population_count(
+            venue_population_filter(source_ids, from_date), mailto=cfg["mailto"])
+        + openalex_population_count(
+            arxiv_population_filter(arxiv_sid, from_date,
+                                    cfg["eval"]["arxiv_min_citations"]),
+            mailto=cfg["mailto"]))
     agg = aggregate_run(verdicts, dup_flags, population)
     (run_dir / "metrics.json").write_text(json.dumps(agg, indent=2))
+    verdict_records = [
+        {**dataclasses.asdict(v), "dup_flag": dup_flags[v.idea_id]}
+        for v in verdicts]
+    (run_dir / "verdicts.json").write_text(json.dumps(verdict_records, indent=2))
     print(json.dumps(agg, indent=2))
 
 

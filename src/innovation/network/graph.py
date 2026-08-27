@@ -62,6 +62,8 @@ class IdeaGraph:
     def add_idea(self, node_id: str, text: str, cited_ids: list[str], *,
                  source: str = "generated", year: int | None = None,
                  meta: dict | None = None) -> None:
+        if self._g.has_node(node_id):
+            raise ValueError(f"duplicate node_id: {node_id}")
         missing = [c for c in cited_ids if not self._g.has_node(c)]
         if missing:
             raise KeyError(f"cited ids not in graph: {missing}")
