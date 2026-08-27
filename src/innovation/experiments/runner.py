@@ -7,7 +7,7 @@ import numpy as np
 from innovation.agents.baselines import (NoNavLLMPolicy,
                                          PreferentialAttachmentPolicy)
 from innovation.agents.llm_agent import LLMAgentPolicy
-from innovation.experiments.env import Environment
+from innovation.experiments.env import AgentScope, Environment
 from innovation.experiments.events import EventLog
 
 
@@ -34,13 +34,33 @@ def build_policy(spec: dict, *, llm, model, graph, rng):
     raise ValueError(f"unknown policy kind: {kind}")
 
 
+def build_scope(spec: dict) -> AgentScope | None:
+    """Agent behavioral profile from its config dict (spec §3.4-3.5):
+    read_communities / write_communities (lists of community ids; absent =
+    unrestricted) and allow_jump (default True)."""
+    read = spec.get("read_communities")
+    write = spec.get("write_communities")
+    allow_jump = spec.get("allow_jump", True)
+    if read is None and write is None and allow_jump:
+        return None
+    return AgentScope(read=set(read) if read is not None else None,
+                      write=set(write) if write is not None else None,
+                      allow_jump=allow_jump)
+
+
 def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
                    out_dir) -> dict:
     rng = np.random.default_rng(cfg.seed)
     run_dir = Path(out_dir) / cfg.run_id
+    scopes = {a["agent_id"]: s for a in cfg.agents
+              if (s := build_scope(a)) is not None}
+    needs_communities = any(s.read is not None or s.write is not None
+                            for s in scopes.values())
+    communities = graph.communities() if needs_communities else None
     env = Environment(run_id=cfg.run_id, graph=graph, index=index,
                       embedder=embedder, event_log=EventLog(run_dir / "events.jsonl"),
-                      rng=rng, generation_budget=cfg.generation_budget)
+                      rng=rng, generation_budget=cfg.generation_budget,
+                      scopes=scopes, communities=communities)
     policies = {a["agent_id"]: build_policy(a, llm=llm, model=model,
                                             graph=graph, rng=rng)
                 for a in cfg.agents}

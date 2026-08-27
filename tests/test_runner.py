@@ -62,3 +62,23 @@ def test_build_policy_rejects_unknown_kind():
     with pytest.raises(ValueError):
         build_policy({"policy": "quantum"}, llm=None, model="m",
                      graph=None, rng=np.random.default_rng(0))
+
+
+def test_agent_scopes_flow_from_config(tmp_path):
+    """Agent specs with read/write/jump constraints reach the Environment."""
+    import json
+    from innovation.llm import FakeLLM
+
+    graph, index, emb = fixtures()
+    gen_out = json.dumps({"action": "generate",
+                          "args": {"text": "t", "cited_ids": ["W5"]}})
+    llm = FakeLLM(default=gen_out)
+    cfg = RunConfig(run_id="rs", seed=0, total_steps=2, generation_budget=2,
+                    agents=[{"agent_id": "a0", "policy": "llm",
+                             "write_communities": [-999],  # nothing writable
+                             "allow_jump": False}])
+    out = run_simulation(cfg, graph=graph, index=index, embedder=emb,
+                         llm=llm, model="m", out_dir=tmp_path)
+    assert out["generated"] == []  # every generate blocked by write scope
+    events = load_events(tmp_path / "rs" / "events.jsonl")
+    assert all("error" in e["result"] for e in events if e["action"] == "generate")

@@ -31,6 +31,12 @@ run:
   seed: 0
   total_steps: 200
   generation_budget: 20
+  # Behavior profiles (spec §3.5): read_communities / write_communities are
+  # lists of Louvain community ids (omit = unrestricted); allow_jump gates
+  # sample_frontier. Examples:
+  #   specialist:            {read_communities: [0], write_communities: [0]}
+  #   broad reader/loc writer: {write_communities: [0]}
+  #   generalist, no jumps:  {allow_jump: false}
   agents:
     - {agent_id: a0, policy: llm}
     - {agent_id: a1, policy: llm}

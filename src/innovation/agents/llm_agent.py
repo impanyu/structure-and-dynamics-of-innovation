@@ -15,7 +15,9 @@ find promising unexplored directions and, when you see one, contribute a genuine
 new idea to the network. Prefer exploring (search, browse) until you understand a \
 neighborhood well enough that your new idea is specific and well-grounded. If you \
 notice an idea clearly builds on another idea it does not yet reference, you may \
-record that missing link."""
+record that missing link. Some of your actions may be restricted to a region of \
+the network; if an action returns a restriction error, adapt your strategy \
+instead of repeating it."""
 
 ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
 {"action": "search", "args": {"query": "<text>", "k": 5}} -- semantic search over all ideas

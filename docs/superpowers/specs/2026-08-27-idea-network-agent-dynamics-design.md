@@ -133,8 +133,8 @@ Two manipulated factors, crossed:
 
 | Factor | Levels |
 |---|---|
-| **Structure** (initial placement) | inside a dense community / at a community boundary / cross-community mix |
-| **Dynamics** | single agent / multi-N homogeneous / multi-N heterogeneous |
+| **Structure → behavior profiles** | structural conditions are operationalized as per-agent behavioral constraints (`AgentScope`): read scope, write scope (sets of Louvain communities; unrestricted = whole graph), and whether random jumps are allowed. Canonical profiles: **specialist** (read+write one community), **broad reader / local writer** (read all, write one community), **generalist** (read+write all), each with jumps on or off. Constraints are enforced by the environment (search results filtered, browse/jump restricted to readable nodes, generate/add_links/remove_links restricted to writable nodes); generated nodes inherit the majority community of their citations so regions stay meaningful as the network grows. |
+| **Dynamics** | single agent / multi-N homogeneous / multi-N heterogeneous (personas and/or mixed behavior profiles) |
 
 Plus the two baseline policies from §3.4. All conditions run with multiple random
 seeds. Every agent action is one JSONL event (run_id, agent_id, step, action,

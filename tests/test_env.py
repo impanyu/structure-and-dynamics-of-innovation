@@ -103,3 +103,61 @@ def test_remove_links_action_logs_and_restores(tmp_path):
     env2.restore(events)
     assert "W1" not in env2.graph.citations_out("W2")
     assert env2.event_log.read_all() == []
+
+
+def make_scoped_env(tmp_path, scopes, communities):
+    ideas = pd.DataFrame([
+        {"paper_id": "A1", "idea_text": "alpha one", "year": 2019, "venue": "V"},
+        {"paper_id": "A2", "idea_text": "alpha two", "year": 2020, "venue": "V"},
+        {"paper_id": "B1", "idea_text": "beta one", "year": 2020, "venue": "V"},
+    ])
+    edges = pd.DataFrame([{"src": "A2", "dst": "A1"}])
+    graph = IdeaGraph.from_tables(ideas, edges)
+    emb = FakeEmbedder()
+    index = VectorIndex(emb.dim)
+    ids = graph.node_ids()
+    index.add(ids, emb.encode([graph.node(n).text for n in ids]))
+    log = EventLog(tmp_path / "events.jsonl")
+    return Environment(run_id="r1", graph=graph, index=index, embedder=emb,
+                       event_log=log, rng=np.random.default_rng(0),
+                       generation_budget=5, scopes=scopes,
+                       communities=communities)
+
+
+COMM = {"A1": 0, "A2": 0, "B1": 1}
+
+
+def test_scoped_read_filters_search_browse_and_jump(tmp_path):
+    from innovation.experiments.env import AgentScope
+    scopes = {"a0": AgentScope(read={0}, write={0})}
+    env = make_scoped_env(tmp_path, scopes, COMM)
+    hits = env.execute("a0", 0, Action("search", {"query": "one", "k": 3}))
+    assert {h["node_id"] for h in hits["hits"]} <= {"A1", "A2"}
+    assert "error" in env.execute("a0", 1, Action("browse", {"node_id": "B1"}))
+    for step in range(2, 8):  # jump stays inside the readable region
+        res = env.execute("a0", step, Action("sample_frontier", {}))
+        assert res["node_id"] in {"A1", "A2"}
+    # unrestricted agent still sees everything
+    assert "error" not in env.execute("other", 9, Action("browse", {"node_id": "B1"}))
+
+
+def test_no_jump_scope_blocks_sample_frontier(tmp_path):
+    from innovation.experiments.env import AgentScope
+    scopes = {"a0": AgentScope(allow_jump=False)}
+    env = make_scoped_env(tmp_path, scopes, COMM)
+    assert "error" in env.execute("a0", 0, Action("sample_frontier", {}))
+
+
+def test_scoped_write_constrains_generate_and_links(tmp_path):
+    from innovation.experiments.env import AgentScope
+    scopes = {"a0": AgentScope(read=None, write={0})}  # read all, write only C0
+    env = make_scoped_env(tmp_path, scopes, COMM)
+    res = env.execute("a0", 0, Action("generate", {"text": "x", "cited_ids": ["A1", "B1"]}))
+    assert "error" in res  # B1 is outside the write scope
+    res = env.execute("a0", 1, Action("generate", {"text": "x", "cited_ids": ["A1", "A2"]}))
+    assert res["node_id"] == "gen:r1:0"
+    # new node inherits majority community of its citations -> writable/readable
+    res = env.execute("a0", 2, Action("add_links", {"src_id": "gen:r1:0", "dst_ids": ["A2"]}))
+    assert "error" not in res
+    assert "error" in env.execute("a0", 3, Action("add_links", {"src_id": "B1", "dst_ids": ["A1"]}))
+    assert "error" in env.execute("a0", 4, Action("remove_links", {"src_id": "B1", "dst_ids": ["A1"]}))
