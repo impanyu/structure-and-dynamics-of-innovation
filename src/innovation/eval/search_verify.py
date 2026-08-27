@@ -96,6 +96,7 @@ class Verdict:
     hit: bool
     paper: dict | None
     excluded_pre_cutoff: list[dict] = field(default_factory=list)
+    unknown_date: list[dict] = field(default_factory=list)
 
 
 def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
@@ -112,14 +113,16 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 seen_titles.add(title_key)
                 candidates.append(cand)
 
-    hit_paper, excluded = None, []
+    hit_paper, excluded, unknown = None, [], []
     for cand in candidates:
         if not judge_realization(llm, model=model, idea_text=idea_text, candidate=cand):
             continue
         if cand["pub_date"] and cand["pub_date"] > cutoff_date:
             if hit_paper is None:
                 hit_paper = cand  # first post-cutoff realization = the hit
-        else:
+        elif cand["pub_date"]:
             excluded.append(cand)  # logged, NEVER scored (spec §3.6)
+        else:
+            unknown.append(cand)  # unknown date realizations logged separately
     return Verdict(idea_id=idea_id, hit=hit_paper is not None,
-                   paper=hit_paper, excluded_pre_cutoff=excluded)
+                   paper=hit_paper, excluded_pre_cutoff=excluded, unknown_date=unknown)

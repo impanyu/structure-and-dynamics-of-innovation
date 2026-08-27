@@ -84,3 +84,20 @@ def test_verify_idea_no_hit_when_only_pre_cutoff(tmp_path):
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
     assert not v.hit and v.paper is None
     assert len(v.excluded_pre_cutoff) == 1
+
+
+def test_verify_idea_unknown_date_not_hit_not_excluded(tmp_path):
+    # One judged-YES candidate with no date; should not be excluded or hit.
+    payload = s2_payload([{"id": "unknown", "title": "Unknown date paper"}])
+
+    def fake_get(url, params=None):
+        return FakeResponse(payload if "semanticscholar" in url
+                            else {"results": [], "meta": {}})
+
+    llm = FakeLLM(responses=["q", "YES"])
+    v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
+                    cutoff_date="2025-01-01", mailto="a@b.c",
+                    cache_dir=tmp_path, http_get=fake_get, n_queries=1)
+    assert not v.hit and v.paper is None
+    assert v.excluded_pre_cutoff == []
+    assert [p["paper_id"] for p in v.unknown_date] == ["unknown"]
