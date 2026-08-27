@@ -18,13 +18,15 @@ growing network is a dynamical system; we study how initial structure and agent
 configuration shape the innovation it produces.
 
 **Headline evaluation:** hold out the future. Initialize the network with papers up
-to cutoff year T = 2022, let agents grow it, and measure how well generated ideas
-anticipate the real 2023–2024 literature.
+to cutoff T, let agents grow it, and measure how well generated ideas anticipate
+the real post-T literature. **T is aligned with the agent LLM's training cutoff
+(~early 2025)** so that post-T hits cannot be pretraining recall; the held-out set
+is the real ~2025–2026 literature.
 
 ## 2. Scope and Staging
 
-- **Stage 1 (pipeline validation):** 1–2 venues (NeurIPS + ICLR), 2013–2024,
-  ~20k papers. All code paths, metrics, and at least one full experiment run
+- **Stage 1 (pipeline validation):** 1–2 venues (NeurIPS + ICLR), 2013 up to
+  cutoff T (~early 2025), ~20k papers. All code paths, metrics, and at least one full experiment run
   end-to-end.
 - **Stage 2 (full study):** add ICML, ACL, CVPR, AAAI (and similar AI/ML top
   venues), ~50–100k papers. Same code, bigger config.
@@ -126,12 +128,17 @@ into the repo.
 
 ### 3.6 Evaluation (`eval/`)
 
-- **Anticipation score (headline):** network initialized at T = 2022; real
-  post-T papers (summarized identically) form the held-out set.
+- **Cutoff choice:** T is aligned with the agent LLM's training cutoff (~early
+  2025). Rationale: for papers published before the model's cutoff, a "hit" may
+  be pretraining recall rather than innovation; only post-cutoff hits exclude
+  memorization. The held-out set is the real ~2025–2026 literature.
+- **Anticipation score (headline, tier 1 — embedding matching):** network
+  initialized at T; real post-T papers (summarized identically) form the
+  held-out set.
   - **Asymmetric corpus design:** the ≤T network is narrow (selected venues,
     needs citation edges), but the >T held-out set is **broad** — a wide AI/ML
     venue list (NeurIPS/ICML/ICLR/ACL/EMNLP/CVPR/ICCV/AAAI/KDD/…) plus arXiv
-    cs.LG/cs.CL/cs.CV 2023–2024. The held-out set needs no citation edges and
+    cs.LG/cs.CL/cs.CV post-T. The held-out set needs no citation edges and
     never enters the graph, so widening it costs only summarization + embedding
     (same template, same embedding model, for representational comparability).
     This prevents penalizing agents for anticipating ideas published outside the
@@ -142,6 +149,20 @@ into the repo.
   - *Recall-like:* reported at two scopes — narrow (future papers of the seed
     venues; the fairest in-domain coverage measure) and broad (honest but
     expectedly low; reported for reference).
+- **Realization check (tier 2 — literature-search verification):** each
+  generated idea (or a large sample) is verified against the *whole* literature,
+  with no time restriction:
+  - Pipeline: idea → extracted search queries → Semantic Scholar / OpenAlex
+    search API (NOT Google Scholar — no API, anti-scraping) → candidate papers →
+    LLM judge decides whether a candidate genuinely realizes the idea → human
+    spot-check of judgments.
+  - All search responses cached to disk with timestamps (live indexes drift;
+    this keeps the evaluation replayable).
+  - **Only anticipation counts as a hit:** a hit requires the realizing paper
+    to be published *after* the agent model's training cutoff, which excludes
+    pretraining recall. Matches to papers published before the cutoff
+    (rediscoveries) score zero — they are logged with an `excluded_pre_cutoff`
+    flag for later inspection, but never counted in any metric.
   - Residual limitation: ideas realized entirely outside CS (e.g. physics
     journals) can still be missed; stated as a limitation, mitigated by human
     inspection of matched/unmatched samples.
