@@ -40,3 +40,10 @@ def test_routed_llm_dispatches_by_prefix():
     assert calls["anthropic"] == "claude-sonnet-5"
     assert router.complete(model="openai:gpt-5", system="s", user="u") == "openai"
     assert calls["openai"] == "gpt-5"  # prefix stripped for the provider call
+
+
+def test_parse_openai_model_effort_suffix():
+    from innovation.llm import parse_openai_model
+
+    assert parse_openai_model("gpt-5-mini:minimal") == ("gpt-5-mini", "minimal")
+    assert parse_openai_model("gpt-5") == ("gpt-5", None)

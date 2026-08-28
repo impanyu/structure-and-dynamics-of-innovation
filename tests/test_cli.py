@@ -19,7 +19,7 @@ def test_load_config_reads_stage1_yaml():
     cfg = load_config("configs/stage1.yaml")
     assert isinstance(cfg, dict)
     assert cfg["cutoff_date"] == "2024-09-30"
-    assert cfg["models"]["summarizer"] == "openai:gpt-5-mini"
+    assert cfg["models"]["summarizer"] == "openai:gpt-5-mini:minimal"
 
     # Recognition list: evaluation-only concept, entries carry name + aliases
     recognized = cfg["recognized_venues"]

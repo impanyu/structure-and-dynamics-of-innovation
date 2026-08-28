@@ -59,6 +59,14 @@ class AnthropicLLM:
         return msg.content[0].text
 
 
+def parse_openai_model(model: str) -> tuple[str, str | None]:
+    """'gpt-5-mini:minimal' -> ('gpt-5-mini', 'minimal'). GPT-5 models are
+    reasoning models: reasoning tokens consume max_output_tokens, so callers
+    pick an effort per role (summarizer: minimal; judge: low; agent: default)."""
+    name, _, effort = model.partition(":")
+    return name, (effort or None)
+
+
 class OpenAILLM:
     """Real OpenAI client. Needs OPENAI_API_KEY in the environment."""
 
@@ -68,9 +76,15 @@ class OpenAILLM:
         self.client = openai.OpenAI()
 
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
+        name, effort = parse_openai_model(model)
+        kwargs = {}
+        if effort:
+            kwargs["reasoning"] = {"effort": effort}
+        # Headroom so reasoning tokens cannot starve the visible answer.
+        headroom = 200 if effort == "minimal" else 2000
         resp = self.client.responses.create(
-            model=model, instructions=system, input=user,
-            max_output_tokens=max_tokens)
+            model=name, instructions=system, input=user,
+            max_output_tokens=max_tokens + headroom, **kwargs)
         return resp.output_text
 
 
