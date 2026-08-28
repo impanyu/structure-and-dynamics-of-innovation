@@ -11,6 +11,8 @@ from innovation.config import load_config
 from innovation.data.corpus import build_corpus, load_corpus, save_corpus
 from innovation.data.openalex import (fetch_field_works, fetch_source_works,
                                       find_source_id)
+from innovation.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
+                                s2_fetch_references)
 from innovation.eval.metrics import (aggregate_run, arxiv_population_filter,
                                      past_dup_flag, openalex_population_count,
                                      venue_population_filter)
@@ -31,6 +33,23 @@ def _llm(cfg):
 def cmd_fetch(cfg):
     cache = Path(cfg["data_dir"]) / "openalex_cache"
     corpus_cfg = cfg.get("corpus", {})
+    if corpus_cfg.get("mode") == "s2_venues":
+        # Top-venue corpus via Semantic Scholar (OpenAlex venue coverage is
+        # fragmented). Broad AI/ML coverage; citation floor bounds the size.
+        raw = []
+        for venue in corpus_cfg["venues"]:
+            batch = s2_bulk_venue_search(
+                venue, f"{cfg['year_from']}-{cfg['cutoff_year']}",
+                min_citations=corpus_cfg.get("min_citations", 0),
+                cache_dir=cache)
+            print(f"{venue}: {len(batch)} papers")
+            raw.extend(batch)
+        ids = sorted({p["paperId"] for p in raw if p.get("paperId")})
+        refs = s2_fetch_references(ids, cache_dir=cache)
+        papers, edges = build_s2_corpus(raw, refs)
+        save_corpus(papers, edges, cfg["data_dir"])
+        print(f"papers={len(papers)} edges={len(edges)}")
+        return
     if corpus_cfg.get("mode") == "field":
         # Small-field initial graph (spec §2): field query + year range +
         # citation floor. The recognized-venue list is an EVALUATION concept
@@ -116,6 +135,10 @@ def cmd_evaluate(cfg):
     # eval.recognized_min_citations.
     recognized = cfg.get("recognized_venues") or []
     aliases = [a.lower() for v in recognized for a in v.get("aliases", [])]
+    # Contamination guard: papers already in the initial graph can never be
+    # anticipation hits (the agent may simply have read them).
+    corpus_papers, _ = load_corpus(cfg["data_dir"])
+    corpus_titles = {t.strip().lower() for t in corpus_papers["title"] if t}
     verdicts, dup_flags = [], {}
     for nid, text in generated:
         verdicts.append(verify_idea(
@@ -124,7 +147,8 @@ def cmd_evaluate(cfg):
             cache_dir=run_dir / "search_cache",
             n_queries=cfg["eval"]["n_queries"], top_k=cfg["eval"]["top_k"],
             recognized_aliases=aliases or None,
-            recognized_min_citations=cfg["eval"].get("recognized_min_citations", 10)))
+            recognized_min_citations=cfg["eval"].get("recognized_min_citations", 10),
+            corpus_titles=corpus_titles))
         dup_flags[nid] = past_dup_flag(emb.encode([text])[0], corpus_vecs,
                                        ceiling=cfg["eval"]["dup_ceiling"])
     cache = Path(cfg["data_dir"]) / "openalex_cache"

@@ -108,6 +108,7 @@ class Verdict:
     excluded_pre_cutoff: list[dict] = field(default_factory=list)
     unknown_date: list[dict] = field(default_factory=list)
     excluded_unrecognized: list[dict] = field(default_factory=list)
+    excluded_in_corpus: list[dict] = field(default_factory=list)
 
 
 def is_recognized(cand: dict, recognized_aliases: list[str] | None,
@@ -127,7 +128,8 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 cutoff_date: str, mailto: str, cache_dir, http_get=None,
                 n_queries: int = 3, top_k: int = 5,
                 recognized_aliases: list[str] | None = None,
-                recognized_min_citations: int = 10) -> Verdict:
+                recognized_min_citations: int = 10,
+                corpus_titles: set[str] | None = None) -> Verdict:
     queries = extract_queries(llm, model=model, idea_text=idea_text, n=n_queries)
     candidates, seen_titles = [], set()
     for q in queries:
@@ -139,9 +141,15 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 seen_titles.add(title_key)
                 candidates.append(cand)
 
-    hit_paper, excluded, unknown, unrecognized = None, [], [], []
+    hit_paper, excluded, unknown, unrecognized, in_corpus = None, [], [], [], []
     for cand in candidates:
         if not judge_realization(llm, model=model, idea_text=idea_text, candidate=cand):
+            continue
+        if (corpus_titles is not None
+                and cand["title"].strip().lower() in corpus_titles):
+            # Contamination guard: the paper is IN the initial graph, so the
+            # agent could simply have read it — never an anticipation hit.
+            in_corpus.append(cand)
             continue
         if cand["pub_date"] and cand["pub_date"] > cutoff_date:
             if not is_recognized(cand, recognized_aliases, recognized_min_citations):
@@ -154,4 +162,5 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
             unknown.append(cand)  # unknown date realizations logged separately
     return Verdict(idea_id=idea_id, hit=hit_paper is not None,
                    paper=hit_paper, excluded_pre_cutoff=excluded,
-                   unknown_date=unknown, excluded_unrecognized=unrecognized)
+                   unknown_date=unknown, excluded_unrecognized=unrecognized,
+                   excluded_in_corpus=in_corpus)

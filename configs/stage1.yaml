@@ -1,14 +1,17 @@
-# Stage 1 (spec §2): small-field corpus, cutoff aligned to model training cutoff.
+# Stage 1 (spec §2): broad top-venue AI/ML corpus, cutoff aligned to model training cutoff.
 mailto: impanyu@gmail.com
 data_dir: data/stage1
-# Initial graph: one small, coherent subfield (spec §2) so innovation dynamics
-# are observable on a dense, bounded network. Evaluation still searches the
-# WHOLE literature (spec §3.6). corpus.mode "venues" instead downloads the
-# recognized_venues list itself (not used for Stage 1).
+# Initial corpus = broad AI/ML/DL/LLM coverage from core top venues via
+# Semantic Scholar (OpenAlex venue coverage is fragmented). Budget: <=10k
+# papers total; citation floor 50 sizes NeurIPS+ICLR 2016-2025 to ~10.5k raw,
+# under 10k after the abstract filter. (Older modes "field"/"venues" remain
+# available for ablations.)
 corpus:
-  mode: field
-  field_query: "federated learning"
-  min_citations: 10        # admission floor: citations > this (venue list is NOT a download filter)
+  mode: s2_venues
+  venues:
+    - "Neural Information Processing Systems"
+    - "International Conference on Learning Representations"
+  min_citations: 50
 # Recognition list — EVALUATION ONLY, never a download filter. A search-
 # verified realization counts as a hit iff it was published in one of these
 # venues (alias substring match against the search result's venue string) OR
@@ -33,7 +36,8 @@ recognized_venues:
   - {name: "Conference on Language Modeling", aliases: ["conference on language modeling", "colm"]}
   - {name: "Reinforcement Learning Conference", aliases: ["reinforcement learning conference"]}
 year_from: 2016
-cutoff_year: 2024        # last full year in the graph
+cutoff_year: 2025        # last year in the graph (2016-2025 per design); in-corpus
+                         # search hits are excluded from anticipation (contamination guard)
 cutoff_date: "2025-01-01"  # anticipation boundary = agent model training cutoff
 models:
   summarizer: claude-haiku-4-5-20251001

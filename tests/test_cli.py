@@ -312,3 +312,27 @@ def test_all_experiment_configs_load_and_scopes_build():
             build_scope(spec, emb)  # must not raise
         if f.stem.startswith("core-"):
             assert len(run["agents"]) == 10
+
+
+def test_cmd_fetch_s2_venues_mode(tmp_path, monkeypatch):
+    """corpus.mode=s2_venues builds the corpus from Semantic Scholar."""
+    import innovation.cli as cli
+
+    cfg = {"data_dir": str(tmp_path / "data"), "mailto": "t@t",
+           "year_from": 2016, "cutoff_year": 2025,
+           "corpus": {"mode": "s2_venues", "venues": ["NeurIPS", "ICLR"],
+                      "min_citations": 50}}
+    raws = {"NeurIPS": [{"paperId": "p1", "title": "A", "abstract": "aa",
+                         "year": 2020, "venue": "NeurIPS", "citationCount": 60}],
+            "ICLR": [{"paperId": "p2", "title": "B", "abstract": "bb",
+                      "year": 2021, "venue": "ICLR", "citationCount": 70}]}
+
+    monkeypatch.setattr(cli, "s2_bulk_venue_search",
+                        lambda venue, yr, **kw: raws[venue])
+    monkeypatch.setattr(cli, "s2_fetch_references",
+                        lambda ids, **kw: {"p2": ["p1"]})
+    cli.cmd_fetch(cfg)
+    papers = pd.read_parquet(Path(cfg["data_dir"]) / "papers.parquet")
+    edges = pd.read_parquet(Path(cfg["data_dir"]) / "edges.parquet")
+    assert sorted(papers["paper_id"]) == ["p1", "p2"]
+    assert [(r.src, r.dst) for r in edges.itertuples()] == [("p2", "p1")]

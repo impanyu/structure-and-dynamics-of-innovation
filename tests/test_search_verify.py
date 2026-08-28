@@ -151,3 +151,20 @@ def test_verify_idea_hit_requires_recognition(tmp_path):
                     recognized_min_citations=10)
     assert v.hit and v.paper["paper_id"] == "top"
     assert [p["paper_id"] for p in v.excluded_unrecognized] == ["lowq"]
+
+
+def test_verify_idea_excludes_in_corpus_titles(tmp_path):
+    payload = s2_payload([{"id": "known", "title": "A Known Graph Paper",
+                           "date": "2025-06-01"}])
+
+    def fake_get(url, params=None):
+        return FakeResponse(payload if "semanticscholar" in url
+                            else {"results": [], "meta": {}})
+
+    llm = FakeLLM(responses=["q", "YES"])
+    v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
+                    cutoff_date="2025-01-01", mailto="a@b.c",
+                    cache_dir=tmp_path, http_get=fake_get, n_queries=1,
+                    corpus_titles={"a known graph paper"})
+    assert not v.hit
+    assert [p["paper_id"] for p in v.excluded_in_corpus] == ["known"]
