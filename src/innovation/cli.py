@@ -32,25 +32,19 @@ def cmd_fetch(cfg):
     cache = Path(cfg["data_dir"]) / "openalex_cache"
     corpus_cfg = cfg.get("corpus", {})
     if corpus_cfg.get("mode") == "field":
-        # Small-field initial graph (spec §2). Admission rule: within the
-        # field query and year range, a paper qualifies if it appeared in the
-        # top-venue list OR its citations exceed the floor. OpenAlex cannot OR
-        # across attributes, so we union two queries; build_corpus dedupes.
+        # Small-field initial graph (spec §2): field query + year range +
+        # citation floor. The recognized-venue list is an EVALUATION concept
+        # (hit recognition + recall denominator), not a download filter.
         query = corpus_cfg["field_query"]
-        source_ids = [find_source_id(v, mailto=cfg["mailto"], cache_dir=cache)
-                      for v in cfg["venues"]]
-        in_venues = fetch_field_works(
-            query, cfg["year_from"], cfg["cutoff_year"],
-            mailto=cfg["mailto"], cache_dir=cache, source_ids=source_ids)
-        min_citations = corpus_cfg.get("min_citations", 0)
-        high_cited = fetch_field_works(
+        works = fetch_field_works(
             query, cfg["year_from"], cfg["cutoff_year"],
             mailto=cfg["mailto"], cache_dir=cache,
-            min_citations=min_citations) if min_citations > 0 else []
-        works_by_venue = {f"field:{query}": in_venues + high_cited}
+            min_citations=corpus_cfg.get("min_citations", 0))
+        works_by_venue = {f"field:{query}": works}
     else:
         works_by_venue = {}
-        for name in cfg["venues"]:
+        for venue in cfg["recognized_venues"]:
+            name = venue["name"]
             sid = find_source_id(name, mailto=cfg["mailto"], cache_dir=cache)
             print(f"{name} -> {sid}")
             works_by_venue[name] = fetch_source_works(
@@ -117,18 +111,25 @@ def cmd_evaluate(cfg):
                  if e["action"] == "generate" and "node_id" in e.get("result", {})]
     corpus_vecs = np.stack(list(vec_by_id.values()))
     llm = _llm(cfg)
+    # Recognition rule (evaluation only): a realizing paper counts iff its
+    # venue matches the recognized-venue alias list OR its citations clear
+    # eval.recognized_min_citations.
+    recognized = cfg.get("recognized_venues") or []
+    aliases = [a.lower() for v in recognized for a in v.get("aliases", [])]
     verdicts, dup_flags = [], {}
     for nid, text in generated:
         verdicts.append(verify_idea(
             llm, model=cfg["models"]["judge"], idea_id=nid, idea_text=text,
             cutoff_date=cfg["cutoff_date"], mailto=cfg["mailto"],
             cache_dir=run_dir / "search_cache",
-            n_queries=cfg["eval"]["n_queries"], top_k=cfg["eval"]["top_k"]))
+            n_queries=cfg["eval"]["n_queries"], top_k=cfg["eval"]["top_k"],
+            recognized_aliases=aliases or None,
+            recognized_min_citations=cfg["eval"].get("recognized_min_citations", 10)))
         dup_flags[nid] = past_dup_flag(emb.encode([text])[0], corpus_vecs,
                                        ceiling=cfg["eval"]["dup_ceiling"])
     cache = Path(cfg["data_dir"]) / "openalex_cache"
-    source_ids = [find_source_id(v, mailto=cfg["mailto"], cache_dir=cache)
-                  for v in cfg["venues"]]
+    source_ids = [find_source_id(v["name"], mailto=cfg["mailto"], cache_dir=cache)
+                  for v in recognized]
     # Hits require pub_date strictly > cutoff_date, but from_publication_date
     # is inclusive, so start the population window one day after the cutoff.
     from_date = (datetime.date.fromisoformat(cfg["cutoff_date"])

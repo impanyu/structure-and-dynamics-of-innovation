@@ -39,7 +39,8 @@ def test_s2_search_normalizes_and_caches(tmp_path):
 
     hits = s2_search("q", cache_dir=tmp_path, http_get=fake_get)
     assert hits[0] == {"paper_id": "p1", "title": "T", "abstract": "",
-                       "pub_date": "2025-06-01", "source_api": "s2"}
+                       "pub_date": "2025-06-01", "venue": "", "citations": 0,
+                       "source_api": "s2"}
     s2_search("q", cache_dir=tmp_path, http_get=fake_get)
     assert len(calls) == 1  # cached
     cache_files = list(tmp_path.glob("*.json"))
@@ -116,3 +117,37 @@ def test_verify_idea_keeps_first_of_multiple_post_cutoff_hits(tmp_path):
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
     assert v.hit and v.paper["paper_id"] == "n1"
+
+
+def test_is_recognized_venue_alias_or_citations():
+    from innovation.eval.search_verify import is_recognized
+    aliases = ["neural information processing", "iclr"]
+    assert is_recognized({"venue": "Advances in Neural Information Processing Systems",
+                          "citations": 0}, aliases, 10)
+    assert is_recognized({"venue": "Workshop on X", "citations": 25}, aliases, 10)
+    assert not is_recognized({"venue": "Obscure Journal", "citations": 3}, aliases, 10)
+    assert is_recognized({"venue": "", "citations": 0}, None, 10)  # filter off
+
+
+def test_verify_idea_hit_requires_recognition(tmp_path):
+    payload = {"data": [
+        {"paperId": "lowq", "title": "Fringe paper", "abstract": "a",
+         "publicationDate": "2025-06-01", "venue": "Obscure Journal",
+         "citationCount": 2},
+        {"paperId": "top", "title": "ICLR paper", "abstract": "a",
+         "publicationDate": "2025-07-01",
+         "venue": "International Conference on Learning Representations",
+         "citationCount": 0}]}
+
+    def fake_get(url, params=None):
+        return FakeResponse(payload if "semanticscholar" in url
+                            else {"results": [], "meta": {}})
+
+    llm = FakeLLM(responses=["q", "YES", "YES"])
+    v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
+                    cutoff_date="2025-01-01", mailto="a@b.c",
+                    cache_dir=tmp_path, http_get=fake_get, n_queries=1,
+                    recognized_aliases=["international conference on learning representations"],
+                    recognized_min_citations=10)
+    assert v.hit and v.paper["paper_id"] == "top"
+    assert [p["paper_id"] for p in v.excluded_unrecognized] == ["lowq"]

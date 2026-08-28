@@ -27,12 +27,12 @@ pretraining recall; the reference is the real ~2025–2026 literature.
 
 - **Stage 1 (pipeline validation + first dynamics study):** the initial graph
   is ONE small, coherent subfield, up to cutoff T (~early 2025). **Admission
-  rule:** within the field keyword query and year range, a paper enters the
-  graph iff it was published in the top-venue list OR its citation count
-  exceeds a configured floor (implemented as the union of two OpenAlex
-  queries; deduped downstream). A compact, dense field makes the innovation
-  dynamics observable; evaluation still searches the WHOLE literature (§3.6),
-  so agents get credit wherever their ideas were realized. All code paths, metrics, and at least one full experiment run
+  rule:** field keyword query + year range + citation floor. The recognized
+  top-venue list is NOT a download filter — it belongs to evaluation (§3.6),
+  where it decides which realizing papers count as recognized innovation. A
+  compact, dense field makes the innovation dynamics observable; evaluation
+  still searches the WHOLE literature (§3.6), so agents get credit wherever
+  their ideas were realized — provided the realizing paper is recognized. All code paths, metrics, and at least one full experiment run
   end-to-end.
 - **Stage 2 (full study):** add ICML, ACL, CVPR, AAAI (and similar AI/ML top
   venues), ~50–100k papers. Same code, bigger config.
@@ -162,6 +162,13 @@ into the repo.
     pretraining recall. Matches to papers published before the cutoff
     (rediscoveries) score zero — they are logged with an `excluded_pre_cutoff`
     flag for later inspection, but never counted in any metric.
+  - **Recognition filter:** the realizing paper must itself be recognized
+    innovation — published in the recognized top-venue list (CCF-A AI venues +
+    KDD + ICLR/COLM/RLC; alias substring match on the search result's venue
+    string) OR carrying citations ≥ a configured impact floor. Realizations
+    failing this are logged as `excluded_unrecognized`, never scored. The
+    recognized-venue list is an evaluation concept only — it is NOT a corpus
+    download filter (corpus admission is field query + year + citation floor).
 - **Precision:** fraction of generated ideas judged realized by a post-cutoff
   paper.
 - **Recall:** (number of *distinct* realized papers hit across all generated

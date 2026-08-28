@@ -59,11 +59,14 @@ def _cached_get(url: str, params: dict, cache_dir: Path, http_get) -> dict:
 def s2_search(query: str, *, cache_dir, http_get=None) -> list[dict]:
     http_get = http_get or requests.get
     payload = _cached_get(S2_BASE, {"query": query, "limit": 10,
-                                    "fields": "title,abstract,publicationDate"},
+                                    "fields": "title,abstract,publicationDate,"
+                                              "venue,citationCount"},
                           Path(cache_dir), http_get)
     return [{"paper_id": p.get("paperId", ""), "title": p.get("title") or "",
              "abstract": p.get("abstract") or "",
-             "pub_date": p.get("publicationDate") or "", "source_api": "s2"}
+             "pub_date": p.get("publicationDate") or "",
+             "venue": p.get("venue") or "",
+             "citations": p.get("citationCount") or 0, "source_api": "s2"}
             for p in payload.get("data", [])]
 
 
@@ -74,10 +77,17 @@ def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> lis
     payload = _cached_get(OPENALEX_BASE,
                           {"search": query, "per-page": 10, "mailto": mailto},
                           Path(cache_dir), http_get)
+
+    def venue_of(w):
+        loc = w.get("primary_location") or {}
+        return ((loc.get("source") or {}).get("display_name")) or ""
+
     return [{"paper_id": (w.get("id") or "").rsplit("/", 1)[-1],
              "title": w.get("title") or "",
              "abstract": reconstruct_abstract(w.get("abstract_inverted_index")),
-             "pub_date": w.get("publication_date") or "", "source_api": "openalex"}
+             "pub_date": w.get("publication_date") or "",
+             "venue": venue_of(w),
+             "citations": w.get("cited_by_count") or 0, "source_api": "openalex"}
             for w in payload.get("results", [])]
 
 
@@ -97,11 +107,27 @@ class Verdict:
     paper: dict | None
     excluded_pre_cutoff: list[dict] = field(default_factory=list)
     unknown_date: list[dict] = field(default_factory=list)
+    excluded_unrecognized: list[dict] = field(default_factory=list)
+
+
+def is_recognized(cand: dict, recognized_aliases: list[str] | None,
+                  min_citations: int) -> bool:
+    """A realizing paper counts as recognized innovation iff its venue matches
+    the recognized top-venue alias list OR its citation count clears the
+    impact floor. With no alias list configured, everything is recognized."""
+    if recognized_aliases is None:
+        return True
+    venue = (cand.get("venue") or "").lower()
+    if venue and any(alias in venue for alias in recognized_aliases):
+        return True
+    return (cand.get("citations") or 0) >= min_citations
 
 
 def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 cutoff_date: str, mailto: str, cache_dir, http_get=None,
-                n_queries: int = 3, top_k: int = 5) -> Verdict:
+                n_queries: int = 3, top_k: int = 5,
+                recognized_aliases: list[str] | None = None,
+                recognized_min_citations: int = 10) -> Verdict:
     queries = extract_queries(llm, model=model, idea_text=idea_text, n=n_queries)
     candidates, seen_titles = [], set()
     for q in queries:
@@ -113,16 +139,19 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 seen_titles.add(title_key)
                 candidates.append(cand)
 
-    hit_paper, excluded, unknown = None, [], []
+    hit_paper, excluded, unknown, unrecognized = None, [], [], []
     for cand in candidates:
         if not judge_realization(llm, model=model, idea_text=idea_text, candidate=cand):
             continue
         if cand["pub_date"] and cand["pub_date"] > cutoff_date:
-            if hit_paper is None:
-                hit_paper = cand  # first post-cutoff realization = the hit
+            if not is_recognized(cand, recognized_aliases, recognized_min_citations):
+                unrecognized.append(cand)  # realized, but not by a recognized paper
+            elif hit_paper is None:
+                hit_paper = cand  # first recognized post-cutoff realization
         elif cand["pub_date"]:
             excluded.append(cand)  # logged, NEVER scored (spec §3.6)
         else:
             unknown.append(cand)  # unknown date realizations logged separately
     return Verdict(idea_id=idea_id, hit=hit_paper is not None,
-                   paper=hit_paper, excluded_pre_cutoff=excluded, unknown_date=unknown)
+                   paper=hit_paper, excluded_pre_cutoff=excluded,
+                   unknown_date=unknown, excluded_unrecognized=unrecognized)

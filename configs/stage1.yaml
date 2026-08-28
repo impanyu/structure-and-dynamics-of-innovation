@@ -1,41 +1,34 @@
-# Stage 1 (spec §2): NeurIPS + ICLR slice, cutoff aligned to model training cutoff.
+# Stage 1 (spec §2): small-field corpus, cutoff aligned to model training cutoff.
 mailto: impanyu@gmail.com
 data_dir: data/stage1
 # Initial graph: one small, coherent subfield (spec §2) so innovation dynamics
 # are observable on a dense, bounded network. Evaluation still searches the
-# WHOLE literature (spec §3.6). Switch corpus.mode to "venues" to use the venue
-# list below instead.
+# WHOLE literature (spec §3.6). corpus.mode "venues" instead downloads the
+# recognized_venues list itself (not used for Stage 1).
 corpus:
   mode: field
   field_query: "federated learning"
-  min_citations: 10        # admission: in top-venue list OR citations > this floor
-# Venue list: used for the field-corpus venue arm and the recall-denominator
-# population count. Names audited 2026-08 to resolve to CONSOLIDATED OpenAlex
-# sources (top search hit). Known gaps — OpenAlex fragments ACL/EMNLP/CVPR/ICCV
-# into per-year proceedings and lacks UAI/COLM/RLC entirely; Semantic Scholar
-# fallback is the spec §5 mitigation if the venue arm needs to be complete.
-# Composition follows the CCF recommended list (2022, AI category) for the
-# AI/ML/DL/RL/LLM scope: CCF-A (AAAI, NeurIPS, ACL, CVPR, ICCV, ICML, IJCAI,
-# KDD) + relevant CCF-B (EMNLP, NAACL, ECCV, UAI, AAMAS, COLT) + essential
-# venues CCF omits (ICLR, AISTATS, COLM, RLC, CoRL). Names below are the
-# OpenAlex-resolvable subset; UAI/COLT/COLM/RLC have no OpenAlex source and
-# ACL/EMNLP/CVPR/ICCV resolve only to per-year fragments (S2 fallback later).
-venues:
-  - "AAAI Conference on Artificial Intelligence"
-  - "Neural Information Processing Systems"
-  - "Annual Meeting of the Association for Computational Linguistics"
-  - "Computer Vision and Pattern Recognition"
-  - "IEEE International Conference on Computer Vision"
-  - "International Conference on Machine Learning"
-  - "International Joint Conference on Artificial Intelligence"
-  - "Knowledge Discovery and Data Mining"
-  - "Conference on Empirical Methods in Natural Language Processing"
-  - "North American Chapter of the Association for Computational Linguistics"
-  - "European Conference on Computer Vision"
-  - "International Conference on Autonomous Agents and Multiagent Systems"
-  - "International Conference on Learning Representations"
-  - "International Conference on Artificial Intelligence and Statistics"
-  - "Conference on Robot Learning"
+  min_citations: 10        # admission floor: citations > this (venue list is NOT a download filter)
+# Recognition list — EVALUATION ONLY, never a download filter. A search-
+# verified realization counts as a hit iff it was published in one of these
+# venues (alias substring match against the search result's venue string) OR
+# its citations reach eval.recognized_min_citations. Also the recall
+# denominator. Composition: CCF-A (AI) + KDD, plus venues CCF omits but the
+# field recognizes as top (ICLR, COLM, RLC). `name` is the OpenAlex-resolvable
+# form used for the denominator (COLM/RLC lack OpenAlex sources; their alias
+# still recognizes hits, they just don't enter the denominator).
+recognized_venues:
+  - {name: "AAAI Conference on Artificial Intelligence", aliases: ["aaai"]}
+  - {name: "Neural Information Processing Systems", aliases: ["neurips", "neural information processing"]}
+  - {name: "Annual Meeting of the Association for Computational Linguistics", aliases: ["annual meeting of the association for computational linguistics"]}
+  - {name: "Computer Vision and Pattern Recognition", aliases: ["computer vision and pattern recognition", "cvpr"]}
+  - {name: "IEEE International Conference on Computer Vision", aliases: ["international conference on computer vision", "iccv"]}
+  - {name: "International Conference on Machine Learning", aliases: ["international conference on machine learning", "icml"]}
+  - {name: "International Joint Conference on Artificial Intelligence", aliases: ["international joint conference on artificial intelligence", "ijcai"]}
+  - {name: "Knowledge Discovery and Data Mining", aliases: ["knowledge discovery and data mining", "kdd"]}
+  - {name: "International Conference on Learning Representations", aliases: ["international conference on learning representations", "iclr"]}
+  - {name: "Conference on Language Modeling", aliases: ["conference on language modeling", "colm"]}
+  - {name: "Reinforcement Learning Conference", aliases: ["reinforcement learning conference"]}
 year_from: 2016
 cutoff_year: 2024        # last full year in the graph
 cutoff_date: "2025-01-01"  # anticipation boundary = agent model training cutoff
@@ -49,6 +42,7 @@ eval:
   top_k: 5
   dup_ceiling: 0.95
   arxiv_min_citations: 10
+  recognized_min_citations: 10  # OR-arm of hit recognition: impact floor for unlisted venues
   arxiv_source_name: arXiv
 run:
   run_id: stage1-pilot

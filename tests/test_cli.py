@@ -21,13 +21,13 @@ def test_load_config_reads_stage1_yaml():
     assert cfg["cutoff_date"] == "2025-01-01"
     assert cfg["models"]["summarizer"] == "claude-haiku-4-5-20251001"
 
-    # Venues should be names (list of str, not source IDs starting with S + digits)
-    venues = cfg["venues"]
-    assert isinstance(venues, list)
-    for v in venues:
-        assert isinstance(v, str)
-        # Should be human-readable names, not S123456 style IDs
-        assert not (v.startswith("S") and len(v) > 1 and v[1:].split()[0].isdigit())
+    # Recognition list: evaluation-only concept, entries carry name + aliases
+    recognized = cfg["recognized_venues"]
+    assert isinstance(recognized, list) and len(recognized) >= 8
+    for v in recognized:
+        assert isinstance(v["name"], str)
+        assert isinstance(v["aliases"], list) and v["aliases"]
+    assert cfg["eval"]["recognized_min_citations"] == 10
 
 
 def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
@@ -67,7 +67,7 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
         "embedding_model": "BAAI/bge-small-en-v1.5",
         "eval": {"n_queries": 1, "top_k": 3, "dup_ceiling": 0.95, "arxiv_min_citations": 10},
         "models": {"summarizer": "m", "agent": "m", "judge": "m"},
-        "venues": ["V"],
+        "recognized_venues": [{"name": "V", "aliases": ["v"]}],
         "run": {
             "run_id": "t1",
             "seed": 0,
@@ -173,7 +173,7 @@ def test_cmd_run_refuses_to_overwrite_existing_run(tmp_path, monkeypatch):
         "embedding_model": "BAAI/bge-small-en-v1.5",
         "eval": {"n_queries": 1, "top_k": 3, "dup_ceiling": 0.95, "arxiv_min_citations": 10},
         "models": {"summarizer": "m", "agent": "m", "judge": "m"},
-        "venues": ["V"],
+        "recognized_venues": [{"name": "V", "aliases": ["v"]}],
         "run": {
             "run_id": "t2",
             "seed": 0,
@@ -202,7 +202,8 @@ def test_cmd_fetch_and_summarize_wiring(tmp_path, monkeypatch):
     import innovation.cli as cli
 
     cfg = {"data_dir": str(tmp_path / "data"), "mailto": "t@t",
-           "venues": ["VenueA"], "year_from": 2020, "cutoff_year": 2024,
+           "recognized_venues": [{"name": "VenueA", "aliases": ["venuea"]}],
+           "year_from": 2020, "cutoff_year": 2024,
            "models": {"summarizer": "m"}, "embedding_model": "fake"}
 
     works = [{"id": f"https://openalex.org/W{i}", "title": f"T{i}",
@@ -224,38 +225,28 @@ def test_cmd_fetch_and_summarize_wiring(tmp_path, monkeypatch):
 
 
 def test_cmd_fetch_field_mode(tmp_path, monkeypatch):
-    """corpus.mode=field routes through fetch_field_works."""
+    """corpus.mode=field routes through fetch_field_works (citation floor only)."""
     import innovation.cli as cli
 
     cfg = {"data_dir": str(tmp_path / "data"), "mailto": "t@t",
-           "year_from": 2016, "cutoff_year": 2024, "venues": ["V1", "V2"],
+           "year_from": 2016, "cutoff_year": 2024,
            "corpus": {"mode": "field", "field_query": "federated learning",
                       "min_citations": 5}}
 
-    def work(wid):
-        return {"id": f"https://openalex.org/{wid}", "title": wid,
-                "publication_year": 2020,
-                "abstract_inverted_index": {"fl": [0]}, "referenced_works": []}
-
+    works = [{"id": "https://openalex.org/W1", "title": "T1",
+              "publication_year": 2020,
+              "abstract_inverted_index": {"fl": [0]}, "referenced_works": []}]
     calls = []
 
     def fake_field(query, y0, y1, **kw):
-        calls.append({"query": query, "source_ids": kw.get("source_ids"),
-                      "min_citations": kw.get("min_citations", 0)})
-        # venue-scoped call returns W1; citation-scoped returns W1 (dup) + W2
-        return [work("W1")] if kw.get("source_ids") else [work("W1"), work("W2")]
+        calls.append({"query": query, "min_citations": kw.get("min_citations", 0)})
+        return works
 
-    monkeypatch.setattr(cli, "find_source_id", lambda name, **kw: f"S_{name}")
     monkeypatch.setattr(cli, "fetch_field_works", fake_field)
     cli.cmd_fetch(cfg)
-    # Admission rule = (in venue list) OR (citations > floor): two calls, unioned
-    assert calls == [
-        {"query": "federated learning", "source_ids": ["S_V1", "S_V2"],
-         "min_citations": 0},
-        {"query": "federated learning", "source_ids": None, "min_citations": 5},
-    ]
+    # The recognized-venue list must NOT participate in downloading.
+    assert calls == [{"query": "federated learning", "min_citations": 5}]
     papers = pd.read_parquet(Path(cfg["data_dir"]) / "papers.parquet")
-    assert sorted(papers["paper_id"]) == ["W1", "W2"]  # W1 deduped
     assert papers.iloc[0]["venue"] == "field:federated learning"
 
 
