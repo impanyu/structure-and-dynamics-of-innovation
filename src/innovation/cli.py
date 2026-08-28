@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from innovation.config import load_config
+from innovation.config import load_config, load_env
 from innovation.data.corpus import build_corpus, load_corpus, save_corpus
 from innovation.data.openalex import (fetch_field_works, fetch_source_works,
                                       find_source_id)
@@ -177,6 +177,7 @@ def main():
     parser.add_argument("--run-id", default=None,
                         help="override run.run_id (for multi-seed sweeps)")
     args = parser.parse_args()
+    load_env()  # API keys from ./.env (shell env takes precedence)
     cfg = load_config(args.config)
     if args.command == "run":
         cmd_run(cfg, seed=args.seed, run_id=args.run_id)

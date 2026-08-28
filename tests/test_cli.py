@@ -321,3 +321,24 @@ def test_cmd_fetch_s2_venues_mode(tmp_path, monkeypatch):
     edges = pd.read_parquet(Path(cfg["data_dir"]) / "edges.parquet")
     assert sorted(papers["paper_id"]) == ["p1", "p2"]
     assert [(r.src, r.dst) for r in edges.itertuples()] == [("p2", "p1")]
+
+
+def test_load_env_sets_missing_vars_only(tmp_path, monkeypatch):
+    from innovation.config import load_env
+    import os
+
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# comment line\n"
+        "OPENAI_API_KEY=sk-test-123\n"
+        "ALREADY_SET=from-file\n"
+        "\n"
+        "QUOTED=\"q-value\"\n")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("ALREADY_SET", "from-shell")
+    load_env(env_file)
+    assert os.environ["OPENAI_API_KEY"] == "sk-test-123"
+    assert os.environ["ALREADY_SET"] == "from-shell"  # shell wins over file
+    assert os.environ["QUOTED"] == "q-value"
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("QUOTED", raising=False)
