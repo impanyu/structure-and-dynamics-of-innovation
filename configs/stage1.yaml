@@ -37,6 +37,9 @@ recognized_venues:
   - {name: "International ACM SIGIR Conference on Research and Development in Information Retrieval", aliases: ["sigir", "research and development in information retrieval"]}
   - {name: "The Web Conference", aliases: ["the web conference", "world wide web conference", "international conference on world wide web"]}
   - {name: "ACM Multimedia", aliases: ["acm multimedia", "acm international conference on multimedia"]}
+  - {name: "ACM SIGMOD International Conference on Management of Data", aliases: ["sigmod"]}
+  - {name: "IEEE International Conference on Data Engineering", aliases: ["international conference on data engineering", "icde"]}
+  - {name: "Very Large Data Bases", aliases: ["very large data bases", "vldb"]}
   # Beyond CCF (founded 2024, LLM/RL top venues):
   - {name: "Conference on Language Modeling", aliases: ["conference on language modeling", "colm"]}
   - {name: "Reinforcement Learning Conference", aliases: ["reinforcement learning conference"]}
