@@ -144,10 +144,14 @@ into the repo.
 
 ### 3.6 Evaluation (`eval/`)
 
-- **Cutoff choice:** T is aligned with the agent LLM's training cutoff (~early
-  2025). Rationale: for papers published before the model's cutoff, a "hit" may
-  be pretraining recall rather than innovation; only post-cutoff hits exclude
-  memorization.
+- **Cutoff choice:** T = the agent LLM's training-cutoff MONTH. The initial
+  graph contains only papers published before that month; anticipation hits
+  require publication after it (the cutoff month itself is excluded on both
+  sides). Concretely: claude-sonnet-5's training data cutoff is Jan 2026, so
+  the graph holds 2016–2025 papers and hits require pub_date ≥ Feb 2026.
+  Rationale: for papers published before the model's cutoff, a "hit" may be
+  pretraining recall rather than innovation; only post-cutoff hits exclude
+  memorization. The validation window (Feb 2026 → present) grows over time.
 - **Search-verified realization (the sole evaluation channel).** No held-out
   corpus is downloaded or embedded; each generated idea is verified against the
   live literature indexes:

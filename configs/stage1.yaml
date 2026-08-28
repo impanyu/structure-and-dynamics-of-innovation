@@ -36,9 +36,14 @@ recognized_venues:
   - {name: "Conference on Language Modeling", aliases: ["conference on language modeling", "colm"]}
   - {name: "Reinforcement Learning Conference", aliases: ["reinforcement learning conference"]}
 year_from: 2016
-cutoff_year: 2025        # last year in the graph (2016-2025 per design); in-corpus
-                         # search hits are excluded from anticipation (contamination guard)
-cutoff_date: "2025-01-01"  # anticipation boundary = agent model training cutoff
+# Temporal design: T = agent model's training cutoff month. claude-sonnet-5
+# training data cutoff = Jan 2026 (platform.claude.com models overview,
+# checked 2026-08). Initial graph = papers published BEFORE that month
+# (2016-2025); anticipation hits = papers published AFTER it (>= Feb 2026,
+# the cutoff month itself excluded). In-corpus search hits are additionally
+# excluded (contamination guard).
+cutoff_year: 2025          # last year in the graph
+cutoff_date: "2026-01-31"  # hits require pub_date > this (i.e. Feb 2026+)
 models:
   summarizer: claude-haiku-4-5-20251001
   agent: claude-sonnet-5

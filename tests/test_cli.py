@@ -18,7 +18,7 @@ def test_load_config_reads_stage1_yaml():
     """Load stage1.yaml and verify key fields."""
     cfg = load_config("configs/stage1.yaml")
     assert isinstance(cfg, dict)
-    assert cfg["cutoff_date"] == "2025-01-01"
+    assert cfg["cutoff_date"] == "2026-01-31"
     assert cfg["models"]["summarizer"] == "claude-haiku-4-5-20251001"
 
     # Recognition list: evaluation-only concept, entries carry name + aliases
