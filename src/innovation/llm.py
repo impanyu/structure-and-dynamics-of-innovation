@@ -57,3 +57,45 @@ class AnthropicLLM:
             model=model, system=system, max_tokens=max_tokens,
             messages=[{"role": "user", "content": user}])
         return msg.content[0].text
+
+
+class OpenAILLM:
+    """Real OpenAI client. Needs OPENAI_API_KEY in the environment."""
+
+    def __init__(self):
+        import openai
+
+        self.client = openai.OpenAI()
+
+    def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
+        resp = self.client.responses.create(
+            model=model, instructions=system, input=user,
+            max_output_tokens=max_tokens)
+        return resp.output_text
+
+
+class RoutedLLM:
+    """Dispatch by model id: 'openai:<model>' -> OpenAI, anything else ->
+    Anthropic. Clients are constructed lazily so only the providers actually
+    used need credentials. Cache keys (CachedLLM) include the full prefixed
+    model string, so providers never collide in the cache."""
+
+    def __init__(self, anthropic_factory=AnthropicLLM, openai_factory=None):
+        self._anthropic_factory = anthropic_factory
+        self._openai_factory = openai_factory or OpenAILLM
+        self._clients: dict[str, LLM] = {}
+
+    def _client(self, provider: str) -> LLM:
+        if provider not in self._clients:
+            factory = (self._openai_factory if provider == "openai"
+                       else self._anthropic_factory)
+            self._clients[provider] = factory()
+        return self._clients[provider]
+
+    def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
+        if model.startswith("openai:"):
+            return self._client("openai").complete(
+                model=model.split(":", 1)[1], system=system, user=user,
+                max_tokens=max_tokens)
+        return self._client("anthropic").complete(
+            model=model, system=system, user=user, max_tokens=max_tokens)

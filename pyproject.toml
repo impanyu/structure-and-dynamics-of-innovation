@@ -11,6 +11,7 @@ dependencies = [
     "pyyaml>=6",
     "anthropic>=0.40",
     "sentence-transformers>=3",
+    "openai>=3.5.0",
 ]
 
 [dependency-groups]

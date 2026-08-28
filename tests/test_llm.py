@@ -19,3 +19,24 @@ def test_cached_llm_hits_disk_cache(tmp_path):
     # A different prompt is a cache miss.
     llm.complete(model="m", system="s", user="other")
     assert len(inner.calls) == 2
+
+
+def test_routed_llm_dispatches_by_prefix():
+    from innovation.llm import RoutedLLM
+
+    calls = {}
+
+    class Fake:
+        def __init__(self, name):
+            self.name = name
+
+        def complete(self, *, model, system, user, max_tokens=1024):
+            calls[self.name] = model
+            return self.name
+
+    router = RoutedLLM(anthropic_factory=lambda: Fake("anthropic"),
+                       openai_factory=lambda: Fake("openai"))
+    assert router.complete(model="claude-sonnet-5", system="s", user="u") == "anthropic"
+    assert calls["anthropic"] == "claude-sonnet-5"
+    assert router.complete(model="openai:gpt-5", system="s", user="u") == "openai"
+    assert calls["openai"] == "gpt-5"  # prefix stripped for the provider call

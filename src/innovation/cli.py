@@ -22,13 +22,13 @@ from innovation.experiments.events import load_events
 from innovation.experiments.runner import RunConfig, run_simulation
 from innovation.ideas.embed import Embedder, load_embeddings, save_embeddings
 from innovation.ideas.summarize import load_ideas, save_ideas, summarize_corpus
-from innovation.llm import AnthropicLLM, CachedLLM
+from innovation.llm import CachedLLM, RoutedLLM
 from innovation.network.graph import IdeaGraph
 from innovation.network.index import VectorIndex
 
 
 def _llm(cfg):
-    return CachedLLM(AnthropicLLM(), Path(cfg["data_dir"]) / "llm_cache")
+    return CachedLLM(RoutedLLM(), Path(cfg["data_dir"]) / "llm_cache")
 
 
 def cmd_fetch(cfg):
@@ -51,7 +51,8 @@ def cmd_fetch(cfg):
         print(f"papers={len(papers)} s2_edges={len(edges)}")
         # S2 reference coverage is incomplete for these venues; union in
         # OpenAlex references matched by MAG/DOI/arXiv id.
-        edges = augment_edges(papers, edges, cache_dir=cache, mailto=cfg["mailto"])
+        edges = augment_edges(papers, edges, cache_dir=cache,
+                              mailto=cfg["mailto"], delay=2.5)
         save_corpus(papers, edges, cfg["data_dir"])
         print(f"papers={len(papers)} edges={len(edges)} (after OpenAlex augmentation)")
         return
