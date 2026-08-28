@@ -18,13 +18,19 @@ S2_BATCH = "https://api.semanticscholar.org/graph/v1/paper/batch"
 PAPER_FIELDS = "paperId,title,abstract,year,venue,citationCount"
 
 
-def _cached_call(cache_file: Path, do_call, delay: float):
+RETRYABLE = {429, 500, 502, 503, 504}
+
+
+def _cached_call(cache_file: Path, do_call, delay: float, attempts: int = 12):
     if cache_file.exists():
         return json.loads(cache_file.read_text())
-    for attempt in range(6):
+    for attempt in range(attempts):
         resp = do_call()
-        if resp.status_code == 429:
-            time.sleep(max(delay, 1.0) * (2 ** attempt))
+        if resp.status_code in RETRYABLE:
+            # Unauthenticated S2 shares a heavily-loaded pool; back off hard
+            # (capped at 90s) and keep trying — every page is cached, so a
+            # crashed run resumes where it left off.
+            time.sleep(min(90.0, max(delay, 2.0) * (2 ** attempt)))
             continue
         resp.raise_for_status()
         payload = resp.json()
@@ -59,7 +65,7 @@ def s2_bulk_venue_search(venue: str, year_range: str, *, min_citations: int,
 
 
 def s2_fetch_references(paper_ids: list[str], *, cache_dir, http_post=None,
-                        delay: float = 1.1, batch_size: int = 500) -> dict:
+                        delay: float = 4.0, batch_size: int = 500) -> dict:
     """paper_id -> list of referenced S2 paper ids, via the batch endpoint."""
     http_post = http_post or requests.post
     refs: dict[str, list[str]] = {}
