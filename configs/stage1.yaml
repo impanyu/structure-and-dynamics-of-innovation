@@ -33,6 +33,11 @@ recognized_venues:
   - {name: "International Conference on Machine Learning", aliases: ["international conference on machine learning", "icml"]}
   - {name: "International Conference on Learning Representations", aliases: ["international conference on learning representations", "iclr"]}
   - {name: "Knowledge Discovery and Data Mining", aliases: ["knowledge discovery and data mining", "kdd"]}
+  # CCF-A from other categories, AI/ML-relevant (7th ed. scan):
+  - {name: "International ACM SIGIR Conference on Research and Development in Information Retrieval", aliases: ["sigir", "research and development in information retrieval"]}
+  - {name: "The Web Conference", aliases: ["the web conference", "world wide web conference", "international conference on world wide web"]}
+  - {name: "ACM Multimedia", aliases: ["acm multimedia", "acm international conference on multimedia"]}
+  # Beyond CCF (founded 2024, LLM/RL top venues):
   - {name: "Conference on Language Modeling", aliases: ["conference on language modeling", "colm"]}
   - {name: "Reinforcement Learning Conference", aliases: ["reinforcement learning conference"]}
 year_from: 2016
