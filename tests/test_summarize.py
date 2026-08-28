@@ -26,3 +26,28 @@ def test_summarize_corpus_and_roundtrip(tmp_path):
     assert list(ideas["idea_text"]) == ["Idea one.", "Idea two."]
     save_ideas(ideas, tmp_path)
     pd.testing.assert_frame_equal(load_ideas(tmp_path), ideas)
+
+
+def test_summarize_corpus_parallel_preserves_order():
+    import threading
+
+    class SlowFake:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.count = 0
+
+        def complete(self, *, model, system, user, max_tokens=1024):
+            # echo the title back so order is verifiable
+            title = user.split("Title: ")[1].split("\n")[0]
+            with self.lock:
+                self.count += 1
+            return f"idea for {title}"
+
+    papers = pd.DataFrame([
+        {"paper_id": f"W{i}", "title": f"T{i}", "abstract": f"A{i}",
+         "year": 2020, "venue": "V"} for i in range(20)])
+    llm = SlowFake()
+    ideas = summarize_corpus(llm, papers, model="m", workers=8)
+    assert llm.count == 20
+    assert list(ideas["paper_id"]) == [f"W{i}" for i in range(20)]
+    assert list(ideas["idea_text"]) == [f"idea for T{i}" for i in range(20)]

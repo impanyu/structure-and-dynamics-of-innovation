@@ -1,4 +1,5 @@
 """Paper -> one-paragraph idea (spec §3.2). Fixed template; caching lives in CachedLLM."""
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pandas as pd
@@ -22,12 +23,20 @@ def summarize_paper(llm: LLM, *, model: str, title: str, abstract: str) -> str:
     return llm.complete(model=model, system=SUMMARY_SYSTEM, user=user, max_tokens=400).strip()
 
 
-def summarize_corpus(llm: LLM, papers: pd.DataFrame, *, model: str) -> pd.DataFrame:
-    rows = []
-    for p in papers.itertuples():
+def summarize_corpus(llm: LLM, papers: pd.DataFrame, *, model: str,
+                     workers: int = 1) -> pd.DataFrame:
+    records = list(papers.itertuples())
+
+    def one(p):
         idea = summarize_paper(llm, model=model, title=p.title, abstract=p.abstract)
-        rows.append({"paper_id": p.paper_id, "idea_text": idea,
-                     "year": p.year, "venue": p.venue})
+        return {"paper_id": p.paper_id, "idea_text": idea,
+                "year": p.year, "venue": p.venue}
+
+    if workers <= 1:
+        rows = [one(p) for p in records]
+    else:  # order-preserving parallel map; disk cache writes are per-file, safe
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            rows = list(pool.map(one, records))
     return pd.DataFrame(rows, columns=["paper_id", "idea_text", "year", "venue"])
 
 

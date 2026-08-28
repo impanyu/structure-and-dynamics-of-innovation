@@ -83,7 +83,8 @@ def cmd_fetch(cfg):
 
 def cmd_summarize(cfg):
     papers, _ = load_corpus(cfg["data_dir"])
-    ideas = summarize_corpus(_llm(cfg), papers, model=cfg["models"]["summarizer"])
+    ideas = summarize_corpus(_llm(cfg), papers, model=cfg["models"]["summarizer"],
+                             workers=int(cfg.get("summarize_workers", 12)))
     save_ideas(ideas, cfg["data_dir"])
     emb = Embedder(cfg["embedding_model"])
     vecs = emb.encode(list(ideas["idea_text"]))
