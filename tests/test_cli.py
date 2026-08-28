@@ -18,8 +18,8 @@ def test_load_config_reads_stage1_yaml():
     """Load stage1.yaml and verify key fields."""
     cfg = load_config("configs/stage1.yaml")
     assert isinstance(cfg, dict)
-    assert cfg["cutoff_date"] == "2026-01-31"
-    assert cfg["models"]["summarizer"] == "claude-haiku-4-5-20251001"
+    assert cfg["cutoff_date"] == "2024-09-30"
+    assert cfg["models"]["summarizer"] == "openai:gpt-5-mini"
 
     # Recognition list: evaluation-only concept, entries carry name + aliases
     recognized = cfg["recognized_venues"]
@@ -319,7 +319,7 @@ def test_cmd_fetch_s2_venues_mode(tmp_path, monkeypatch):
     import innovation.cli as cli
 
     cfg = {"data_dir": str(tmp_path / "data"), "mailto": "t@t",
-           "year_from": 2016, "cutoff_year": 2025,
+           "year_from": 2016, "cutoff_year": 2025, "cutoff_date": "2026-01-31",
            "corpus": {"mode": "s2_venues", "venues": ["NeurIPS", "ICLR"],
                       "min_citations": 50}}
     raws = {"NeurIPS": [{"paperId": "p1", "title": "A", "abstract": "aa",

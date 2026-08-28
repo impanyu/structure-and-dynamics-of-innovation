@@ -15,7 +15,7 @@ import requests
 
 S2_BULK = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
 S2_BATCH = "https://api.semanticscholar.org/graph/v1/paper/batch"
-PAPER_FIELDS = "paperId,title,abstract,year,venue,citationCount"
+PAPER_FIELDS = "paperId,title,abstract,year,venue,citationCount,publicationDate"
 
 
 RETRYABLE = {429, 500, 502, 503, 504}
@@ -48,7 +48,10 @@ def s2_bulk_venue_search(venue: str, year_range: str, *, min_citations: int,
     """All papers of a venue in year_range with citations >= min_citations."""
     http_get = http_get or requests.get
     papers, token, page_i = [], None, 0
-    key = f"{venue.replace(' ', '_')}_{year_range}_c{min_citations}"
+    # Cache key includes the requested fields: adding a field must invalidate
+    # pages cached without it.
+    fields_tag = hashlib.sha256(PAPER_FIELDS.encode()).hexdigest()[:8]
+    key = f"{venue.replace(' ', '_')}_{year_range}_c{min_citations}_{fields_tag}"
     while True:
         cache_file = Path(cache_dir) / f"s2bulk_{key}_p{page_i}.json"
         params = {"query": "", "venue": venue, "year": year_range,
@@ -86,13 +89,28 @@ def s2_fetch_references(paper_ids: list[str], *, cache_dir, http_post=None,
     return refs
 
 
-def build_s2_corpus(raw_papers: list[dict], refs: dict):
-    """Normalize S2 records into the canonical papers/edges tables."""
+def build_s2_corpus(raw_papers: list[dict], refs: dict,
+                    before_date: str | None = None):
+    """Normalize S2 records into the canonical papers/edges tables.
+
+    before_date (ISO): keep only papers published strictly before it — the
+    temporal design admits only papers published before the agent model's
+    training-cutoff month. Papers with a publicationDate are compared by date;
+    papers without one are kept iff their year precedes the boundary year
+    (conservative: an undated paper from the boundary year is dropped)."""
     rows, seen = [], set()
+    boundary_year = int(before_date[:4]) if before_date else None
     for p in raw_papers:
         pid = p.get("paperId")
         if not pid or pid in seen or not (p.get("abstract") or "").strip():
             continue
+        if before_date:
+            pub = p.get("publicationDate")
+            if pub:
+                if pub >= before_date:
+                    continue
+            elif int(p.get("year") or 0) >= boundary_year:
+                continue
         seen.add(pid)
         rows.append({"paper_id": pid, "title": p.get("title") or "",
                      "abstract": p["abstract"].strip(),

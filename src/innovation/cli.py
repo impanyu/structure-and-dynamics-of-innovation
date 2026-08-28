@@ -45,9 +45,13 @@ def cmd_fetch(cfg):
                 cache_dir=cache)
             print(f"{venue}: {len(batch)} papers")
             raw.extend(batch)
-        ids = sorted({p["paperId"] for p in raw if p.get("paperId")})
+        # Corpus admits only papers published BEFORE the agent model's
+        # training-cutoff month (first day of cutoff_date's month).
+        before_date = cfg["cutoff_date"][:8] + "01"
+        admitted, _ = build_s2_corpus(raw, {}, before_date=before_date)
+        ids = sorted(admitted["paper_id"])
         refs = s2_fetch_references(ids, cache_dir=cache)
-        papers, edges = build_s2_corpus(raw, refs)
+        papers, edges = build_s2_corpus(raw, refs, before_date=before_date)
         print(f"papers={len(papers)} s2_edges={len(edges)}")
         # S2 reference coverage is incomplete for these venues; union in
         # OpenAlex references matched by MAG/DOI/arXiv id.

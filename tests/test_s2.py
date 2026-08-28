@@ -82,3 +82,18 @@ def test_build_s2_corpus_filters_and_edges():
     assert list(papers["paper_id"]) == ["p1", "p3"]
     assert list(papers.columns) == ["paper_id", "title", "abstract", "year", "venue"]
     assert [(r.src, r.dst) for r in edges.itertuples()] == [("p3", "p1")]
+
+
+def test_build_s2_corpus_before_date_boundary():
+    raw = [
+        {"paperId": "a", "title": "A", "abstract": "x", "year": 2024,
+         "venue": "V", "publicationDate": "2024-05-01"},   # before boundary
+        {"paperId": "b", "title": "B", "abstract": "x", "year": 2024,
+         "venue": "V", "publicationDate": "2024-12-10"},   # after -> dropped
+        {"paperId": "c", "title": "C", "abstract": "x", "year": 2024,
+         "venue": "V", "publicationDate": None},           # boundary year, undated -> dropped
+        {"paperId": "d", "title": "D", "abstract": "x", "year": 2023,
+         "venue": "V", "publicationDate": None},           # earlier year, undated -> kept
+    ]
+    papers, _ = build_s2_corpus(raw, {}, before_date="2024-09-01")
+    assert sorted(papers["paper_id"]) == ["a", "d"]

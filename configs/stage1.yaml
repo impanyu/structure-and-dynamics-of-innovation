@@ -36,18 +36,18 @@ recognized_venues:
   - {name: "Conference on Language Modeling", aliases: ["conference on language modeling", "colm"]}
   - {name: "Reinforcement Learning Conference", aliases: ["reinforcement learning conference"]}
 year_from: 2016
-# Temporal design: T = agent model's training cutoff month. claude-sonnet-5
-# training data cutoff = Jan 2026 (platform.claude.com models overview,
-# checked 2026-08). Initial graph = papers published BEFORE that month
-# (2016-2025); anticipation hits = papers published AFTER it (>= Feb 2026,
-# the cutoff month itself excluded). In-corpus search hits are additionally
-# excluded (contamination guard).
-cutoff_year: 2025          # last year in the graph
-cutoff_date: "2026-01-31"  # hits require pub_date > this (i.e. Feb 2026+)
+# Temporal design: T = agent model's training cutoff month. openai:gpt-5
+# training data cutoff = 2024-09-30. Initial graph = papers published BEFORE
+# Sep 2024 (pub_date < 2024-09-01); anticipation hits = papers published
+# AFTER the cutoff (>= Oct 2024) — the cutoff month itself is excluded on
+# both sides, giving a ~22-month validation window as of Aug 2026. In-corpus
+# search hits are additionally excluded (contamination guard).
+cutoff_year: 2024          # last year fetched (month filter applies within it)
+cutoff_date: "2024-09-30"  # hits require pub_date > this (i.e. Oct 2024+)
 models:
-  summarizer: claude-haiku-4-5-20251001
-  agent: claude-sonnet-5
-  judge: claude-sonnet-5
+  summarizer: openai:gpt-5-mini
+  agent: openai:gpt-5      # its Sep-2024 training cutoff defines T above
+  judge: openai:gpt-5-mini
 embedding_model: BAAI/bge-small-en-v1.5
 eval:
   n_queries: 3
