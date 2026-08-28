@@ -13,10 +13,14 @@ corpus:
 # verified realization counts as a hit iff it was published in one of these
 # venues (alias substring match against the search result's venue string) OR
 # its citations reach eval.recognized_min_citations. Also the recall
-# denominator. Composition: CCF-A (AI) + KDD, plus venues CCF omits but the
-# field recognizes as top (ICLR, COLM, RLC). `name` is the OpenAlex-resolvable
-# form used for the denominator (COLM/RLC lack OpenAlex sources; their alias
-# still recognizes hits, they just don't enter the denominator).
+# denominator. Composition per CCF 7th edition (2026-03): AI category A-class
+# (AAAI, NeurIPS, ACL, CVPR, ICCV, ICML, ICLR — ICLR newly promoted to A;
+# IJCAI demoted to B and therefore EXCLUDED) + SIGKDD (DB/DM category A).
+# COLM and RLC are NOT in CCF (too new, both founded 2024) — kept as explicit
+# beyond-CCF additions for the LLM/RL fields; delete the two lines to drop
+# them. `name` is the OpenAlex-resolvable form used for the denominator
+# (COLM/RLC lack OpenAlex sources; their alias still recognizes hits, they
+# just don't enter the denominator).
 recognized_venues:
   - {name: "AAAI Conference on Artificial Intelligence", aliases: ["aaai"]}
   - {name: "Neural Information Processing Systems", aliases: ["neurips", "neural information processing"]}
@@ -24,9 +28,8 @@ recognized_venues:
   - {name: "Computer Vision and Pattern Recognition", aliases: ["computer vision and pattern recognition", "cvpr"]}
   - {name: "IEEE International Conference on Computer Vision", aliases: ["international conference on computer vision", "iccv"]}
   - {name: "International Conference on Machine Learning", aliases: ["international conference on machine learning", "icml"]}
-  - {name: "International Joint Conference on Artificial Intelligence", aliases: ["international joint conference on artificial intelligence", "ijcai"]}
-  - {name: "Knowledge Discovery and Data Mining", aliases: ["knowledge discovery and data mining", "kdd"]}
   - {name: "International Conference on Learning Representations", aliases: ["international conference on learning representations", "iclr"]}
+  - {name: "Knowledge Discovery and Data Mining", aliases: ["knowledge discovery and data mining", "kdd"]}
   - {name: "Conference on Language Modeling", aliases: ["conference on language modeling", "colm"]}
   - {name: "Reinforcement Learning Conference", aliases: ["reinforcement learning conference"]}
 year_from: 2016
