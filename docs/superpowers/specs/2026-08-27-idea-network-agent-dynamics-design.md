@@ -173,14 +173,11 @@ into the repo.
     failing this are logged as `excluded_unrecognized`, never scored. The
     recognized-venue list is an evaluation concept only — it is NOT a corpus
     download filter (corpus admission is field query + year + citation floor).
-- **Precision:** fraction of generated ideas judged realized by a post-cutoff
-  paper.
-- **Recall:** (number of *distinct* realized papers hit across all generated
-  ideas) ÷ (estimated post-cutoff relevant population). The denominator needs
-  no downloads: an OpenAlex metadata *count* query over (a) post-cutoff papers
-  in the venue list (NeurIPS/ICML/ICLR/ACL/EMNLP/CVPR/ICCV/AAAI/KDD/…) plus
-  (b) post-cutoff arXiv-only papers above a citation threshold (threshold in
-  config).
+- **Accuracy (precision) — the sole headline metric:** fraction of generated
+  ideas judged realized by a recognized post-cutoff paper. Recall was dropped
+  by design decision (2026-08-28): with a broad recognition list there is no
+  meaningful denominator, and the research question is answered by comparing
+  accuracy (plus process observables) across conditions.
 - **Anti-plagiarism-of-the-past:** generated ideas must stay below a ceiling
   similarity to the ≤T corpus (whose embeddings exist anyway for the agents'
   `search` action); near-duplicates of the past are flagged and excluded from
