@@ -9,9 +9,33 @@ corpus:
   mode: field
   field_query: "federated learning"
   min_citations: 10        # admission: in top-venue list OR citations > this floor
-# Venue list: used for corpus when corpus.mode != field, and always for the
-# recall-denominator population count.
-venues: ["Neural Information Processing Systems", "International Conference on Learning Representations"]
+# Venue list: used for the field-corpus venue arm and the recall-denominator
+# population count. Names audited 2026-08 to resolve to CONSOLIDATED OpenAlex
+# sources (top search hit). Known gaps — OpenAlex fragments ACL/EMNLP/CVPR/ICCV
+# into per-year proceedings and lacks UAI/COLM/RLC entirely; Semantic Scholar
+# fallback is the spec §5 mitigation if the venue arm needs to be complete.
+# Composition follows the CCF recommended list (2022, AI category) for the
+# AI/ML/DL/RL/LLM scope: CCF-A (AAAI, NeurIPS, ACL, CVPR, ICCV, ICML, IJCAI,
+# KDD) + relevant CCF-B (EMNLP, NAACL, ECCV, UAI, AAMAS, COLT) + essential
+# venues CCF omits (ICLR, AISTATS, COLM, RLC, CoRL). Names below are the
+# OpenAlex-resolvable subset; UAI/COLT/COLM/RLC have no OpenAlex source and
+# ACL/EMNLP/CVPR/ICCV resolve only to per-year fragments (S2 fallback later).
+venues:
+  - "AAAI Conference on Artificial Intelligence"
+  - "Neural Information Processing Systems"
+  - "Annual Meeting of the Association for Computational Linguistics"
+  - "Computer Vision and Pattern Recognition"
+  - "IEEE International Conference on Computer Vision"
+  - "International Conference on Machine Learning"
+  - "International Joint Conference on Artificial Intelligence"
+  - "Knowledge Discovery and Data Mining"
+  - "Conference on Empirical Methods in Natural Language Processing"
+  - "North American Chapter of the Association for Computational Linguistics"
+  - "European Conference on Computer Vision"
+  - "International Conference on Autonomous Agents and Multiagent Systems"
+  - "International Conference on Learning Representations"
+  - "International Conference on Artificial Intelligence and Statistics"
+  - "Conference on Robot Learning"
 year_from: 2016
 cutoff_year: 2024        # last full year in the graph
 cutoff_date: "2025-01-01"  # anticipation boundary = agent model training cutoff
