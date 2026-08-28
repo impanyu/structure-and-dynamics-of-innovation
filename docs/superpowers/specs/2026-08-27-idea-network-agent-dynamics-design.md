@@ -216,3 +216,10 @@ into the repo.
   audit.
 - **OpenAlex venue coverage gaps** → validate venue queries early in Stage 1;
   fall back to Semantic Scholar for missing venues.
+
+## 6. Attribution Obligations
+
+- The paper must cite "The Semantic Scholar Open Data Platform" (Kinney et
+  al.) — required by the S2 API license for the API key we use.
+- OpenAlex requests CC0 attribution (cite Priem et al., "OpenAlex: A
+  fully-open index of scholarly works") — cite it as the second data source.
