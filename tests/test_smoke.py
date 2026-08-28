@@ -74,7 +74,7 @@ def test_full_pipeline_smoke(tmp_path):
     dup_flags = {nid: past_dup_flag(emb.encode([graph.node(nid).text])[0],
                                     corpus_vecs)
                  for nid in out["generated"]}
-    agg = aggregate_run(verdicts, dup_flags, population=50)
+    agg = aggregate_run(verdicts, dup_flags)
     assert agg["n_ideas"] == 3
     assert 0.0 <= agg["precision"] <= 1.0
     assert agg["n_hits"] >= 1

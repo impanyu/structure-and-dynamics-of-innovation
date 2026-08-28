@@ -65,7 +65,7 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
         "mailto": "t@t",
         "cutoff_date": "2025-01-01",
         "embedding_model": "BAAI/bge-small-en-v1.5",
-        "eval": {"n_queries": 1, "top_k": 3, "dup_ceiling": 0.95, "arxiv_min_citations": 10},
+        "eval": {"n_queries": 1, "top_k": 3, "dup_ceiling": 0.95},
         "models": {"summarizer": "m", "agent": "m", "judge": "m"},
         "recognized_venues": [{"name": "V", "aliases": ["v"]}],
         "run": {
@@ -84,25 +84,12 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
     def fake_llm_factory(cfg):
         return FakeLLM(default="q")
 
-    def fake_find_source_id(name, **kwargs):
-        return "S1"
-
     def fake_verify_idea(llm, **kwargs):
         return Verdict(idea_id=kwargs["idea_id"], hit=False, paper=None)
 
-    population_calls = []
-
-    def fake_openalex_population_count(filter_str, **kwargs):
-        population_calls.append(filter_str)
-        # First call is the venue population, second is the arXiv population
-        # (spec §3.6: population = venue + arXiv-above-citation-threshold).
-        return 10 if len(population_calls) == 1 else 5
-
     monkeypatch.setattr("innovation.cli.Embedder", fake_embedder_factory)
     monkeypatch.setattr("innovation.cli._llm", fake_llm_factory)
-    monkeypatch.setattr("innovation.cli.find_source_id", fake_find_source_id)
     monkeypatch.setattr("innovation.cli.verify_idea", fake_verify_idea)
-    monkeypatch.setattr("innovation.cli.openalex_population_count", fake_openalex_population_count)
 
     # 5) Run cmd_run
     cmd_run(cfg)
@@ -119,15 +106,11 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
     assert metrics_file.exists(), f"metrics.json not found at {metrics_file}"
 
     metrics = json.loads(metrics_file.read_text())
-    required_keys = {"precision", "recall", "n_ideas", "n_hits", "n_dup_flagged"}
+    required_keys = {"precision", "n_ideas", "n_hits", "n_dup_flagged"}
     assert set(metrics.keys()) >= required_keys, \
         f"metrics missing keys. Expected {required_keys}, got {set(metrics.keys())}"
 
-    # Population = venue (10) + arXiv (5) = 15; n_hits is 0 in this test (all
-    # fake verdicts are misses), so recall stays 0.0 regardless of population.
-    assert len(population_calls) == 2
     assert metrics["n_hits"] == 0
-    assert metrics["recall"] == 0.0
 
     # 9) Assert verdicts.json exists with one entry per generated idea.
     verdicts_file = Path(cfg["out_dir"]) / "t1" / "verdicts.json"
@@ -171,7 +154,7 @@ def test_cmd_run_refuses_to_overwrite_existing_run(tmp_path, monkeypatch):
         "mailto": "t@t",
         "cutoff_date": "2025-01-01",
         "embedding_model": "BAAI/bge-small-en-v1.5",
-        "eval": {"n_queries": 1, "top_k": 3, "dup_ceiling": 0.95, "arxiv_min_citations": 10},
+        "eval": {"n_queries": 1, "top_k": 3, "dup_ceiling": 0.95},
         "models": {"summarizer": "m", "agent": "m", "judge": "m"},
         "recognized_venues": [{"name": "V", "aliases": ["v"]}],
         "run": {

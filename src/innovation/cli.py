@@ -1,7 +1,6 @@
 """CLI: fetch -> summarize -> run -> evaluate, all driven by one YAML config."""
 import argparse
 import dataclasses
-import datetime
 import json
 from pathlib import Path
 
@@ -14,9 +13,7 @@ from innovation.data.openalex import (fetch_field_works, fetch_source_works,
 from innovation.data.edge_augment import augment_edges
 from innovation.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
                                 s2_fetch_references)
-from innovation.eval.metrics import (aggregate_run, arxiv_population_filter,
-                                     past_dup_flag, openalex_population_count,
-                                     venue_population_filter)
+from innovation.eval.metrics import aggregate_run, past_dup_flag
 from innovation.eval.search_verify import verify_idea
 from innovation.experiments.events import load_events
 from innovation.experiments.runner import RunConfig, run_simulation
@@ -161,26 +158,7 @@ def cmd_evaluate(cfg):
             corpus_titles=corpus_titles))
         dup_flags[nid] = past_dup_flag(emb.encode([text])[0], corpus_vecs,
                                        ceiling=cfg["eval"]["dup_ceiling"])
-    cache = Path(cfg["data_dir"]) / "openalex_cache"
-    source_ids = [find_source_id(v["name"], mailto=cfg["mailto"], cache_dir=cache)
-                  for v in recognized]
-    # Hits require pub_date strictly > cutoff_date, but from_publication_date
-    # is inclusive, so start the population window one day after the cutoff.
-    from_date = (datetime.date.fromisoformat(cfg["cutoff_date"])
-                + datetime.timedelta(days=1)).isoformat()
-    arxiv_sid = find_source_id(cfg["eval"].get("arxiv_source_name", "arXiv"),
-                               mailto=cfg["mailto"], cache_dir=cache)
-    # Population = post-cutoff venue papers + post-cutoff arXiv papers above a
-    # citation threshold (spec §3.6). This approximates "arXiv-only": overlap
-    # between the arXiv set and the venue list is not subtracted.
-    population = (
-        openalex_population_count(
-            venue_population_filter(source_ids, from_date), mailto=cfg["mailto"])
-        + openalex_population_count(
-            arxiv_population_filter(arxiv_sid, from_date,
-                                    cfg["eval"]["arxiv_min_citations"]),
-            mailto=cfg["mailto"]))
-    agg = aggregate_run(verdicts, dup_flags, population)
+    agg = aggregate_run(verdicts, dup_flags)
     (run_dir / "metrics.json").write_text(json.dumps(agg, indent=2))
     verdict_records = [
         {**dataclasses.asdict(v), "dup_flag": dup_flags[v.idea_id]}
