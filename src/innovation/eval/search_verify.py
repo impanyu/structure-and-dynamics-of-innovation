@@ -39,14 +39,15 @@ def extract_queries(llm: LLM, *, model: str, idea_text: str, n: int = 3) -> list
     return [line.strip() for line in reply.splitlines() if line.strip()][:n]
 
 
-def _cached_get(url: str, params: dict, cache_dir: Path, http_get) -> dict:
+def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
+                headers: dict | None = None) -> dict:
     """Disk cache with fetched_at timestamp — live indexes drift (spec §3.6)."""
     key = hashlib.sha256(json.dumps({"url": url, "params": params},
                                     sort_keys=True).encode()).hexdigest()
     cache_file = Path(cache_dir) / f"{key}.json"
     if cache_file.exists():
         return json.loads(cache_file.read_text())["response"]
-    r = http_get(url, params=params)
+    r = http_get(url, params=params, **({"headers": headers} if headers else {}))
     r.raise_for_status()
     payload = r.json()
     cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -57,11 +58,13 @@ def _cached_get(url: str, params: dict, cache_dir: Path, http_get) -> dict:
 
 
 def s2_search(query: str, *, cache_dir, http_get=None) -> list[dict]:
+    from innovation.data.s2 import s2_headers
+
     http_get = http_get or requests.get
     payload = _cached_get(S2_BASE, {"query": query, "limit": 10,
                                     "fields": "title,abstract,publicationDate,"
                                               "venue,citationCount"},
-                          Path(cache_dir), http_get)
+                          Path(cache_dir), http_get, headers=s2_headers())
     return [{"paper_id": p.get("paperId", ""), "title": p.get("title") or "",
              "abstract": p.get("abstract") or "",
              "pub_date": p.get("publicationDate") or "",

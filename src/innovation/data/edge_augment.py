@@ -18,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from innovation.data.s2 import S2_BATCH, _cached_call
+from innovation.data.s2 import S2_BATCH, _cached_call, s2_headers
 
 OPENALEX_WORKS = "https://api.openalex.org/works"
 
@@ -35,7 +35,7 @@ def s2_fetch_external_ids(paper_ids: list[str], *, cache_dir, http_post=None,
         payload = _cached_call(
             cache_file,
             lambda: http_post(S2_BATCH, params={"fields": "externalIds"},
-                              json={"ids": batch}), delay)
+                              json={"ids": batch}, headers=s2_headers()), delay)
         for entry in payload or []:
             if isinstance(entry, dict) and entry.get("paperId"):
                 out[entry["paperId"]] = entry.get("externalIds") or {}

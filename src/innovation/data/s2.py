@@ -7,6 +7,7 @@ fallback). Every response page is disk-cached; a `delay` throttles live calls
 """
 import hashlib
 import json
+import os
 import time
 from pathlib import Path
 
@@ -16,6 +17,12 @@ import requests
 S2_BULK = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
 S2_BATCH = "https://api.semanticscholar.org/graph/v1/paper/batch"
 PAPER_FIELDS = "paperId,title,abstract,year,venue,citationCount,publicationDate"
+
+
+def s2_headers() -> dict:
+    """x-api-key header when S2_API_KEY is set (higher rate limits)."""
+    key = os.environ.get("S2_API_KEY", "").strip()
+    return {"x-api-key": key} if key else {}
 
 
 RETRYABLE = {429, 500, 502, 503, 504}
@@ -58,8 +65,10 @@ def s2_bulk_venue_search(venue: str, year_range: str, *, min_citations: int,
                   "minCitationCount": min_citations, "fields": PAPER_FIELDS}
         if token:
             params["token"] = token
-        payload = _cached_call(cache_file,
-                               lambda: http_get(S2_BULK, params=params), delay)
+        payload = _cached_call(
+            cache_file,
+            lambda: http_get(S2_BULK, params=params, headers=s2_headers()),
+            delay)
         papers.extend(payload.get("data") or [])
         token = payload.get("token")
         page_i += 1
@@ -79,7 +88,7 @@ def s2_fetch_references(paper_ids: list[str], *, cache_dir, http_post=None,
         payload = _cached_call(
             cache_file,
             lambda: http_post(S2_BATCH, params={"fields": "references.paperId"},
-                              json={"ids": batch}), delay)
+                              json={"ids": batch}, headers=s2_headers()), delay)
         for entry in payload or []:
             if not entry:
                 continue

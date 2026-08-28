@@ -97,3 +97,25 @@ def test_build_s2_corpus_before_date_boundary():
     ]
     papers, _ = build_s2_corpus(raw, {}, before_date="2024-09-01")
     assert sorted(papers["paper_id"]) == ["a", "d"]
+
+
+def test_s2_headers_include_api_key_when_set(tmp_path, monkeypatch):
+    from innovation.data.s2 import s2_headers
+
+    monkeypatch.delenv("S2_API_KEY", raising=False)
+    assert s2_headers() == {}
+    monkeypatch.setenv("S2_API_KEY", "k-123")
+    assert s2_headers() == {"x-api-key": "k-123"}
+
+
+def test_bulk_search_passes_headers(tmp_path, monkeypatch):
+    monkeypatch.setenv("S2_API_KEY", "k-123")
+    seen = {}
+
+    def fake_get(url, params=None, headers=None):
+        seen["headers"] = headers
+        return FakeResponse({"total": 0, "token": None, "data": []})
+
+    s2_bulk_venue_search("V", "2016-2024", min_citations=50,
+                         cache_dir=tmp_path, http_get=fake_get, delay=0)
+    assert seen["headers"] == {"x-api-key": "k-123"}
