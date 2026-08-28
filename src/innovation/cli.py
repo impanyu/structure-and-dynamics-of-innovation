@@ -11,6 +11,7 @@ from innovation.config import load_config
 from innovation.data.corpus import build_corpus, load_corpus, save_corpus
 from innovation.data.openalex import (fetch_field_works, fetch_source_works,
                                       find_source_id)
+from innovation.data.edge_augment import augment_edges
 from innovation.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
                                 s2_fetch_references)
 from innovation.eval.metrics import (aggregate_run, arxiv_population_filter,
@@ -47,8 +48,12 @@ def cmd_fetch(cfg):
         ids = sorted({p["paperId"] for p in raw if p.get("paperId")})
         refs = s2_fetch_references(ids, cache_dir=cache)
         papers, edges = build_s2_corpus(raw, refs)
+        print(f"papers={len(papers)} s2_edges={len(edges)}")
+        # S2 reference coverage is incomplete for these venues; union in
+        # OpenAlex references matched by MAG/DOI/arXiv id.
+        edges = augment_edges(papers, edges, cache_dir=cache, mailto=cfg["mailto"])
         save_corpus(papers, edges, cfg["data_dir"])
-        print(f"papers={len(papers)} edges={len(edges)}")
+        print(f"papers={len(papers)} edges={len(edges)} (after OpenAlex augmentation)")
         return
     if corpus_cfg.get("mode") == "field":
         # Small-field initial graph (spec §2): field query + year range +
