@@ -331,6 +331,8 @@ def test_cmd_fetch_s2_venues_mode(tmp_path, monkeypatch):
                         lambda venue, yr, **kw: raws[venue])
     monkeypatch.setattr(cli, "s2_fetch_references",
                         lambda ids, **kw: {"p2": ["p1"]})
+    monkeypatch.setattr(cli, "augment_edges",
+                        lambda papers, edges, **kw: edges)
     cli.cmd_fetch(cfg)
     papers = pd.read_parquet(Path(cfg["data_dir"]) / "papers.parquet")
     edges = pd.read_parquet(Path(cfg["data_dir"]) / "edges.parquet")
