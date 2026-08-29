@@ -13,8 +13,9 @@ then `... evaluate --config <same> --run-id <name>-sK`.
 - Agent model `openai:gpt-5`; judge `openai:gpt-5-mini:low`.
 - Topic pool: 50 corpus-derived subfields (`configs/topics-k50.yaml`).
   A "specialist" draws ONE topic per run — seeded random, distinct within the
-  run, same topic for read and write, recorded in `run_meta.json`. Semantic
-  radius 0.3.
+  run, same topic for read and write, recorded in `run_meta.json`. Scope =
+  equal-mass region: the 800 corpus papers nearest the topic anchor (per-
+  anchor derived radius, so generated ideas classify naturally).
 
 ## Controls (identical across all conditions)
 
