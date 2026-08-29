@@ -95,11 +95,11 @@ cutoff_year: 2024          # last year fetched (month filter applies within it)
 cutoff_date: "2024-09-30"  # hits require pub_date > this (i.e. Oct 2024+)
 # OpenAI model strings may carry a reasoning-effort suffix (gpt-5 family are
 # reasoning models; without it, reasoning tokens can starve the visible
-# output): summarizer minimal (compression, no deep thought), judge low.
+# output): summarizer minimal (compression, no deep thought), judge medium.
 models:
   summarizer: openai:gpt-5-mini:minimal
   agent: openai:gpt-5      # its Sep-2024 training cutoff defines T above
-  judge: openai:gpt-5-mini:low
+  judge: openai:gpt-5-mini:medium
 embedding_model: BAAI/bge-small-en-v1.5
 eval:
   n_queries: 3
