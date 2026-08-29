@@ -43,8 +43,12 @@ class LLMAgentPolicy(Policy):
         history = "\n".join(f"{a} -> {r}" for a, r in self.memory)
         user = (ACTIONS_DOC + "\n\nRecent history (oldest first):\n" + history
                 + "\n\nChoose your next action (JSON only):")
+        # 2000 visible-output budget: a generate action carries a full idea
+        # paragraph (~250 tokens) and must survive even a long reasoning turn
+        # (OpenAI reasoning models share one max_output_tokens cap; the
+        # provider client adds its own reasoning headroom on top).
         reply = self.llm.complete(model=self.model, system=self.system,
-                                  user=user, max_tokens=600)
+                                  user=user, max_tokens=2000)
         action = self._parse(reply)
         self._last_action = action.name
         return action
