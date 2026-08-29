@@ -91,9 +91,11 @@ def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> lis
     from innovation.data.openalex import reconstruct_abstract
 
     http_get = http_get or requests.get
+    # fail fast (3 attempts): a budget-exhausted OpenAlex 429 lasts hours and
+    # the caller degrades to S2-only rather than stalling minutes per query.
     payload = _cached_get(OPENALEX_BASE,
                           {"search": query, "per-page": 10, "mailto": mailto},
-                          Path(cache_dir), http_get)
+                          Path(cache_dir), http_get, attempts=3, delay=1.0)
 
     def venue_of(w):
         loc = w.get("primary_location") or {}
@@ -150,9 +152,14 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
     queries = extract_queries(llm, model=model, idea_text=idea_text, n=n_queries)
     candidates, seen_titles = [], set()
     for q in queries:
-        for cand in (s2_search(q, cache_dir=cache_dir, http_get=http_get)[:top_k]
-                     + openalex_search(q, mailto=mailto, cache_dir=cache_dir,
-                                       http_get=http_get)[:top_k]):
+        pool = s2_search(q, cache_dir=cache_dir, http_get=http_get)[:top_k]
+        try:
+            pool += openalex_search(q, mailto=mailto, cache_dir=cache_dir,
+                                    http_get=http_get)[:top_k]
+        except requests.HTTPError as exc:
+            # Redundant channel down (e.g. daily budget) -> S2-only, keep going.
+            print(f"WARN openalex_search degraded ({exc}); S2-only for: {q[:60]}")
+        for cand in pool:
             title_key = cand["title"].strip().lower()
             if title_key and title_key not in seen_titles:
                 seen_titles.add(title_key)

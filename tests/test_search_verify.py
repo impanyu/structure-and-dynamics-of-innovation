@@ -191,3 +191,29 @@ def test_cached_get_retries_on_429(tmp_path):
 
     out = _cached_get("http://x", {"q": 1}, tmp_path, flaky_get, delay=0)
     assert out == {"data": []} and len(calls) == 3
+
+
+def test_verify_idea_degrades_when_openalex_unavailable(tmp_path):
+    """A dead OpenAlex channel (persistent 429/budget) must not kill the
+    evaluation — verify proceeds on S2 results alone."""
+    import requests
+
+    payload = s2_payload([{"id": "new", "title": "New paper", "date": "2025-08-01"}])
+
+    class Resp429:
+        status_code = 429
+        def raise_for_status(self):
+            raise requests.HTTPError("429")
+        def json(self):
+            return {}
+
+    def fake_get(url, params=None, **kw):
+        if "semanticscholar" in url:
+            return FakeResponse(payload)
+        return Resp429()
+
+    llm = FakeLLM(responses=["q", "YES"])
+    v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
+                    cutoff_date="2025-01-01", mailto="a@b.c",
+                    cache_dir=tmp_path, http_get=fake_get, n_queries=1)
+    assert v.hit and v.paper["paper_id"] == "new"
