@@ -13,7 +13,9 @@ AGENT_SYSTEM = """You are a research agent exploring a network of research ideas
 distilled from published papers. Ideas cite the ideas they build on. Your goal is to \
 find promising unexplored directions and, when you see one, contribute a genuinely \
 new idea to the network. Prefer exploring (search, browse) until you understand a \
-neighborhood well enough that your new idea is specific and well-grounded. If you \
+neighborhood well enough that your new idea is specific and well-grounded. Pace \
+yourself against the step counter: by the end of the run your team should have \
+(nearly) used its whole idea budget — do not hoard exploration. If you \
 notice an idea clearly builds on another idea it does not yet reference, you may \
 record that missing link. Some of your actions may be restricted to a region of \
 the network; if an action returns a restriction error, adapt your strategy \
@@ -30,12 +32,13 @@ ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing 
 
 class LLMAgentPolicy(Policy):
     def __init__(self, *, llm: LLM, model: str, memory_size: int = 20,
-                 persona: str = "", identity: str = ""):
+                 persona: str = "", identity: str = "", total_steps: int = 0):
         self.llm = llm
         self.model = model
         # identity (run:agent) is embedded in every prompt so identical memory
         # states of DIFFERENT agents/runs never share a disk-cache entry.
         self.identity = identity
+        self.total_steps = total_steps
         self.system = AGENT_SYSTEM + ("\n\n" + persona if persona else "")
         # FIFO short-term memory of (action, result) pairs; oldest evicted first.
         self.memory: deque[tuple[str, str]] = deque(maxlen=memory_size)
@@ -45,7 +48,9 @@ class LLMAgentPolicy(Policy):
         result_snippet = json.dumps(obs.get("last_result", {}))[:1500]
         self.memory.append((self._last_action, result_snippet))
         history = "\n".join(f"{a} -> {r}" for a, r in self.memory)
-        header = f"[agent {self.identity} | step {obs['step']}]\n\n" if self.identity else ""
+        total = f"/{self.total_steps}" if self.total_steps else ""
+        header = (f"[agent {self.identity} | step {obs['step']}{total}]\n\n"
+                  if self.identity or self.total_steps else "")
         user = (header + ACTIONS_DOC + "\n\nRecent history (oldest first):\n" + history
                 + "\n\nChoose your next action (JSON only):")
         # 2000 visible-output budget: a generate action carries a full idea
