@@ -29,9 +29,13 @@ ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing 
 
 
 class LLMAgentPolicy(Policy):
-    def __init__(self, *, llm: LLM, model: str, memory_size: int = 20, persona: str = ""):
+    def __init__(self, *, llm: LLM, model: str, memory_size: int = 20,
+                 persona: str = "", identity: str = ""):
         self.llm = llm
         self.model = model
+        # identity (run:agent) is embedded in every prompt so identical memory
+        # states of DIFFERENT agents/runs never share a disk-cache entry.
+        self.identity = identity
         self.system = AGENT_SYSTEM + ("\n\n" + persona if persona else "")
         # FIFO short-term memory of (action, result) pairs; oldest evicted first.
         self.memory: deque[tuple[str, str]] = deque(maxlen=memory_size)
@@ -41,7 +45,8 @@ class LLMAgentPolicy(Policy):
         result_snippet = json.dumps(obs.get("last_result", {}))[:1500]
         self.memory.append((self._last_action, result_snippet))
         history = "\n".join(f"{a} -> {r}" for a, r in self.memory)
-        user = (ACTIONS_DOC + "\n\nRecent history (oldest first):\n" + history
+        header = f"[agent {self.identity} | step {obs['step']}]\n\n" if self.identity else ""
+        user = (header + ACTIONS_DOC + "\n\nRecent history (oldest first):\n" + history
                 + "\n\nChoose your next action (JSON only):")
         # 2000 visible-output budget: a generate action carries a full idea
         # paragraph (~250 tokens) and must survive even a long reasoning turn

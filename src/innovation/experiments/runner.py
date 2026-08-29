@@ -27,7 +27,8 @@ def build_policy(spec: dict, *, llm, model, graph, rng):
     if kind == "llm":
         return LLMAgentPolicy(llm=llm, model=model,
                               memory_size=spec.get("memory_size", 20),
-                              persona=spec.get("persona", ""))
+                              persona=spec.get("persona", ""),
+                              identity=spec.get("_identity", ""))
     if kind == "nonav":
         return NoNavLLMPolicy(llm=llm, model=model, graph=graph, rng=rng,
                               k=spec.get("k", 3))
@@ -112,6 +113,8 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
     rng = np.random.default_rng(cfg.seed)
     run_dir = Path(out_dir) / cfg.run_id
     agents = [dict(a) for a in cfg.agents]
+    for a in agents:
+        a["_identity"] = f"{cfg.run_id}:{a['agent_id']}"
     assignments = _resolve_random_topics(agents, cfg.topic_pool, rng)
     cfg = RunConfig(run_id=cfg.run_id, seed=cfg.seed, total_steps=cfg.total_steps,
                     generation_budget=cfg.generation_budget, agents=agents,

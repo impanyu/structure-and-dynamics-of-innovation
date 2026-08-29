@@ -71,3 +71,16 @@ def test_parses_remove_links_action():
     pol = LLMAgentPolicy(llm=FakeLLM(responses=[reply]), model="m")
     action = pol.act({"step": 0, "last_result": {}})
     assert action.name == "remove_links"
+
+
+def test_identity_makes_prompts_unique_across_agents():
+    """Same memory state, different agents -> different prompts (prevents the
+    disk cache from collapsing agent diversity at step 0)."""
+    llm = FakeLLM(default=json.dumps({"action": "sample_frontier", "args": {}}))
+    a = LLMAgentPolicy(llm=llm, model="m", identity="run1:g0")
+    b = LLMAgentPolicy(llm=llm, model="m", identity="run1:g1")
+    a.act({"step": 0, "last_result": {}})
+    b.act({"step": 0, "last_result": {}})
+    p0, p1 = llm.calls[0]["user"], llm.calls[1]["user"]
+    assert p0 != p1 and "run1:g0" in p0 and "run1:g1" in p1
+    assert "step 0" in p0
