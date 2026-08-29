@@ -1,0 +1,82 @@
+radius: 0.3
+topics:
+- size: 138
+  topic: neural audio synthesis and representation models
+- size: 48
+  topic: multi-agent reinforcement learning dynamics
+- size: 163
+  topic: neural operators and learned pde solvers
+- size: 83
+  topic: model-based reinforcement learning and control
+- size: 104
+  topic: algorithmic fairness for machine learning
+- size: 206
+  topic: embodied visual language world models
+- size: 322
+  topic: unsupervised and goal-directed reinforcement learning
+- size: 344
+  topic: robustness and adaptation under distribution shift
+- size: 115
+  topic: continual lifelong learning methods and algorithms
+- size: 398
+  topic: disentangled and contrastive representation learning
+- size: 99
+  topic: evaluation and improvement of code generation models
+- size: 133
+  topic: math and logical reasoning with language models
+- size: 216
+  topic: causal representation learning and discovery
+- size: 382
+  topic: efficient and compact large language models
+- size: 166
+  topic: alignment and evaluation of instruction-following language models
+- size: 114
+  topic: language-model autonomous agent research
+- size: 157
+  topic: retrieval-augmented generation and retrieval-guided lms
+- size: 210
+  topic: learning-to-optimize for combinatorial problems
+- size: 159
+  topic: adversarial safety and privacy of llms
+- size: 335
+  topic: adversarial robustness in deep learning
+- size: 275
+  topic: diffusion-based generative image modeling
+- size: 85
+  topic: neural architecture search methodology and benchmarking
+- size: 371
+  topic: multimodal vision-language model pretraining
+- size: 59
+  topic: knowledge distillation and model compression
+- size: 121
+  topic: neuro-symbolic reasoning and graph logic
+- size: 97
+  topic: multi-agent reinforcement learning
+- size: 150
+  topic: time-series forecasting with deep models
+- size: 370
+  topic: graph neural network representation and scalability
+- size: 583
+  topic: vision transformer representation learning
+- size: 470
+  topic: loss landscape and overparameterized optimization
+- size: 200
+  topic: controllable long-range video generation and prediction
+- size: 323
+  topic: sparse neural network pruning and training
+- size: 373
+  topic: neural 3d reconstruction and generation
+- size: 269
+  topic: offline reinforcement learning algorithms
+- size: 354
+  topic: optimization algorithms for stochastic nonconvex learning
+- size: 199
+  topic: privacy-preserving federated learning with robustness
+- size: 169
+  topic: efficient long-context transformer architectures
+- size: 130
+  topic: contextual and constrained stochastic bandits
+- size: 143
+  topic: spiking recurrent neural network learning
+- size: 126
+  topic: 3d equivariant generative modeling for molecules
