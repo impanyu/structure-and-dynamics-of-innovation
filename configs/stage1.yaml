@@ -17,7 +17,7 @@ corpus:
 # Recognition list — EVALUATION ONLY, never a download filter. A search-
 # verified realization counts as a hit iff it was published in one of these
 # venues (alias substring match against the search result's venue string) OR
-# its citations reach eval.recognized_min_citations. Composition: ALL 58
+# its citations exceed 50 (eval.recognized_min_citations). Composition: ALL 58
 # CCF-A conferences (7th edition, 2026-03, every category) + COLM/RLC (2024-
 # founded LLM/RL venues CCF has not yet rated). Broad recognition costs
 # nothing and credits cross-domain realizations (e.g. an ML-systems idea
@@ -105,7 +105,7 @@ eval:
   n_queries: 3
   top_k: 5
   dup_ceiling: 0.95
-  recognized_min_citations: 10  # OR-arm of hit recognition: impact floor for unlisted venues
+  recognized_min_citations: 51  # OR-arm of hit recognition: citations > 50 (user rule 2026-08-29)
 run:
   run_id: stage1-pilot
   seed: 0

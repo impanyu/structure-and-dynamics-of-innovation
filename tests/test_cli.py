@@ -27,7 +27,7 @@ def test_load_config_reads_stage1_yaml():
     for v in recognized:
         assert isinstance(v["name"], str)
         assert isinstance(v["aliases"], list) and v["aliases"]
-    assert cfg["eval"]["recognized_min_citations"] == 10
+    assert cfg["eval"]["recognized_min_citations"] == 51
 
 
 def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
