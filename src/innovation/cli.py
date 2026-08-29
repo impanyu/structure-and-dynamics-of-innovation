@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 from innovation.config import load_config, load_env
 from innovation.data.corpus import build_corpus, load_corpus, save_corpus
@@ -12,7 +13,7 @@ from innovation.data.openalex import (fetch_field_works, fetch_source_works,
                                       find_source_id)
 from innovation.data.edge_augment import augment_edges
 from innovation.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
-                                s2_fetch_references)
+                                s2_fetch_citations, s2_fetch_references)
 from innovation.eval.metrics import aggregate_run, past_dup_flag
 from innovation.eval.search_verify import verify_idea
 from innovation.experiments.events import load_events
@@ -50,8 +51,17 @@ def cmd_fetch(cfg):
         refs = s2_fetch_references(ids, cache_dir=cache)
         papers, edges = build_s2_corpus(raw, refs, before_date=before_date)
         print(f"papers={len(papers)} s2_edges={len(edges)}")
-        # S2 reference coverage is incomplete for these venues; union in
-        # OpenAlex references matched by MAG/DOI/arXiv id.
+        # Reference lists alone are incomplete (many corpus papers have no
+        # parsed bibliography anywhere). Recover A->B edges from B's CITATIONS
+        # list too, then union in OpenAlex references (MAG/DOI/arXiv match).
+        in_corpus = set(papers["paper_id"])
+        cits = s2_fetch_citations(sorted(in_corpus), cache_dir=cache)
+        rev_rows = [{"src": citer, "dst": cited}
+                    for cited, citers in cits.items()
+                    for citer in citers if citer in in_corpus]
+        edges = pd.concat([edges, pd.DataFrame(rev_rows, columns=["src", "dst"])],
+                          ignore_index=True).drop_duplicates()
+        print(f"papers={len(papers)} edges={len(edges)} (after citations arm)")
         edges = augment_edges(papers, edges, cache_dir=cache,
                               mailto=cfg["mailto"], delay=2.5)
         save_corpus(papers, edges, cfg["data_dir"])

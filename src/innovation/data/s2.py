@@ -98,6 +98,31 @@ def s2_fetch_references(paper_ids: list[str], *, cache_dir, http_post=None,
     return refs
 
 
+def s2_fetch_citations(paper_ids: list[str], *, cache_dir, http_post=None,
+                       delay: float = 1.1, batch_size: int = 100) -> dict:
+    """paper_id -> list of CITING S2 paper ids. Complements references: the
+    edge A->B appears in B's citations even when A's reference list was never
+    parsed. (Nested lists are capped by the API at ~1000 entries; mega-cited
+    papers lose tail citers, but those already have rich in-corpus in-degree.)"""
+    http_post = http_post or requests.post
+    cits: dict[str, list[str]] = {}
+    for i in range(0, len(paper_ids), batch_size):
+        batch = paper_ids[i:i + batch_size]
+        key = hashlib.sha256(json.dumps(batch).encode()).hexdigest()[:24]
+        cache_file = Path(cache_dir) / f"s2cits_{key}.json"
+        payload = _cached_call(
+            cache_file,
+            lambda: http_post(S2_BATCH, params={"fields": "citations.paperId"},
+                              json={"ids": batch}, headers=s2_headers()), delay)
+        for entry in payload or []:
+            if not entry:
+                continue
+            cits[entry["paperId"]] = [
+                c["paperId"] for c in entry.get("citations") or []
+                if c and c.get("paperId")]
+    return cits
+
+
 def build_s2_corpus(raw_papers: list[dict], refs: dict,
                     before_date: str | None = None):
     """Normalize S2 records into the canonical papers/edges tables.

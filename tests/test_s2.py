@@ -119,3 +119,17 @@ def test_bulk_search_passes_headers(tmp_path, monkeypatch):
     s2_bulk_venue_search("V", "2016-2024", min_citations=50,
                          cache_dir=tmp_path, http_get=fake_get, delay=0)
     assert seen["headers"] == {"x-api-key": "k-123"}
+
+
+def test_fetch_citations_builds_reverse_edges(tmp_path):
+    from innovation.data.s2 import s2_fetch_citations
+
+    def fake_post(url, params=None, json=None, headers=None):
+        assert params["fields"] == "citations.paperId"
+        return FakeResponse([
+            {"paperId": pid, "citations": [{"paperId": f"citer_of_{pid}"}, {"paperId": None}]}
+            for pid in json["ids"]])
+
+    cits = s2_fetch_citations(["a", "b"], cache_dir=tmp_path,
+                              http_post=fake_post, delay=0, batch_size=1)
+    assert cits == {"a": ["citer_of_a"], "b": ["citer_of_b"]}
