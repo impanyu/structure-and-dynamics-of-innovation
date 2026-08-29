@@ -1,7 +1,8 @@
 # C2 — 多专精: 10 specialists, 2 per subfield topic; each reads AND writes only
 # inside its semantic region (jumps allowed, scoped to the readable region).
 # Topics frozen 2026-08-28 from embedding-cluster analysis of the corpus;
-# radius 0.25 calibrated so each region holds ~600-1000 papers (distinct regions).
+# radius 0.3 (user decision: some overlap between regions is fine and realistic;
+# regions hold ~1900-3250 papers each). A radius sweep is a supplementary experiment.
 extends: ../stage1.yaml
 run:
   run_id: core-specialists
@@ -9,13 +10,13 @@ run:
   total_steps: 400
   generation_budget: 40
   agents:
-    - {agent_id: s0, policy: llm, read_topics: ["large language models and natural language reasoning"], read_radius: 0.25, write_topics: ["large language models and natural language reasoning"], write_radius: 0.25}
-    - {agent_id: s1, policy: llm, read_topics: ["large language models and natural language reasoning"], read_radius: 0.25, write_topics: ["large language models and natural language reasoning"], write_radius: 0.25}
-    - {agent_id: s2, policy: llm, read_topics: ["computer vision and generative image models"], read_radius: 0.25, write_topics: ["computer vision and generative image models"], write_radius: 0.25}
-    - {agent_id: s3, policy: llm, read_topics: ["computer vision and generative image models"], read_radius: 0.25, write_topics: ["computer vision and generative image models"], write_radius: 0.25}
-    - {agent_id: s4, policy: llm, read_topics: ["reinforcement learning and sequential decision making"], read_radius: 0.25, write_topics: ["reinforcement learning and sequential decision making"], write_radius: 0.25}
-    - {agent_id: s5, policy: llm, read_topics: ["reinforcement learning and sequential decision making"], read_radius: 0.25, write_topics: ["reinforcement learning and sequential decision making"], write_radius: 0.25}
-    - {agent_id: s6, policy: llm, read_topics: ["graph neural networks and efficient deep learning architectures"], read_radius: 0.25, write_topics: ["graph neural networks and efficient deep learning architectures"], write_radius: 0.25}
-    - {agent_id: s7, policy: llm, read_topics: ["graph neural networks and efficient deep learning architectures"], read_radius: 0.25, write_topics: ["graph neural networks and efficient deep learning architectures"], write_radius: 0.25}
-    - {agent_id: s8, policy: llm, read_topics: ["adversarial robustness and trustworthy machine learning"], read_radius: 0.25, write_topics: ["adversarial robustness and trustworthy machine learning"], write_radius: 0.25}
-    - {agent_id: s9, policy: llm, read_topics: ["adversarial robustness and trustworthy machine learning"], read_radius: 0.25, write_topics: ["adversarial robustness and trustworthy machine learning"], write_radius: 0.25}
+    - {agent_id: s0, policy: llm, read_topics: ["large language models and natural language reasoning"], read_radius: 0.3, write_topics: ["large language models and natural language reasoning"], write_radius: 0.3}
+    - {agent_id: s1, policy: llm, read_topics: ["large language models and natural language reasoning"], read_radius: 0.3, write_topics: ["large language models and natural language reasoning"], write_radius: 0.3}
+    - {agent_id: s2, policy: llm, read_topics: ["computer vision and generative image models"], read_radius: 0.3, write_topics: ["computer vision and generative image models"], write_radius: 0.3}
+    - {agent_id: s3, policy: llm, read_topics: ["computer vision and generative image models"], read_radius: 0.3, write_topics: ["computer vision and generative image models"], write_radius: 0.3}
+    - {agent_id: s4, policy: llm, read_topics: ["reinforcement learning and sequential decision making"], read_radius: 0.3, write_topics: ["reinforcement learning and sequential decision making"], write_radius: 0.3}
+    - {agent_id: s5, policy: llm, read_topics: ["reinforcement learning and sequential decision making"], read_radius: 0.3, write_topics: ["reinforcement learning and sequential decision making"], write_radius: 0.3}
+    - {agent_id: s6, policy: llm, read_topics: ["graph neural networks and efficient deep learning architectures"], read_radius: 0.3, write_topics: ["graph neural networks and efficient deep learning architectures"], write_radius: 0.3}
+    - {agent_id: s7, policy: llm, read_topics: ["graph neural networks and efficient deep learning architectures"], read_radius: 0.3, write_topics: ["graph neural networks and efficient deep learning architectures"], write_radius: 0.3}
+    - {agent_id: s8, policy: llm, read_topics: ["adversarial robustness and trustworthy machine learning"], read_radius: 0.3, write_topics: ["adversarial robustness and trustworthy machine learning"], write_radius: 0.3}
+    - {agent_id: s9, policy: llm, read_topics: ["adversarial robustness and trustworthy machine learning"], read_radius: 0.3, write_topics: ["adversarial robustness and trustworthy machine learning"], write_radius: 0.3}
