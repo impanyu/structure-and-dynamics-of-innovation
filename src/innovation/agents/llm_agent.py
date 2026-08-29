@@ -46,12 +46,10 @@ class LLMAgentPolicy(Policy):
         result_snippet = json.dumps(obs.get("last_result", {}))[:1500]
         self.memory.append((self._last_action, result_snippet))
         history = "\n".join(f"{a} -> {r}" for a, r in self.memory)
-        total = f"/{self.total_steps}" if self.total_steps else ""
         budget = ""
         if obs.get("ideas_total"):
             budget = f" | team ideas {obs.get('ideas_used', 0)}/{obs['ideas_total']}"
-        header = (f"[agent {self.identity} | step {obs['step']}{total}{budget}]\n\n"
-                  if self.identity or self.total_steps else "")
+        header = f"[agent {self.identity}{budget}]\n\n" if self.identity else ""
         user = (header + ACTIONS_DOC + "\n\nRecent history (oldest first):\n" + history
                 + "\n\nChoose your next action (JSON only):")
         # 2000 visible-output budget: a generate action carries a full idea

@@ -112,6 +112,90 @@ def _resolve_random_topics(agents: list[dict], pool, rng) -> dict:
     return assignments
 
 
+def _drive(cfg, env, policies, order, last_result, start_step) -> dict:
+    for step in range(start_step, cfg.total_steps):
+        agent_id = order[step % len(order)]
+        obs = {"step": step, "last_result": last_result[agent_id]}
+        if cfg.generation_budget is not None:
+            obs["ideas_used"] = cfg.generation_budget - env.generation_budget
+            obs["ideas_total"] = cfg.generation_budget
+        action = policies[agent_id].act(obs)
+        last_result[agent_id] = env.execute(agent_id, step, action)
+    return {"run_id": cfg.run_id, "steps": cfg.total_steps,
+            "generated": env.generated_ids()}
+
+
+def resume_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
+                      out_dir) -> dict:
+    """Continue an existing run up to cfg.total_steps (raise it in the config
+    to extend). Rebuilds from the event log: graph mutations are replayed,
+    each agent's rolling memory and last result are reconstructed, recorded
+    topic assignments are reused (never re-sampled). The resumed segment uses
+    a fresh rng stream seeded by (seed, start_step) — a resumed run is
+    reproducible, but not bit-identical to an uninterrupted one."""
+    from innovation.experiments.events import load_events
+
+    run_dir = Path(out_dir) / cfg.run_id
+    events = load_events(run_dir / "events.jsonl")
+    if not events:
+        raise SystemExit(f"nothing to resume at {run_dir}")
+    meta = json.loads((run_dir / "run_meta.json").read_text())
+    start_step = max(e["step"] for e in events) + 1
+    if start_step >= cfg.total_steps:
+        raise SystemExit(f"run already has {start_step} steps; "
+                         f"raise total_steps beyond that to extend")
+
+    agents = [dict(a) for a in cfg.agents]
+    for a in agents:
+        a["_identity"] = f"{cfg.run_id}:{a['agent_id']}"
+        a["_total_steps"] = cfg.total_steps
+        topic = meta.get("topic_assignments", {}).get(a["agent_id"])
+        if topic:  # reuse the original draw
+            if a.get("read_topics") == "random":
+                a["read_topics"] = [topic]
+            if a.get("write_topics") == "random":
+                a["write_topics"] = [topic]
+    rng = np.random.default_rng((cfg.seed, start_step))
+    # scopes derive from the CORPUS vectors: build before restore adds
+    # generated vectors to the index.
+    scopes = {a["agent_id"]: s for a in agents
+              if (s := build_scope(a, embedder, corpus_vecs=index.vecs)) is not None}
+    needs_communities = any(s.read is not None or s.write is not None
+                            for s in scopes.values())
+    communities = graph.communities() if needs_communities else None
+    env = Environment(run_id=cfg.run_id, graph=graph, index=index,
+                      embedder=embedder, event_log=EventLog(run_dir / "events.jsonl"),
+                      rng=rng, generation_budget=cfg.generation_budget,
+                      scopes=scopes, communities=communities)
+    env.restore(events)
+
+    policies, last_result = {}, {}
+    order = [a["agent_id"] for a in agents]
+    by_agent = {aid: [e for e in events if e["agent_id"] == aid] for aid in order}
+    for a in agents:
+        aid = a["agent_id"]
+        pol = build_policy(a, llm=llm, model=model, graph=graph, rng=rng)
+        mine = by_agent[aid]
+        if mine and hasattr(pol, "memory"):
+            # replay the (action -> result) history into the rolling memory:
+            # entry i is (action_{i-1}, result_{i-1}); the newest result feeds
+            # back through last_result instead.
+            pol.memory.append(("(none)", "{}"))
+            for e in mine[:-1]:
+                pol.memory.append((e["action"], json.dumps(e["result"])[:1500]))
+            pol._last_action = mine[-1]["action"]
+        policies[aid] = pol
+        last_result[aid] = mine[-1]["result"] if mine else {}
+
+    out = _drive(cfg, env, policies, order, last_result, start_step)
+    out["topic_assignments"] = meta.get("topic_assignments", {})
+    out["resumed_from_step"] = start_step
+    (run_dir / "run_meta.json").write_text(json.dumps(
+        {**meta, "total_steps": cfg.total_steps,
+         "resumed_from": meta.get("resumed_from", []) + [start_step]}, indent=1))
+    return out
+
+
 def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
                    out_dir) -> dict:
     rng = np.random.default_rng(cfg.seed)
@@ -139,19 +223,8 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
                 for a in cfg.agents}
     order = [a["agent_id"] for a in cfg.agents]
     last_result: dict[str, dict] = {aid: {} for aid in order}
-
-    for step in range(cfg.total_steps):
-        agent_id = order[step % len(order)]
-        obs = {"step": step, "last_result": last_result[agent_id]}
-        if cfg.generation_budget is not None:
-            obs["ideas_used"] = cfg.generation_budget - env.generation_budget
-            obs["ideas_total"] = cfg.generation_budget
-        action = policies[agent_id].act(obs)
-        last_result[agent_id] = env.execute(agent_id, step, action)
-
-    out = {"run_id": cfg.run_id, "steps": cfg.total_steps,
-           "generated": env.generated_ids(),
-           "topic_assignments": assignments}
+    out = _drive(cfg, env, policies, order, last_result, 0)
+    out["topic_assignments"] = assignments
     (run_dir / "run_meta.json").write_text(json.dumps(
         {"run_id": cfg.run_id, "seed": cfg.seed,
          "topic_assignments": assignments}, indent=1))

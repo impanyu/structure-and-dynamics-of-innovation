@@ -172,3 +172,43 @@ def test_obs_carries_live_budget_status(tmp_path):
                    llm=llm, model="m", out_dir=tmp_path)
     # prompt at step 2 must reflect 2 ideas already generated
     assert "team ideas 2/5" in llm.calls[2]["user"]
+
+
+def test_resume_continues_steps_memory_and_gen_counter(tmp_path):
+    """resume_simulation continues a finished run: steps and gen ids carry on,
+    agent memories are rebuilt from the event log, topic assignments reused."""
+    import json
+    from innovation.experiments.events import load_events
+    from innovation.experiments.runner import resume_simulation
+    from innovation.llm import FakeLLM
+
+    graph, index, emb = fixtures()
+    gen = json.dumps({"action": "generate", "args": {"text": "t", "cited_ids": ["W0"]}})
+    search = json.dumps({"action": "search", "args": {"query": "idea", "k": 2}})
+    llm = FakeLLM(default=search)
+    pool = [f"topic {i}" for i in range(10)]
+    agents = [{"agent_id": "a0", "policy": "llm"},
+              {"agent_id": "a1", "policy": "llm",
+               "write_topics": "random", "write_mass": 3}]
+    cfg = RunConfig(run_id="rr", seed=1, total_steps=2,
+                    agents=agents, topic_pool=pool)
+    out1 = run_simulation(cfg, graph=graph, index=index, embedder=emb,
+                          llm=llm, model="m", out_dir=tmp_path)
+    assigned = out1["topic_assignments"]["a1"]
+
+    # resume on a FRESH world (as a new process would): extend to 6 steps
+    graph2, index2, emb2 = fixtures()
+    llm2 = FakeLLM(default=gen)
+    cfg2 = RunConfig(run_id="rr", seed=1, total_steps=6,
+                     agents=agents, topic_pool=pool)
+    out2 = resume_simulation(cfg2, graph=graph2, index=index2, embedder=emb2,
+                             llm=llm2, model="m", out_dir=tmp_path)
+    events = load_events(tmp_path / "rr" / "events.jsonl")
+    assert [e["step"] for e in events] == [0, 1, 2, 3, 4, 5]
+    assert out2["topic_assignments"]["a1"] == assigned  # reused, not re-sampled
+    # unscoped a0 generates at steps 2 and 4; counter starts at gen:rr:0
+    gen_ids = [e["result"]["node_id"] for e in events
+               if e["action"] == "generate" and "node_id" in e["result"]]
+    assert gen_ids[:2] == ["gen:rr:0", "gen:rr:1"]
+    # memory rebuilt: a0's first resumed prompt references its past search
+    assert "search ->" in llm2.calls[0]["user"]

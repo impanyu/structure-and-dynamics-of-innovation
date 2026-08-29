@@ -17,7 +17,8 @@ from innovation.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
 from innovation.eval.metrics import aggregate_run, past_dup_flag
 from innovation.eval.search_verify import verify_idea
 from innovation.experiments.events import load_events
-from innovation.experiments.runner import RunConfig, run_simulation
+from innovation.experiments.runner import (RunConfig, resume_simulation,
+                                            run_simulation)
 from innovation.ideas.embed import Embedder, load_embeddings, save_embeddings
 from innovation.ideas.summarize import load_ideas, save_ideas, summarize_corpus
 from innovation.llm import CachedLLM, RoutedLLM
@@ -117,17 +118,17 @@ def _load_world(cfg):
     return graph, index, emb, dict(zip(ids, vecs))
 
 
-def cmd_run(cfg, seed=None, run_id=None):
+def cmd_run(cfg, seed=None, run_id=None, resume=False):
     r = cfg["run"]
     if seed is not None:
         r["seed"] = seed
     if run_id is not None:
         r["run_id"] = run_id
     events_path = Path(cfg["out_dir"]) / r["run_id"] / "events.jsonl"
-    if events_path.exists():
+    if events_path.exists() and not resume:
         raise SystemExit(
             f"run '{r['run_id']}' already has events at {events_path}; "
-            "delete it or choose a new run_id — resuming is not yet supported")
+            "pass --resume (with a raised total_steps) to extend it, or use a new run_id")
     graph, index, emb, _ = _load_world(cfg)
     topic_pool = None
     if cfg.get("topics_file"):
@@ -138,9 +139,10 @@ def cmd_run(cfg, seed=None, run_id=None):
                         total_steps=r["total_steps"],
                         generation_budget=r.get("generation_budget"),
                         agents=r["agents"], topic_pool=topic_pool)
-    out = run_simulation(run_cfg, graph=graph, index=index, embedder=emb,
-                         llm=_llm(cfg), model=cfg["models"]["agent"],
-                         out_dir=cfg["out_dir"])
+    simulate = resume_simulation if resume else run_simulation
+    out = simulate(run_cfg, graph=graph, index=index, embedder=emb,
+                   llm=_llm(cfg), model=cfg["models"]["agent"],
+                   out_dir=cfg["out_dir"])
     print(json.dumps(out, indent=2))
 
 
@@ -192,11 +194,17 @@ def main():
                         help="override run.seed (for multi-seed sweeps)")
     parser.add_argument("--run-id", default=None,
                         help="override run.run_id (for multi-seed sweeps)")
+    parser.add_argument("--steps", type=int, default=None,
+                        help="override run.total_steps (e.g. to extend before --resume)")
+    parser.add_argument("--resume", action="store_true",
+                        help="continue an existing run up to total_steps")
     args = parser.parse_args()
     load_env()  # API keys from ./.env (shell env takes precedence)
     cfg = load_config(args.config)
     if args.command == "run":
-        cmd_run(cfg, seed=args.seed, run_id=args.run_id)
+        if args.steps is not None:
+            cfg["run"]["total_steps"] = args.steps
+        cmd_run(cfg, seed=args.seed, run_id=args.run_id, resume=args.resume)
         return
     if args.command == "evaluate" and args.run_id is not None:
         cfg["run"]["run_id"] = args.run_id

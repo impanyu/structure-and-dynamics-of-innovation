@@ -83,14 +83,14 @@ def test_identity_makes_prompts_unique_across_agents():
     b.act({"step": 0, "last_result": {}})
     p0, p1 = llm.calls[0]["user"], llm.calls[1]["user"]
     assert p0 != p1 and "run1:g0" in p0 and "run1:g1" in p1
-    assert "step 0" in p0
 
 
-def test_pace_header_shows_step_over_total():
+def test_header_has_no_step_counter():
     llm = FakeLLM(default=json.dumps({"action": "sample_frontier", "args": {}}))
     pol = LLMAgentPolicy(llm=llm, model="m", identity="r:g0", total_steps=400)
     pol.act({"step": 65, "last_result": {}})
-    assert "step 65/400" in llm.calls[0]["user"]
+    assert "step 65" not in llm.calls[0]["user"]
+    assert "[agent r:g0]" in llm.calls[0]["user"]
 
 
 def test_header_shows_team_budget_status():
