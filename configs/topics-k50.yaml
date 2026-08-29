@@ -1,102 +1,102 @@
 radius: 0.3
 topics:
-- size: 110
-  topic: continual learning and lifelong learning methods
-- size: 208
-  topic: vision-language multimodal representation learning
-- size: 157
-  topic: alignment and evaluation of language models
-- size: 108
-  topic: multimodal vision-language foundation models
-- size: 210
-  topic: variational and generative image compression models
-- size: 84
-  topic: algorithmic fairness and fairness-aware learning
-- size: 330
-  topic: optimization and generalization of deep networks
-- size: 267
-  topic: vision transformer architectures and efficiency
-- size: 123
-  topic: language-model agent research and benchmarks
-- size: 261
-  topic: robustness and distribution shift in learning
-- size: 84
-  topic: knowledge graph reasoning and embeddings
-- size: 138
-  topic: neural operator and neural pde solvers
-- size: 109
-  topic: differentially private machine learning algorithms
-- size: 125
-  topic: neural audio generation and representation learning
-- size: 261
-  topic: pessimistic offline reinforcement learning methods
-- size: 90
-  topic: personalized and heterogeneous federated learning techniques
-- size: 95
-  topic: code generation and evaluation for large language models
-- size: 135
-  topic: deep learning for time series forecasting
-- size: 137
-  topic: tool-augmented mathematical reasoning with language models
-- size: 67
-  topic: communication-efficient distributed optimization
-- size: 342
-  topic: representation and reward-centric reinforcement learning
-- size: 89
-  topic: higher-order and geometric graph clustering
-- size: 154
-  topic: data-efficient generative adversarial network training
-- size: 89
-  topic: multimodal language-guided 3d scene generation
-- size: 337
+- size: 434
+  topic: adaptive and robust stochastic optimization methods
+- size: 293
+  topic: efficient and inductive vision transformers
+- size: 206
+  topic: inductive and contextual knowledge graph representation
+- size: 300
+  topic: 3d object detection on point clouds
+- size: 657
+  topic: graph structure learning and generalization
+- size: 292
+  topic: evaluation and augmentation of language models
+- size: 422
+  topic: single-image to 3d generative modeling
+- size: 172
+  topic: continual learning and lifelong adaptation
+- size: 217
+  topic: causal representation learning under interventions
+- size: 497
   topic: sparse neural network training and pruning
-- size: 140
-  topic: retrieval-augmented question answering with tools
-- size: 109
-  topic: weakly-supervised and noisy-label learning methods
-- size: 199
-  topic: efficient long-context transformers
-- size: 319
-  topic: scalable and robust graph neural network methods
-- size: 101
-  topic: causal representation and discovery with interventions
-- size: 175
-  topic: representation analysis and interpretability of neural networks
-- size: 183
-  topic: learning-driven combinatorial optimization and hyperparameter transfer
-- size: 205
-  topic: nonconvex stochastic optimization methods
-- size: 119
-  topic: training and learning algorithms for spiking neural networks
-- size: 133
-  topic: semantic segmentation research and methods
-- size: 128
-  topic: multi-agent reinforcement learning research
-- size: 230
-  topic: embodied vision-language control models
-- size: 120
-  topic: text-guided controllable image diffusion models
-- size: 144
-  topic: stochastic bandits and constrained online learning
-- size: 166
-  topic: backdoors and jailbreaks in pretrained models
-- size: 173
-  topic: diffusion-based generative modeling and sampling methods
-- size: 157
-  topic: controllable video dynamics generation and prediction
-- size: 258
-  topic: contrastive and few-shot representation learning
+- size: 246
+  topic: differentially private learning and optimization
+- size: 338
+  topic: self-supervised controllable video representation learning
+- size: 103
+  topic: task-oriented and knowledge-grounded dialogue modeling
+- size: 286
+  topic: efficient and long-range transformer architectures
+- size: 418
+  topic: adversarial robustness and training methods
+- size: 277
+  topic: offline and constrained reinforcement learning with pessimism
+- size: 374
+  topic: accelerated sampling and analysis of diffusion models
+- size: 292
+  topic: 3d generative models for molecular design
+- size: 262
+  topic: federated learning optimization and heterogeneity
+- size: 301
+  topic: learning-based combinatorial optimization methods
+- size: 490
+  topic: efficient model compression and adaptation for llms
+- size: 260
+  topic: semantic segmentation with limited supervision
+- size: 296
+  topic: foundation models and generative modeling for time series
 - size: 127
-  topic: 3d equivariant generative models for molecules
-- size: 254
-  topic: adversarial robustness in deep learning
+  topic: multi-view graph-based clustering methods
+- size: 361
+  topic: language model alignment and calibration
+- size: 318
+  topic: efficient transfer and adaptation of models
+- size: 315
+  topic: backdoor attacks and defenses in ml models
+- size: 609
+  topic: out-of-distribution generalization and robustness
+- size: 246
+  topic: multi-step mathematical reasoning with lm prompts
+- size: 158
+  topic: evaluation and improvement of code generation models
+- size: 211
+  topic: retrieval-augmented multimodal question answering
+- size: 444
+  topic: contrastive representation learning and robustness
+- size: 307
+  topic: neural operator and physics-informed pde solvers
+- size: 178
+  topic: individual fairness and robustness in ML
+- size: 538
+  topic: representation learning for sequential decision making
+- size: 240
+  topic: multimodal representation learning for missing modalities
+- size: 577
+  topic: implicit bias and dynamics of deep learning
+- size: 232
+  topic: multimodal generative and robust audio models
+- size: 305
+  topic: language-models as autonomous decision agents
+- size: 146
+  topic: spatio-temporal traffic and trajectory modeling
+- size: 633
+  topic: vision-language foundation models and benchmarks
+- size: 135
+  topic: recommendation systems and sequential user modeling
+- size: 548
+  topic: offline reinforcement learning methods and theory
+- size: 367
+  topic: robust semi-supervised and noisy-label learning
+- size: 210
+  topic: interpretable and causally-grounded model explanations
+- size: 409
+  topic: few-shot and domain-adaptive object detection
 - size: 364
-  topic: efficient adaptation and compression of language models
-- size: 323
-  topic: neural implicit and generative 3d reconstruction
-- size: 166
-  topic: variational bayesian deep learning methods
-- size: 177
-  topic: statistical learning theory and generalization
-- size: 179
-  topic: model distillation and interpretability methods
+  topic: high-resolution diffusion-based image synthesis
+- size: 331
+  topic: online learning and multiagent decision-making
+- size: 178
+  topic: out-of-distribution detection and outlier synthesis
+- size: 288
+  topic: embodied multimodal world-models for agents
