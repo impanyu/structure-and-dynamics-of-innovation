@@ -18,9 +18,11 @@ then `... evaluate --config <same> --run-id <name>-sK`.
 
 ## Controls (identical across all conditions)
 
-- Same graph, same seed set (3 seeds: 0/1/2; extend to 5 for final runs),
-  `total_steps: 400`, global `generation_budget: 40` — every condition emits
-  the same number of ideas; quality is compared, not quantity.
+- Same graph, `total_steps: 400`, global `generation_budget: 40` — every
+  condition emits the same number of ideas; quality is compared, not quantity.
+- Seeds: core matrix runs ONE seed per condition (seed 0) — user decision
+  2026-08-29 to control cost; extend to more seeds for the paper's final
+  numbers once the pipeline and effect directions are confirmed.
 - Jumps (`sample_frontier`) allowed everywhere, always confined to the
   agent's readable scope.
 - Headline metric: **accuracy** (precision) — share of generated ideas
@@ -29,7 +31,7 @@ then `... evaluate --config <same> --run-id <name>-sK`.
   and pre-cutoff matches excluded). Process observables: novelty, bridging,
   diversity, action-trace statistics from `events.jsonl`.
 
-## Core matrix — run first (4 conditions × 3 seeds = 12 runs)
+## Core matrix — run first (4 conditions × 1 seed = 4 runs)
 
 | id | config | team (N=10) | question |
 |---|---|---|---|
@@ -73,11 +75,12 @@ broadly, write narrowly".
 - Per-run: `metrics.json` (accuracy + counts), `verdicts.json` (per-idea
   audit trail), `run_meta.json` (seed, topic assignments), `events.jsonl`
   (full action traces).
-- Seeds paired across conditions; effect sizes + bootstrap CIs;
-  Mann-Whitney/Wilcoxon for pairwise contrasts. Topic assignments are a
-  randomized covariate — per-topic accuracy is itself analyzable.
-- Cost estimate: core matrix ≈ 12 × 400 gpt-5 steps ≈ $60–100 + evaluation
-  ≈ $10 (gpt-5-mini, cached).
+- With one seed per condition, compare per-idea accuracy across conditions
+  (each run yields 40 scored ideas; idea-level bootstrap CIs) and report the
+  seed limitation; add seeds before the paper's final claims. Topic
+  assignments are recorded and analyzable as a covariate.
+- Cost estimate: core matrix ≈ 4 × 400 gpt-5 steps ≈ $25–50 + evaluation
+  ≈ $4 (gpt-5-mini, cached).
 
 ## Gates before running
 
