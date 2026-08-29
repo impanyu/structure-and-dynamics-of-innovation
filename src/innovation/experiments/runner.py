@@ -139,7 +139,9 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
 
     for step in range(cfg.total_steps):
         agent_id = order[step % len(order)]
-        obs = {"step": step, "last_result": last_result[agent_id]}
+        obs = {"step": step, "last_result": last_result[agent_id],
+               "ideas_used": cfg.generation_budget - env.generation_budget,
+               "ideas_total": cfg.generation_budget}
         action = policies[agent_id].act(obs)
         last_result[agent_id] = env.execute(agent_id, step, action)
 

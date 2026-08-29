@@ -157,3 +157,18 @@ def test_equal_mass_scope_covers_exactly_k_corpus_papers():
     inside = (sims >= 1 - np.asarray(scope.read_radius)).any(axis=1)
     assert inside.sum() == 20
     assert (np.asarray(scope.write_radius) == np.asarray(scope.read_radius)).all()
+
+
+def test_obs_carries_live_budget_status(tmp_path):
+    import json
+    from innovation.llm import FakeLLM
+
+    graph, index, emb = fixtures()
+    gen = json.dumps({"action": "generate", "args": {"text": "t", "cited_ids": ["W0"]}})
+    llm = FakeLLM(default=gen)
+    cfg = RunConfig(run_id="rb", seed=0, total_steps=3, generation_budget=5,
+                    agents=[{"agent_id": "a0", "policy": "llm"}])
+    run_simulation(cfg, graph=graph, index=index, embedder=emb,
+                   llm=llm, model="m", out_dir=tmp_path)
+    # prompt at step 2 must reflect 2 ideas already generated
+    assert "team ideas 2/5" in llm.calls[2]["user"]

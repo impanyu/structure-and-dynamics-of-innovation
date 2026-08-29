@@ -91,3 +91,10 @@ def test_pace_header_shows_step_over_total():
     pol = LLMAgentPolicy(llm=llm, model="m", identity="r:g0", total_steps=400)
     pol.act({"step": 65, "last_result": {}})
     assert "step 65/400" in llm.calls[0]["user"]
+
+
+def test_header_shows_team_budget_status():
+    llm = FakeLLM(default=json.dumps({"action": "sample_frontier", "args": {}}))
+    pol = LLMAgentPolicy(llm=llm, model="m", identity="r:g0", total_steps=400)
+    pol.act({"step": 10, "last_result": {}, "ideas_used": 12, "ideas_total": 40})
+    assert "team ideas 12/40" in llm.calls[0]["user"]
