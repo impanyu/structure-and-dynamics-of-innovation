@@ -129,10 +129,15 @@ def cmd_run(cfg, seed=None, run_id=None):
             f"run '{r['run_id']}' already has events at {events_path}; "
             "delete it or choose a new run_id — resuming is not yet supported")
     graph, index, emb, _ = _load_world(cfg)
+    topic_pool = None
+    if cfg.get("topics_file"):
+        import yaml
+        pool_data = yaml.safe_load(Path(cfg["topics_file"]).read_text())
+        topic_pool = [t["topic"] for t in pool_data["topics"]]
     run_cfg = RunConfig(run_id=r["run_id"], seed=r["seed"],
                         total_steps=r["total_steps"],
                         generation_budget=r["generation_budget"],
-                        agents=r["agents"])
+                        agents=r["agents"], topic_pool=topic_pool)
     out = run_simulation(run_cfg, graph=graph, index=index, embedder=emb,
                          llm=_llm(cfg), model=cfg["models"]["agent"],
                          out_dir=cfg["out_dir"])

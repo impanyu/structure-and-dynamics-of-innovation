@@ -1,4 +1,5 @@
 """Round-robin simulation runner (spec §3.4-3.5): stigmergy via the shared network."""
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -18,6 +19,7 @@ class RunConfig:
     total_steps: int
     generation_budget: int  # GLOBAL: the fairness control of spec §3.4
     agents: list[dict] = field(default_factory=list)
+    topic_pool: list[str] | None = None  # for read/write_topics: "random"
 
 
 def build_policy(spec: dict, *, llm, model, graph, rng):
@@ -44,6 +46,8 @@ def build_scope(spec: dict, embedder=None) -> AgentScope | None:
     write = spec.get("write_communities")
     read_topics = spec.get("read_topics")
     write_topics = spec.get("write_topics")
+    if read_topics == "random" or write_topics == "random":
+        raise ValueError("unresolved 'random' topic sentinel reached build_scope")
     if read is not None and read_topics:
         raise ValueError("read scope: give communities OR topics, not both")
     if write is not None and write_topics:
@@ -62,10 +66,37 @@ def build_scope(spec: dict, embedder=None) -> AgentScope | None:
         write_radius=spec.get("write_radius", 0.3))
 
 
+def _resolve_random_topics(agents: list[dict], pool, rng) -> dict:
+    """Replace read/write_topics: "random" with one pool topic per agent —
+    distinct within the run, drawn with the run's seeded rng. A specialist
+    with both random reads and writes gets the SAME topic for both."""
+    specs = [a for a in agents
+             if a.get("read_topics") == "random" or a.get("write_topics") == "random"]
+    if not specs:
+        return {}
+    if not pool:
+        raise ValueError("agents request random topics but no topic_pool given")
+    picks = rng.choice(len(pool), size=len(specs), replace=False)
+    assignments = {}
+    for a, k in zip(specs, picks):
+        topic = [pool[int(k)]]
+        if a.get("read_topics") == "random":
+            a["read_topics"] = topic
+        if a.get("write_topics") == "random":
+            a["write_topics"] = topic
+        assignments[a["agent_id"]] = topic[0]
+    return assignments
+
+
 def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
                    out_dir) -> dict:
     rng = np.random.default_rng(cfg.seed)
     run_dir = Path(out_dir) / cfg.run_id
+    agents = [dict(a) for a in cfg.agents]
+    assignments = _resolve_random_topics(agents, cfg.topic_pool, rng)
+    cfg = RunConfig(run_id=cfg.run_id, seed=cfg.seed, total_steps=cfg.total_steps,
+                    generation_budget=cfg.generation_budget, agents=agents,
+                    topic_pool=cfg.topic_pool)
     scopes = {a["agent_id"]: s for a in cfg.agents
               if (s := build_scope(a, embedder)) is not None}
     needs_communities = any(s.read is not None or s.write is not None
@@ -87,5 +118,10 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
         action = policies[agent_id].act(obs)
         last_result[agent_id] = env.execute(agent_id, step, action)
 
-    return {"run_id": cfg.run_id, "steps": cfg.total_steps,
-            "generated": env.generated_ids()}
+    out = {"run_id": cfg.run_id, "steps": cfg.total_steps,
+           "generated": env.generated_ids(),
+           "topic_assignments": assignments}
+    (run_dir / "run_meta.json").write_text(json.dumps(
+        {"run_id": cfg.run_id, "seed": cfg.seed,
+         "topic_assignments": assignments}, indent=1))
+    return out

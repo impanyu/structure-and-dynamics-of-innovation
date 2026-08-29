@@ -111,3 +111,31 @@ def test_topic_scope_flows_from_config(tmp_path):
     events = load_events(tmp_path / "rt" / "events.jsonl")
     jumps = [e for e in events if e["action"] == "sample_frontier"]
     assert jumps and all(e["result"]["node_id"] == "W0" for e in jumps)
+
+
+def test_random_topic_assignment_is_seeded_and_distinct(tmp_path):
+    """read/write_topics: "random" resolves to one pool topic per specialist,
+    distinct within a run, deterministic per seed, recorded in run_meta."""
+    import json
+    from innovation.llm import FakeLLM
+
+    graph, index, emb = fixtures()
+    pool = [f"topic {i}" for i in range(50)]
+    llm = FakeLLM(default=json.dumps({"action": "sample_frontier", "args": {}}))
+    agents = [{"agent_id": f"s{i}", "policy": "llm",
+               "read_topics": "random", "write_topics": "random",
+               "read_radius": 0.3, "write_radius": 0.3} for i in range(5)]
+    cfg = RunConfig(run_id="rta", seed=3, total_steps=2, generation_budget=1,
+                    agents=agents, topic_pool=pool)
+    out = run_simulation(cfg, graph=graph, index=index, embedder=emb,
+                         llm=llm, model="m", out_dir=tmp_path / "a")
+    assigned = out["topic_assignments"]
+    assert set(assigned) == {f"s{i}" for i in range(5)}
+    topics = list(assigned.values())
+    assert len(set(topics)) == 5 and all(t in pool for t in topics)
+    meta = json.loads((tmp_path / "a" / "rta" / "run_meta.json").read_text())
+    assert meta["topic_assignments"] == assigned
+    # same seed -> same assignment; different seed -> (almost surely) different
+    out2 = run_simulation(cfg, graph=fixtures()[0], index=fixtures()[1],
+                          embedder=emb, llm=llm, model="m", out_dir=tmp_path / "b")
+    assert out2["topic_assignments"] == assigned

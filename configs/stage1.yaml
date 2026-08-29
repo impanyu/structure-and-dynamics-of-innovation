@@ -126,3 +126,4 @@ run:
     - {agent_id: a3, policy: llm}
     - {agent_id: a4, policy: llm}
 out_dir: runs
+topics_file: configs/topics-k50.yaml

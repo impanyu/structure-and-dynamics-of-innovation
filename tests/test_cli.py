@@ -292,7 +292,11 @@ def test_all_experiment_configs_load_and_scopes_build():
         assert run["run_id"] == f.stem
         assert run["total_steps"] == 400 and run["generation_budget"] == 40
         for spec in run["agents"]:
-            build_scope(spec, emb)  # must not raise
+            resolved = dict(spec)
+            for key in ("read_topics", "write_topics"):
+                if resolved.get(key) == "random":
+                    resolved[key] = ["placeholder topic"]
+            build_scope(resolved, emb)  # must not raise
         if f.stem.startswith("core-"):
             assert len(run["agents"]) == 10
 
