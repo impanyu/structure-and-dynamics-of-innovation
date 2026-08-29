@@ -15,12 +15,14 @@ S2_BASE = "https://api.semanticscholar.org/graph/v1/paper/search"
 OPENALEX_BASE = "https://api.openalex.org/works"
 
 QUERY_SYSTEM = "You turn research ideas into literature search queries."
-QUERY_TEMPLATE = """Give {n} short keyword search queries (4-8 words each) that would find \
-papers implementing this research idea. One query per line, no numbering, nothing else.
+QUERY_TEMPLATE = """Give {n} short keyword search queries (4-8 words each) for finding papers \
+related to this research idea: the FIRST focused on the PROBLEM it addresses, the \
+SECOND on its core METHOD, the THIRD combining both. One query per line, no \
+numbering, nothing else.
 
 Idea: {idea}"""
 
-JUDGE_SYSTEM = "You judge whether a paper realizes a proposed research idea."
+JUDGE_SYSTEM = "You grade how closely a candidate paper realizes a proposed research idea."
 JUDGE_TEMPLATE = """Research idea:
 {idea}
 
@@ -28,9 +30,15 @@ Candidate paper:
 Title: {title}
 Abstract: {abstract}
 
-Does this paper genuinely realize the core of the idea (same problem AND same key \
-approach, not merely the same topic)? Answer YES or NO on the first line, then one \
-sentence of justification."""
+Grade how closely the paper realizes the idea on this scale:
+0 = different problem entirely
+1 = same broad area/task, but a different goal
+2 = same specific problem/goal, unrelated approach
+3 = same problem AND the approaches belong to the same method family
+4 = same problem AND the same core mechanism, differing in secondary components
+5 = essentially the same idea: problem, core mechanism, and key design choices match
+
+Reply with JSON only: {{"level": <0-5>, "evidence": "<one short sentence>"}}"""
 
 
 def extract_queries(llm: LLM, *, model: str, idea_text: str, n: int = 3) -> list[str]:
@@ -110,20 +118,32 @@ def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> lis
             for w in payload.get("results", [])]
 
 
-def judge_realization(llm: LLM, *, model: str, idea_text: str, candidate: dict) -> bool:
+def judge_level(llm: LLM, *, model: str, idea_text: str, candidate: dict) -> tuple[int, str]:
+    """(realization level 0-5, one-line evidence). Unparsable replies -> (0, ...)."""
     reply = llm.complete(model=model, system=JUDGE_SYSTEM,
                          user=JUDGE_TEMPLATE.format(idea=idea_text,
                                                     title=candidate["title"],
                                                     abstract=candidate["abstract"]),
-                         max_tokens=150)
-    return reply.strip().upper().startswith("YES")
+                         max_tokens=200)
+    start, end = reply.find("{"), reply.rfind("}")
+    if start == -1 or end <= start:
+        return 0, "unparsable judge reply"
+    try:
+        obj = json.loads(reply[start:end + 1])
+        level = int(obj.get("level", 0))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return 0, "unparsable judge reply"
+    return max(0, min(5, level)), str(obj.get("evidence", ""))[:300]
 
 
 @dataclass
 class Verdict:
+    """best_level/best_paper: the highest-graded RECOGNIZED post-cutoff
+    realization (the scoring pair). The exclusion buckets hold level>=2
+    candidates that were disqualified, with their levels, for auditing."""
     idea_id: str
-    hit: bool
-    paper: dict | None
+    best_level: int = 0
+    best_paper: dict | None = None
     excluded_pre_cutoff: list[dict] = field(default_factory=list)
     unknown_date: list[dict] = field(default_factory=list)
     excluded_unrecognized: list[dict] = field(default_factory=list)
@@ -165,26 +185,30 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 seen_titles.add(title_key)
                 candidates.append(cand)
 
-    hit_paper, excluded, unknown, unrecognized, in_corpus = None, [], [], [], []
+    best_level, best_paper = 0, None
+    excluded, unknown, unrecognized, in_corpus = [], [], [], []
     for cand in candidates:
-        if not judge_realization(llm, model=model, idea_text=idea_text, candidate=cand):
-            continue
+        level, evidence = judge_level(llm, model=model, idea_text=idea_text,
+                                      candidate=cand)
+        if level < 2:
+            continue  # below "same specific problem" — not informative
+        entry = {**cand, "level": level, "evidence": evidence}
         if (corpus_titles is not None
                 and cand["title"].strip().lower() in corpus_titles):
-            # Contamination guard: the paper is IN the initial graph, so the
-            # agent could simply have read it — never an anticipation hit.
-            in_corpus.append(cand)
+            # Contamination guard: the paper is IN the initial graph.
+            in_corpus.append(entry)
             continue
-        if cand["pub_date"] and cand["pub_date"] > cutoff_date:
-            if not is_recognized(cand, recognized_aliases, recognized_min_citations):
-                unrecognized.append(cand)  # realized, but not by a recognized paper
-            elif hit_paper is None:
-                hit_paper = cand  # first recognized post-cutoff realization
-        elif cand["pub_date"]:
-            excluded.append(cand)  # logged, NEVER scored (spec §3.6)
-        else:
-            unknown.append(cand)  # unknown date realizations logged separately
-    return Verdict(idea_id=idea_id, hit=hit_paper is not None,
-                   paper=hit_paper, excluded_pre_cutoff=excluded,
-                   unknown_date=unknown, excluded_unrecognized=unrecognized,
-                   excluded_in_corpus=in_corpus)
+        if not cand["pub_date"]:
+            unknown.append(entry)
+            continue
+        if cand["pub_date"] <= cutoff_date:
+            excluded.append(entry)  # logged, NEVER scored (spec §3.6)
+            continue
+        if not is_recognized(cand, recognized_aliases, recognized_min_citations):
+            unrecognized.append(entry)
+            continue
+        if level > best_level:
+            best_level, best_paper = level, entry
+    return Verdict(idea_id=idea_id, best_level=best_level, best_paper=best_paper,
+                   excluded_pre_cutoff=excluded, unknown_date=unknown,
+                   excluded_unrecognized=unrecognized, excluded_in_corpus=in_corpus)

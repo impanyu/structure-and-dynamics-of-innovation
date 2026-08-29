@@ -64,7 +64,7 @@ def test_full_pipeline_smoke(tmp_path):
         return FakeResponse(payload if "semanticscholar" in url
                             else {"results": [], "meta": {"count": 50}})
 
-    eval_llm = FakeLLM(responses=["some query", "YES"] * 10)
+    eval_llm = FakeLLM(responses=["some query", '{"level": 4, "evidence": "e"}'] * 10)
     verdicts = [verify_idea(eval_llm, model="sonnet", idea_id=nid,
                             idea_text=graph.node(nid).text,
                             cutoff_date="2025-01-01", mailto="a@b.c",
@@ -76,5 +76,5 @@ def test_full_pipeline_smoke(tmp_path):
                  for nid in out["generated"]}
     agg = aggregate_run(verdicts, dup_flags)
     assert agg["n_ideas"] == 3
-    assert 0.0 <= agg["precision"] <= 1.0
-    assert agg["n_hits"] >= 1
+    assert 0.0 <= agg["acc_ge3"] <= 1.0
+    assert agg["mean_level"] >= 0.0

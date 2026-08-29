@@ -1,7 +1,7 @@
 import json
 
 from innovation.eval.search_verify import (Verdict, extract_queries,
-                                           judge_realization, s2_search,
+                                           judge_level, s2_search,
                                            verify_idea)
 from innovation.llm import FakeLLM
 
@@ -47,11 +47,17 @@ def test_s2_search_normalizes_and_caches(tmp_path):
     assert "fetched_at" in json.loads(cache_files[0].read_text())
 
 
-def test_judge_realization_yes_no():
-    assert judge_realization(FakeLLM(responses=["YES"]), model="m",
-                             idea_text="i", candidate={"title": "t", "abstract": "a"})
-    assert not judge_realization(FakeLLM(responses=["NO, unrelated"]), model="m",
-                                 idea_text="i", candidate={"title": "t", "abstract": "a"})
+def test_judge_level_parses_json_and_clamps():
+    lvl, ev = judge_level(FakeLLM(responses=['{"level": 4, "evidence": "same core"}']),
+                          model="m", idea_text="i",
+                          candidate={"title": "t", "abstract": "a"})
+    assert (lvl, ev) == (4, "same core")
+    lvl, _ = judge_level(FakeLLM(responses=["garbage"]), model="m",
+                         idea_text="i", candidate={"title": "t", "abstract": "a"})
+    assert lvl == 0
+    lvl, _ = judge_level(FakeLLM(responses=['{"level": 9}']), model="m",
+                         idea_text="i", candidate={"title": "t", "abstract": "a"})
+    assert lvl == 5
 
 
 def test_verify_idea_anticipation_only(tmp_path):
@@ -63,13 +69,16 @@ def test_verify_idea_anticipation_only(tmp_path):
         return FakeResponse(payload if "semanticscholar" in url
                             else {"results": [], "meta": {}})
 
-    llm = FakeLLM(responses=["one query"] + ["YES", "YES"])
+    llm = FakeLLM(responses=["one query",
+                             '{"level": 4, "evidence": "e"}',
+                             '{"level": 3, "evidence": "e"}'])
     v = verify_idea(llm, model="m", idea_id="gen:r:0", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1, top_k=5)
     assert isinstance(v, Verdict)
-    assert v.hit and v.paper["paper_id"] == "new"
+    assert v.best_level == 3 and v.best_paper["paper_id"] == "new"
     assert [p["paper_id"] for p in v.excluded_pre_cutoff] == ["old"]
+    assert v.excluded_pre_cutoff[0]["level"] == 4
 
 
 def test_verify_idea_no_hit_when_only_pre_cutoff(tmp_path):
@@ -79,11 +88,11 @@ def test_verify_idea_no_hit_when_only_pre_cutoff(tmp_path):
         return FakeResponse(payload if "semanticscholar" in url
                             else {"results": [], "meta": {}})
 
-    llm = FakeLLM(responses=["q", "YES"])
+    llm = FakeLLM(responses=["q", '{"level": 5, "evidence": "e"}'])
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert not v.hit and v.paper is None
+    assert v.best_level == 0 and v.best_paper is None
     assert len(v.excluded_pre_cutoff) == 1
 
 
@@ -95,11 +104,11 @@ def test_verify_idea_unknown_date_not_hit_not_excluded(tmp_path):
         return FakeResponse(payload if "semanticscholar" in url
                             else {"results": [], "meta": {}})
 
-    llm = FakeLLM(responses=["q", "YES"])
+    llm = FakeLLM(responses=["q", '{"level": 4, "evidence": "e"}'])
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert not v.hit and v.paper is None
+    assert v.best_level == 0 and v.best_paper is None
     assert v.excluded_pre_cutoff == []
     assert [p["paper_id"] for p in v.unknown_date] == ["unknown"]
 
@@ -112,11 +121,12 @@ def test_verify_idea_keeps_first_of_multiple_post_cutoff_hits(tmp_path):
         return FakeResponse(payload if "semanticscholar" in url
                             else {"results": [], "meta": {}})
 
-    llm = FakeLLM(responses=["q", "YES", "YES"])
+    llm = FakeLLM(responses=["q", '{"level": 3, "evidence": "e"}',
+                             '{"level": 4, "evidence": "e"}'])
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert v.hit and v.paper["paper_id"] == "n1"
+    assert v.best_level == 4 and v.best_paper["paper_id"] == "n2"
 
 
 def test_is_recognized_venue_alias_or_citations():
@@ -143,13 +153,14 @@ def test_verify_idea_hit_requires_recognition(tmp_path):
         return FakeResponse(payload if "semanticscholar" in url
                             else {"results": [], "meta": {}})
 
-    llm = FakeLLM(responses=["q", "YES", "YES"])
+    llm = FakeLLM(responses=["q", '{"level": 4, "evidence": "e"}',
+                             '{"level": 4, "evidence": "e"}'])
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1,
                     recognized_aliases=["international conference on learning representations"],
                     recognized_min_citations=10)
-    assert v.hit and v.paper["paper_id"] == "top"
+    assert v.best_level == 4 and v.best_paper["paper_id"] == "top"
     assert [p["paper_id"] for p in v.excluded_unrecognized] == ["lowq"]
 
 
@@ -161,12 +172,12 @@ def test_verify_idea_excludes_in_corpus_titles(tmp_path):
         return FakeResponse(payload if "semanticscholar" in url
                             else {"results": [], "meta": {}})
 
-    llm = FakeLLM(responses=["q", "YES"])
+    llm = FakeLLM(responses=["q", '{"level": 5, "evidence": "e"}'])
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1,
                     corpus_titles={"a known graph paper"})
-    assert not v.hit
+    assert v.best_level == 0
     assert [p["paper_id"] for p in v.excluded_in_corpus] == ["known"]
 
 
@@ -212,8 +223,8 @@ def test_verify_idea_degrades_when_openalex_unavailable(tmp_path):
             return FakeResponse(payload)
         return Resp429()
 
-    llm = FakeLLM(responses=["q", "YES"])
+    llm = FakeLLM(responses=["q", '{"level": 4, "evidence": "e"}'])
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert v.hit and v.paper["paper_id"] == "new"
+    assert v.best_level == 4 and v.best_paper["paper_id"] == "new"

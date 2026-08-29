@@ -85,7 +85,7 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
         return FakeLLM(default="q")
 
     def fake_verify_idea(llm, **kwargs):
-        return Verdict(idea_id=kwargs["idea_id"], hit=False, paper=None)
+        return Verdict(idea_id=kwargs["idea_id"])
 
     monkeypatch.setattr("innovation.cli.Embedder", fake_embedder_factory)
     monkeypatch.setattr("innovation.cli._llm", fake_llm_factory)
@@ -106,19 +106,20 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
     assert metrics_file.exists(), f"metrics.json not found at {metrics_file}"
 
     metrics = json.loads(metrics_file.read_text())
-    required_keys = {"precision", "n_ideas", "n_hits", "n_dup_flagged"}
+    required_keys = {"mean_level", "acc_ge3", "acc_ge4", "acc_eq5",
+                     "n_ideas", "n_dup_flagged"}
     assert set(metrics.keys()) >= required_keys, \
         f"metrics missing keys. Expected {required_keys}, got {set(metrics.keys())}"
 
-    assert metrics["n_hits"] == 0
+    assert metrics["mean_level"] == 0.0
 
     # 9) Assert verdicts.json exists with one entry per generated idea.
     verdicts_file = Path(cfg["out_dir"]) / "t1" / "verdicts.json"
     assert verdicts_file.exists(), f"verdicts.json not found at {verdicts_file}"
     verdict_records = json.loads(verdicts_file.read_text())
     assert len(verdict_records) == metrics["n_ideas"]
-    required_verdict_keys = {"idea_id", "hit", "paper", "excluded_pre_cutoff",
-                             "unknown_date", "dup_flag"}
+    required_verdict_keys = {"idea_id", "best_level", "best_paper",
+                             "excluded_pre_cutoff", "unknown_date", "dup_flag"}
     for rec in verdict_records:
         assert set(rec.keys()) >= required_verdict_keys
 

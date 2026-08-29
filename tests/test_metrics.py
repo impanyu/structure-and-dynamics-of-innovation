@@ -2,21 +2,20 @@ import numpy as np
 import pytest
 
 from innovation.eval.metrics import (aggregate_run, bridging, diversity,
-                                     novelty, past_dup_flag, precision)
+                                     idea_levels, novelty, past_dup_flag)
 from innovation.eval.search_verify import Verdict
 
 
 def verdicts():
-    return [Verdict("g0", True, {"paper_id": "P1"}),
-            Verdict("g1", True, {"paper_id": "P1"}),   # same paper twice
-            Verdict("g2", False, None),
-            Verdict("g3", True, {"paper_id": "P2"})]
+    return [Verdict("g0", best_level=5, best_paper={"paper_id": "P1"}),
+            Verdict("g1", best_level=3, best_paper={"paper_id": "P1"}),
+            Verdict("g2", best_level=0, best_paper=None),
+            Verdict("g3", best_level=4, best_paper={"paper_id": "P2"})]
 
 
-def test_precision_excludes_dup_flagged_from_numerator():
+def test_idea_levels_zeroes_dup_flagged():
     dup = {"g0": False, "g1": False, "g2": False, "g3": True}
-    # hits g0,g1 count; g3 is a hit but dup-flagged -> excluded; 2/4
-    assert precision(verdicts(), dup) == pytest.approx(0.5)
+    assert idea_levels(verdicts(), dup) == [5, 3, 0, 0]
 
 
 def test_embedding_metrics():
@@ -32,10 +31,13 @@ def test_embedding_metrics():
 def test_aggregate_run():
     dup = {"g0": False, "g1": False, "g2": False, "g3": True}
     agg = aggregate_run(verdicts(), dup)
-    assert agg == {"precision": 0.5, "n_ideas": 4,
-                   "n_hits": 3, "n_dup_flagged": 1}
+    assert agg["mean_level"] == pytest.approx(2.0)   # (5+3+0+0)/4
+    assert agg["acc_ge3"] == pytest.approx(0.5)
+    assert agg["acc_ge4"] == pytest.approx(0.25)
+    assert agg["acc_eq5"] == pytest.approx(0.25)
+    assert agg["n_ideas"] == 4 and agg["n_dup_flagged"] == 1
 
 
 def test_empty_edge_cases():
-    assert precision([], {}) == 0.0
+    assert aggregate_run([], {})["mean_level"] == 0.0
     assert diversity(np.array([[1.0, 0.0]], dtype=np.float32)) == 0.0

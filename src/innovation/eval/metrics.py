@@ -3,12 +3,11 @@
 import numpy as np
 
 
-# --- headline ---
-def precision(verdicts, dup_flags: dict[str, bool]) -> float:
-    if not verdicts:
-        return 0.0
-    good = sum(1 for v in verdicts if v.hit and not dup_flags.get(v.idea_id, False))
-    return good / len(verdicts)
+# --- headline (graded realization, levels 0-5) ---
+def idea_levels(verdicts, dup_flags: dict[str, bool]) -> list[int]:
+    """Per-idea realization level; near-duplicates of the past corpus score 0."""
+    return [0 if dup_flags.get(v.idea_id, False) else v.best_level
+            for v in verdicts]
 
 
 # --- process observables ---
@@ -36,7 +35,11 @@ def diversity(vecs: np.ndarray) -> float:
 
 
 def aggregate_run(verdicts, dup_flags: dict[str, bool]) -> dict:
-    return {"precision": precision(verdicts, dup_flags),
-            "n_ideas": len(verdicts),
-            "n_hits": sum(1 for v in verdicts if v.hit),
+    lv = idea_levels(verdicts, dup_flags)
+    n = len(lv)
+    return {"mean_level": (sum(lv) / n) if n else 0.0,
+            "acc_ge3": (sum(1 for x in lv if x >= 3) / n) if n else 0.0,
+            "acc_ge4": (sum(1 for x in lv if x >= 4) / n) if n else 0.0,
+            "acc_eq5": (sum(1 for x in lv if x == 5) / n) if n else 0.0,
+            "n_ideas": n,
             "n_dup_flagged": sum(1 for f in dup_flags.values() if f)}
