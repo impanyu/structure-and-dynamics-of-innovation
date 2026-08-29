@@ -64,8 +64,11 @@ def extract_trajectories(events: list[dict]) -> dict[str, list[dict]]:
     return traj
 
 
-def plot_run(run_dir, data_dir, embedder, out_name: str = "trajectories.png"):
-    """Write <run_dir>/trajectories.png and trajectories.json; returns paths."""
+def plot_run(run_dir, data_dir, embedder, out_name: str = "trajectories.png",
+             topic_mass: int = 800):
+    """Write <run_dir>/trajectories.png and trajectories.json; returns paths.
+    For runs with topic assignments (run_meta.json), each agent's topic region
+    (its topic_mass nearest corpus papers) is tinted in the agent's color."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -75,6 +78,11 @@ def plot_run(run_dir, data_dir, embedder, out_name: str = "trajectories.png"):
     ids, coords = project_corpus_2d(data_dir)
     pos = dict(zip(ids, coords))
     _, corpus_vecs = load_embeddings(data_dir)
+
+    meta_path = run_dir / "run_meta.json"
+    assignments = {}
+    if meta_path.exists():
+        assignments = json.loads(meta_path.read_text()).get("topic_assignments", {})
 
     gen_texts = {e["result"]["node_id"]: e["args"]["text"]
                  for e in events
@@ -89,11 +97,26 @@ def plot_run(run_dir, data_dir, embedder, out_name: str = "trajectories.png"):
     (run_dir / "trajectories.json").write_text(json.dumps(traj, indent=1))
 
     fig, ax = plt.subplots(figsize=(14, 12))
-    ax.scatter(coords[:, 0], coords[:, 1], s=2, c="#d0d0d0", linewidths=0,
-               rasterized=True, label="corpus (16k ideas)")
+    ax.scatter(coords[:, 0], coords[:, 1], s=2, c="#d8d8d8", linewidths=0,
+               rasterized=True, label=f"corpus ({len(ids)} ideas)")
     cmap = plt.get_cmap("tab10")
-    for i, (aid, visits) in enumerate(sorted(traj.items())):
-        color = cmap(i % 10)
+    agent_order = sorted(set(traj) | set(assignments))
+    agent_color = {aid: cmap(i % 10) for i, aid in enumerate(agent_order)}
+    # tint each assigned topic's region (its topic_mass nearest corpus papers)
+    for aid in agent_order:
+        topic = assignments.get(aid)
+        if not topic:
+            continue
+        anchor = embedder.encode([topic])[0]
+        sims = corpus_vecs @ anchor
+        k = min(topic_mass, len(sims))
+        members = np.argsort(-sims)[:k]
+        ax.scatter(coords[members, 0], coords[members, 1], s=5,
+                   color=agent_color[aid], alpha=0.25, linewidths=0,
+                   rasterized=True)
+    for aid in agent_order:
+        visits = traj.get(aid, [])
+        color = agent_color[aid]
         pts = np.array([pos[v["node_id"]] for v in visits if v["node_id"] in pos])
         if len(pts) > 1:
             ax.plot(pts[:, 0], pts[:, 1], "-", color=color, alpha=0.35, lw=1.0)
@@ -104,10 +127,15 @@ def plot_run(run_dir, data_dir, embedder, out_name: str = "trajectories.png"):
                        linewidths=0)
         writes = np.array([pos[v["node_id"]] for v in visits
                            if v["kind"] == "write" and v["node_id"] in pos])
+        label = f"{aid}: {len(writes)} ideas"
+        if assignments.get(aid):
+            label = f"{aid} [{assignments[aid][:32]}]: {len(writes)} ideas"
         if len(writes):
             ax.scatter(writes[:, 0], writes[:, 1], s=180, color=color,
                        marker="*", edgecolors="black", linewidths=0.6,
-                       label=f"{aid}: {len(writes)} ideas")
+                       label=label)
+        elif assignments.get(aid):
+            ax.scatter([], [], s=30, color=color, label=label)
     ax.legend(loc="upper right", fontsize=8, framealpha=0.9)
     ax.set_title(f"Agent read/write trajectories — {run_dir.name} "
                  f"(dots=reads, stars=generated ideas)")

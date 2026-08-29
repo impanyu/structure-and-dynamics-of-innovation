@@ -57,3 +57,23 @@ def test_plot_run_writes_png_and_json(tmp_path):
     png, tj = plot_run(run_dir, tmp_path / "data", emb)
     assert png.exists() and png.stat().st_size > 10000
     assert json.loads(tj.read_text())["a0"][1]["kind"] == "write"
+
+
+def test_plot_run_tints_topic_regions(tmp_path):
+    emb = FakeEmbedder()
+    ids = [f"W{i}" for i in range(30)]
+    vecs = emb.encode([f"paper {i}" for i in range(30)])
+    save_embeddings(ids, vecs, tmp_path / "data")
+    np.save(tmp_path / "data" / "proj_tsne.npy",
+            np.random.default_rng(0).normal(size=(30, 2)).astype(np.float32))
+    run_dir = tmp_path / "runs" / "r2"
+    run_dir.mkdir(parents=True)
+    (run_dir / "events.jsonl").write_text(json.dumps(
+        {"seq": 0, "run_id": "r2", "agent_id": "s0", "step": 0,
+         "action": "browse", "args": {"node_id": "W3"},
+         "result": {"node_id": "W3", "text": "t"}}))
+    (run_dir / "run_meta.json").write_text(json.dumps(
+        {"run_id": "r2", "seed": 0,
+         "topic_assignments": {"s0": "paper 3", "s1": "paper 7"}}))
+    png, _ = plot_run(run_dir, tmp_path / "data", emb, topic_mass=5)
+    assert png.exists() and png.stat().st_size > 10000
