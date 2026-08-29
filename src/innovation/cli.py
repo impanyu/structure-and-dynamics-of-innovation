@@ -185,10 +185,20 @@ def cmd_evaluate(cfg):
     print(json.dumps(agg, indent=2))
 
 
+def cmd_visualize(cfg):
+    from innovation.analysis.viz import plot_run
+
+    emb = Embedder(cfg["embedding_model"])
+    png, tj = plot_run(Path(cfg["out_dir"]) / cfg["run"]["run_id"],
+                       cfg["data_dir"], emb)
+    print(f"wrote {png}\nwrote {tj}")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="innovation")
     parser.add_argument("command",
-                        choices=["fetch", "summarize", "run", "evaluate"])
+                        choices=["fetch", "summarize", "run", "evaluate",
+                                 "visualize"])
     parser.add_argument("--config", required=True)
     parser.add_argument("--seed", type=int, default=None,
                         help="override run.seed (for multi-seed sweeps)")
@@ -206,10 +216,10 @@ def main():
             cfg["run"]["total_steps"] = args.steps
         cmd_run(cfg, seed=args.seed, run_id=args.run_id, resume=args.resume)
         return
-    if args.command == "evaluate" and args.run_id is not None:
+    if args.command in ("evaluate", "visualize") and args.run_id is not None:
         cfg["run"]["run_id"] = args.run_id
     {"fetch": cmd_fetch, "summarize": cmd_summarize,
-     "evaluate": cmd_evaluate}[args.command](cfg)
+     "evaluate": cmd_evaluate, "visualize": cmd_visualize}[args.command](cfg)
 
 
 if __name__ == "__main__":

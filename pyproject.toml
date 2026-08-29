@@ -12,6 +12,7 @@ dependencies = [
     "anthropic>=0.40",
     "sentence-transformers>=3",
     "openai>=3.5.0",
+    "matplotlib>=3.11.1",
 ]
 
 [dependency-groups]
