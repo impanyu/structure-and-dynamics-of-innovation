@@ -8,7 +8,6 @@ run:
   run_id: supp-mixed-spec-heavy
   seed: 0
   total_steps: 400
-  generation_budget: 40
   agents:
   - agent_id: s0
     policy: llm

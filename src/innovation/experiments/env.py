@@ -39,7 +39,7 @@ def _within_region(anchors, radii, v) -> bool:
 
 class Environment:
     def __init__(self, *, run_id, graph, index, embedder, event_log, rng,
-                 generation_budget: int, scopes: dict | None = None,
+                 generation_budget: int | None = None, scopes: dict | None = None,
                  communities: dict | None = None):
         self.run_id = run_id
         self.graph = graph
@@ -128,7 +128,7 @@ class Environment:
         return _preview(self.graph, node_id) | {"text": self.graph.node(node_id).text}
 
     def _do_generate(self, *, agent_id, step, text: str, cited_ids: list[str]) -> dict:
-        if self.generation_budget <= 0:
+        if self.generation_budget is not None and self.generation_budget <= 0:
             return {"error": "generation budget exhausted"}
         blocked = [c for c in cited_ids if not self._writable(agent_id, c)]
         if blocked:
@@ -142,7 +142,8 @@ class Environment:
         node_id = self._apply_generate(text, cited_ids,
                                        meta={"run_id": self.run_id,
                                              "agent_id": agent_id, "step": step})
-        self.generation_budget -= 1
+        if self.generation_budget is not None:
+            self.generation_budget -= 1
         return {"node_id": node_id}
 
     def _do_add_links(self, *, agent_id, step, src_id: str, dst_ids: list[str]) -> dict:
@@ -185,7 +186,8 @@ class Environment:
                                      meta={"run_id": e["run_id"],
                                            "agent_id": e["agent_id"],
                                            "step": e["step"]})
-                self.generation_budget -= 1
+                if self.generation_budget is not None:
+                    self.generation_budget -= 1
             elif e["action"] == "add_links" and "added" in e.get("result", {}):
                 self.graph.add_links(e["args"]["src_id"], e["result"]["added"],
                                      meta={"run_id": e["run_id"],

@@ -136,7 +136,7 @@ def cmd_run(cfg, seed=None, run_id=None):
         topic_pool = [t["topic"] for t in pool_data["topics"]]
     run_cfg = RunConfig(run_id=r["run_id"], seed=r["seed"],
                         total_steps=r["total_steps"],
-                        generation_budget=r["generation_budget"],
+                        generation_budget=r.get("generation_budget"),
                         agents=r["agents"], topic_pool=topic_pool)
     out = run_simulation(run_cfg, graph=graph, index=index, embedder=emb,
                          llm=_llm(cfg), model=cfg["models"]["agent"],

@@ -4,7 +4,6 @@ run:
   run_id: supp-baseline-nonav
   seed: 0
   total_steps: 400
-  generation_budget: 40
   agents:
     - {agent_id: n0, policy: nonav}
     - {agent_id: n1, policy: nonav}

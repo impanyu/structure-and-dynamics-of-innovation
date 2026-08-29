@@ -8,7 +8,6 @@ run:
   run_id: core-broad
   seed: 0
   total_steps: 400
-  generation_budget: 40
   agents:
   - agent_id: b0
     policy: llm

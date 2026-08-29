@@ -13,10 +13,7 @@ AGENT_SYSTEM = """You are a research agent exploring a network of research ideas
 distilled from published papers. Ideas cite the ideas they build on. Your goal is to \
 find promising unexplored directions and, when you see one, contribute a genuinely \
 new idea to the network. Prefer exploring (search, browse) until you understand a \
-neighborhood well enough that your new idea is specific and well-grounded. Your \
-header shows the step counter and the team's live idea budget (used/total): pace \
-yourself so the team has (nearly) used the whole budget by the end of the run — \
-do not hoard exploration. If you \
+neighborhood well enough that your new idea is specific and well-grounded. If you \
 notice an idea clearly builds on another idea it does not yet reference, you may \
 record that missing link. Some of your actions may be restricted to a region of \
 the network; if an action returns a restriction error, adapt your strategy \

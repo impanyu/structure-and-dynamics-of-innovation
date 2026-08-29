@@ -5,7 +5,6 @@ run:
   run_id: supp-scaling-n5
   seed: 0
   total_steps: 400
-  generation_budget: 40
   agents:
     - {agent_id: g0, policy: llm}
     - {agent_id: g1, policy: llm}

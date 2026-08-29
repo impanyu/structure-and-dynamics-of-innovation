@@ -17,7 +17,10 @@ class RunConfig:
     run_id: str
     seed: int
     total_steps: int
-    generation_budget: int  # GLOBAL: the fairness control of spec §3.4
+    # GLOBAL cap on team idea output; None (default) = unrestricted — agents
+    # generate freely and the count is an outcome variable (user decision
+    # 2026-08-29). Set a number to restore the equal-output control (ablations).
+    generation_budget: int | None = None
     agents: list[dict] = field(default_factory=list)
     topic_pool: list[str] | None = None  # for read/write_topics: "random"
 
@@ -139,9 +142,10 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
 
     for step in range(cfg.total_steps):
         agent_id = order[step % len(order)]
-        obs = {"step": step, "last_result": last_result[agent_id],
-               "ideas_used": cfg.generation_budget - env.generation_budget,
-               "ideas_total": cfg.generation_budget}
+        obs = {"step": step, "last_result": last_result[agent_id]}
+        if cfg.generation_budget is not None:
+            obs["ideas_used"] = cfg.generation_budget - env.generation_budget
+            obs["ideas_total"] = cfg.generation_budget
         action = policies[agent_id].act(obs)
         last_result[agent_id] = env.execute(agent_id, step, action)
 

@@ -110,7 +110,6 @@ run:
   run_id: stage1-pilot
   seed: 0
   total_steps: 200
-  generation_budget: 20
   # Behavior profiles (spec §3.5). A region is EITHER a community list
   # (read_communities / write_communities: Louvain ids) OR a semantic region
   # (read_topics / write_topics: topic strings embedded as anchors, with

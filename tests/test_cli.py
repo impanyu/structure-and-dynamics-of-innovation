@@ -291,7 +291,7 @@ def test_all_experiment_configs_load_and_scopes_build():
         cfg = load_config(f)
         run = cfg["run"]
         assert run["run_id"] == f.stem
-        assert run["total_steps"] == 400 and run["generation_budget"] == 40
+        assert run["total_steps"] == 400 and "generation_budget" not in run
         for spec in run["agents"]:
             resolved = dict(spec)
             for key in ("read_topics", "write_topics"):
