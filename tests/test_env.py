@@ -201,3 +201,17 @@ def test_semantic_write_scope_binds_generated_text(tmp_path):
     res = env.execute("a0", 1, Action("generate", {"text": "alpha one",
                                                    "cited_ids": ["A1"]}))
     assert "node_id" in res
+
+
+def test_per_anchor_radii_membership(tmp_path):
+    """AgentScope radii may be per-anchor arrays (equal-mass regions)."""
+    import numpy as np
+    from innovation.experiments.env import AgentScope
+    emb = FakeEmbedder()
+    anchors = emb.encode(["alpha one", "totally different"])
+    # anchor 0 tight (only exact match), anchor 1 radius 0 (nothing)
+    scopes = {"a0": AgentScope(read_anchors=anchors,
+                               read_radius=np.array([1e-6, 0.0]))}
+    env = make_scoped_env(tmp_path, scopes, communities=None)
+    assert "error" not in env.execute("a0", 0, Action("browse", {"node_id": "A1"}))
+    assert "error" in env.execute("a0", 1, Action("browse", {"node_id": "B1"}))

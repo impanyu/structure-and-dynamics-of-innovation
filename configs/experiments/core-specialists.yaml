@@ -13,60 +13,60 @@ run:
   - agent_id: s0
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s1
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s2
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s3
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s4
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s5
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s6
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s7
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s8
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s9
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800

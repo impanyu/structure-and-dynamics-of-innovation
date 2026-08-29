@@ -20,14 +20,21 @@ class AgentScope:
     """Behavioral constraints modeling researcher profiles (spec §3.4-3.5).
     Each of read/write is defined by ONE mechanism: a set of community ids
     (read/write) or a semantic region (topic anchor embeddings + cosine-distance
-    radius). None everywhere means unrestricted."""
+    radii — a scalar, or a per-anchor array for equal-mass regions). None
+    everywhere means unrestricted."""
     read: set | None = None            # community ids
     write: set | None = None
     allow_jump: bool = True
     read_anchors: object | None = None   # (m, d) topic embeddings
-    read_radius: float = 0.0
+    read_radius: object = 0.0            # float or (m,) array
     write_anchors: object | None = None
-    write_radius: float = 0.0
+    write_radius: object = 0.0
+
+
+def _within_region(anchors, radii, v) -> bool:
+    """Inside the region iff within radius of ANY anchor (radii broadcastable)."""
+    sims = anchors @ v
+    return bool(np.any(sims >= 1.0 - np.asarray(radii)))
 
 
 class Environment:
@@ -46,11 +53,11 @@ class Environment:
         self._gen_counter = 0
 
     # --- scope checks ---
-    def _in_semantic_region(self, anchors, radius: float, node_id: str) -> bool:
+    def _in_semantic_region(self, anchors, radius, node_id: str) -> bool:
         v = self.index.vec(node_id)
         if v is None:
             return False
-        return float(np.max(anchors @ v)) >= 1.0 - radius
+        return _within_region(anchors, radius, v)
 
     def _readable(self, agent_id: str, node_id: str) -> bool:
         scope = self.scopes.get(agent_id)
@@ -130,7 +137,7 @@ class Environment:
         if scope is not None and scope.write_anchors is not None:
             # Semantic write scope also binds the new idea's OWN content.
             v = self.embedder.encode([text])[0]
-            if float(np.max(scope.write_anchors @ v)) < 1.0 - scope.write_radius:
+            if not _within_region(scope.write_anchors, scope.write_radius, v):
                 return {"error": "the idea itself is outside your writable topic region"}
         node_id = self._apply_generate(text, cited_ids,
                                        meta={"run_id": self.run_id,

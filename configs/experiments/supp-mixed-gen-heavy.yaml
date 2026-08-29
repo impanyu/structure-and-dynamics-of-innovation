@@ -13,21 +13,21 @@ run:
   - agent_id: s0
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s1
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: s2
     policy: llm
     read_topics: random
-    read_radius: 0.3
+    read_mass: 800
     write_topics: random
-    write_radius: 0.3
+    write_mass: 800
   - agent_id: g0
     policy: llm
   - agent_id: g1

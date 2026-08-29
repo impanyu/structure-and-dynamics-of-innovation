@@ -283,6 +283,7 @@ def test_all_experiment_configs_load_and_scopes_build():
     from innovation.ideas.embed import FakeEmbedder
 
     emb = FakeEmbedder()
+    corpus_vecs = emb.encode([f"paper {i}" for i in range(1000)])
     exp_dir = Path("configs/experiments")
     files = sorted(exp_dir.glob("*.yaml"))
     assert len(files) >= 10
@@ -296,7 +297,7 @@ def test_all_experiment_configs_load_and_scopes_build():
             for key in ("read_topics", "write_topics"):
                 if resolved.get(key) == "random":
                     resolved[key] = ["placeholder topic"]
-            build_scope(resolved, emb)  # must not raise
+            build_scope(resolved, emb, corpus_vecs=corpus_vecs)  # must not raise
         if f.stem.startswith("core-"):
             assert len(run["agents"]) == 10
 

@@ -36,7 +36,15 @@ def build_policy(spec: dict, *, llm, model, graph, rng):
     raise ValueError(f"unknown policy kind: {kind}")
 
 
-def build_scope(spec: dict, embedder=None) -> AgentScope | None:
+def _mass_radii(anchors, corpus_vecs, k: int):
+    """Per-anchor radius = cosine distance to the k-th nearest corpus paper,
+    so each anchor's region holds exactly k corpus papers (equal mass)."""
+    sims = corpus_vecs @ anchors.T                     # (n_corpus, m)
+    kth = np.partition(sims, -k, axis=0)[-k]           # k-th largest per anchor
+    return 1.0 - kth
+
+
+def build_scope(spec: dict, embedder=None, corpus_vecs=None) -> AgentScope | None:
     """Agent behavioral profile from its config dict (spec §3.4-3.5). Each of
     read/write uses ONE mechanism: community ids (read_communities /
     write_communities) or a semantic region (read_topics + read_radius /
@@ -56,14 +64,25 @@ def build_scope(spec: dict, embedder=None) -> AgentScope | None:
     if (read is None and write is None and not read_topics
             and not write_topics and allow_jump):
         return None
+    read_anchors = embedder.encode(read_topics) if read_topics else None
+    write_anchors = embedder.encode(write_topics) if write_topics else None
+
+    def radii(anchors, mass_key, radius_key):
+        mass = spec.get(mass_key)
+        if anchors is not None and mass:
+            if corpus_vecs is None:
+                raise ValueError(f"{mass_key} requires corpus_vecs")
+            return _mass_radii(anchors, corpus_vecs, int(mass))
+        return spec.get(radius_key, 0.3)
+
     return AgentScope(
         read=set(read) if read is not None else None,
         write=set(write) if write is not None else None,
         allow_jump=allow_jump,
-        read_anchors=embedder.encode(read_topics) if read_topics else None,
-        read_radius=spec.get("read_radius", 0.3),
-        write_anchors=embedder.encode(write_topics) if write_topics else None,
-        write_radius=spec.get("write_radius", 0.3))
+        read_anchors=read_anchors,
+        read_radius=radii(read_anchors, "read_mass", "read_radius"),
+        write_anchors=write_anchors,
+        write_radius=radii(write_anchors, "write_mass", "write_radius"))
 
 
 def _resolve_random_topics(agents: list[dict], pool, rng) -> dict:
@@ -97,8 +116,9 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
     cfg = RunConfig(run_id=cfg.run_id, seed=cfg.seed, total_steps=cfg.total_steps,
                     generation_budget=cfg.generation_budget, agents=agents,
                     topic_pool=cfg.topic_pool)
+    # index.vecs holds exactly the corpus at run start (nothing generated yet)
     scopes = {a["agent_id"]: s for a in cfg.agents
-              if (s := build_scope(a, embedder)) is not None}
+              if (s := build_scope(a, embedder, corpus_vecs=index.vecs)) is not None}
     needs_communities = any(s.read is not None or s.write is not None
                             for s in scopes.values())
     communities = graph.communities() if needs_communities else None

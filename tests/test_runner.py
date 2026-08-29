@@ -139,3 +139,21 @@ def test_random_topic_assignment_is_seeded_and_distinct(tmp_path):
     out2 = run_simulation(cfg, graph=fixtures()[0], index=fixtures()[1],
                           embedder=emb, llm=llm, model="m", out_dir=tmp_path / "b")
     assert out2["topic_assignments"] == assigned
+
+
+def test_equal_mass_scope_covers_exactly_k_corpus_papers():
+    """read_mass: k derives a per-anchor radius = distance to the k-th nearest
+    corpus paper, so every specialist region holds exactly k corpus papers."""
+    import numpy as np
+    from innovation.experiments.runner import build_scope
+    from innovation.ideas.embed import FakeEmbedder
+
+    emb = FakeEmbedder()
+    corpus_vecs = emb.encode([f"paper {i}" for i in range(200)])
+    scope = build_scope({"read_topics": ["some topic"], "read_mass": 20,
+                         "write_topics": ["some topic"], "write_mass": 20},
+                        emb, corpus_vecs=corpus_vecs)
+    sims = corpus_vecs @ scope.read_anchors.T  # (200, 1)
+    inside = (sims >= 1 - np.asarray(scope.read_radius)).any(axis=1)
+    assert inside.sum() == 20
+    assert (np.asarray(scope.write_radius) == np.asarray(scope.read_radius)).all()

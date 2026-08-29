@@ -7,21 +7,21 @@ import json
 
 import yaml
 
-RADIUS = 0.3
+MASS = 800  # equal-mass regions: each topic scope = its 800 nearest corpus papers
 topics = json.load(open("data/stage1/topics_k50.json"))
-yaml.safe_dump({"radius": RADIUS, "topics": topics},
+yaml.safe_dump({"mass": MASS, "topics": topics},
                open("configs/topics-k50.yaml", "w"), allow_unicode=True)
 
 
 def spec_agent(aid):
     return {"agent_id": aid, "policy": "llm",
-            "read_topics": "random", "read_radius": RADIUS,
-            "write_topics": "random", "write_radius": RADIUS}
+            "read_topics": "random", "read_mass": MASS,
+            "write_topics": "random", "write_mass": MASS}
 
 
 def broad_agent(aid):
     return {"agent_id": aid, "policy": "llm",
-            "write_topics": "random", "write_radius": RADIUS}
+            "write_topics": "random", "write_mass": MASS}
 
 
 def gen_agent(aid):
