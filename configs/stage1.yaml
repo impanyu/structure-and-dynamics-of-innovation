@@ -1,17 +1,19 @@
 # Stage 1 (spec §2): broad top-venue AI/ML corpus, cutoff aligned to model training cutoff.
 mailto: impanyu@gmail.com
 data_dir: data/stage1
-# Initial corpus = broad AI/ML/DL/LLM coverage from core top venues via
-# Semantic Scholar (OpenAlex venue coverage is fragmented). Budget: <=10k
-# papers total; citation floor 50 sizes NeurIPS+ICLR 2016-2025 to ~10.5k raw,
-# under 10k after the abstract filter. (Older modes "field"/"venues" remain
-# available for ablations.)
+# Initial corpus = broad AI/ML/DL/LLM coverage from four core top venues via
+# Semantic Scholar (OpenAlex venue coverage is fragmented). Budget ~20k papers:
+# 2020-2024 + citation floor 25 gives ~18.7k raw across the four venues
+# (probed 2026-08-29), landing ~15-17k after the cutoff-month and abstract
+# filters. (Older modes "field"/"venues" remain available for ablations.)
 corpus:
   mode: s2_venues
   venues:
     - "Neural Information Processing Systems"
     - "International Conference on Learning Representations"
-  min_citations: 50
+    - "International Conference on Machine Learning"
+    - "AAAI Conference on Artificial Intelligence"
+  min_citations: 25
 # Recognition list — EVALUATION ONLY, never a download filter. A search-
 # verified realization counts as a hit iff it was published in one of these
 # venues (alias substring match against the search result's venue string) OR
@@ -82,7 +84,7 @@ recognized_venues:
   - {name: "ACM International Joint Conference on Pervasive and Ubiquitous Computing", aliases: ["ubicomp", "pervasive and ubiquitous computing"]}
   - {name: "ACM Symposium on User Interface Software and Technology", aliases: ["user interface software and technology", "uist"]}
   - {name: "IEEE Real-Time Systems Symposium", aliases: ["real-time systems symposium"]}
-year_from: 2016
+year_from: 2020
 # Temporal design: T = agent model's training cutoff month. openai:gpt-5
 # training data cutoff = 2024-09-30. Initial graph = papers published BEFORE
 # Sep 2024 (pub_date < 2024-09-01); anticipation hits = papers published
