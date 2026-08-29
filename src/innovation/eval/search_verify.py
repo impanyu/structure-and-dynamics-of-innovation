@@ -2,6 +2,7 @@
 Semantic Scholar + OpenAlex only; hits count anticipation only."""
 import hashlib
 import json
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,17 +40,30 @@ def extract_queries(llm: LLM, *, model: str, idea_text: str, n: int = 3) -> list
     return [line.strip() for line in reply.splitlines() if line.strip()][:n]
 
 
+RETRYABLE = {429, 500, 502, 503, 504}
+
+
 def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
-                headers: dict | None = None) -> dict:
-    """Disk cache with fetched_at timestamp — live indexes drift (spec §3.6)."""
+                headers: dict | None = None, delay: float = 1.1,
+                attempts: int = 10) -> dict:
+    """Disk cache with fetched_at timestamp — live indexes drift (spec §3.6).
+    Retries rate-limit/server errors with capped exponential backoff and
+    paces live calls (S2 keys allow 1 request/second)."""
     key = hashlib.sha256(json.dumps({"url": url, "params": params},
                                     sort_keys=True).encode()).hexdigest()
     cache_file = Path(cache_dir) / f"{key}.json"
     if cache_file.exists():
         return json.loads(cache_file.read_text())["response"]
-    r = http_get(url, params=params, **({"headers": headers} if headers else {}))
+    for attempt in range(attempts):
+        r = http_get(url, params=params, **({"headers": headers} if headers else {}))
+        if getattr(r, "status_code", 200) in RETRYABLE:
+            time.sleep(min(60.0, max(delay, 1.0) * (2 ** attempt)))
+            continue
+        break
     r.raise_for_status()
     payload = r.json()
+    if delay:
+        time.sleep(delay)
     cache_file.parent.mkdir(parents=True, exist_ok=True)
     cache_file.write_text(json.dumps({
         "fetched_at": datetime.now(timezone.utc).isoformat(),

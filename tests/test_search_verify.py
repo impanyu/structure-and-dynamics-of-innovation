@@ -168,3 +168,26 @@ def test_verify_idea_excludes_in_corpus_titles(tmp_path):
                     corpus_titles={"a known graph paper"})
     assert not v.hit
     assert [p["paper_id"] for p in v.excluded_in_corpus] == ["known"]
+
+
+def test_cached_get_retries_on_429(tmp_path):
+    from innovation.eval.search_verify import _cached_get
+
+    calls = []
+
+    class Resp:
+        def __init__(self, code):
+            self.status_code = code
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"data": []}
+
+    def flaky_get(url, params=None, **kw):
+        calls.append(1)
+        return Resp(429 if len(calls) < 3 else 200)
+
+    out = _cached_get("http://x", {"q": 1}, tmp_path, flaky_get, delay=0)
+    assert out == {"data": []} and len(calls) == 3
