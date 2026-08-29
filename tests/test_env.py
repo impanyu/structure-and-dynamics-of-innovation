@@ -177,14 +177,31 @@ def test_semantic_radius_scope_read_and_write(tmp_path):
     assert "error" not in env.execute("a0", 2, Action("browse", {"node_id": "A1"}))
     res = env.execute("a0", 3, Action("sample_frontier", {}))
     assert res["node_id"] == "A1"  # only readable node
-    # write: citing outside the semantic region is blocked
-    assert "error" in env.execute("a0", 4, Action("generate", {"text": "alpha one",
-                                                               "cited_ids": ["A2"]}))
+    # citations follow the READ scope: an out-of-region cite is DROPPED (not
+    # fatal); the idea itself must still sit inside the write region.
+    res = env.execute("a0", 4, Action("generate", {"text": "alpha one",
+                                                   "cited_ids": ["A2", "A1"]}))
+    assert res["node_id"] == "gen:r1:0"
+    assert res["dropped_cites"] == ["A2"]
+    assert env.graph.citations_out("gen:r1:0") == ["A1"]
     res = env.execute("a0", 5, Action("generate", {"text": "alpha one",
                                                    "cited_ids": ["A1"]}))
-    assert res["node_id"] == "gen:r1:0"
+    assert res["node_id"] == "gen:r1:1"
     # the generated node's own embedding places it inside the region
     assert "error" not in env.execute("a0", 6, Action("browse", {"node_id": "gen:r1:0"}))
+
+
+def test_broad_reader_cites_anywhere(tmp_path):
+    """Read-unrestricted, write-scoped agents may cite ANY paper."""
+    from innovation.experiments.env import AgentScope
+    emb = FakeEmbedder()
+    anchors = emb.encode(["alpha one"])
+    scopes = {"a0": AgentScope(write_anchors=anchors, write_radius=1e-6)}
+    env = make_scoped_env(tmp_path, scopes, communities=None)
+    res = env.execute("a0", 0, Action("generate", {"text": "alpha one",
+                                                   "cited_ids": ["B1", "A2"]}))
+    assert "node_id" in res and "dropped_cites" not in res
+    assert set(env.graph.citations_out(res["node_id"])) == {"B1", "A2"}
 
 
 def test_semantic_write_scope_binds_generated_text(tmp_path):

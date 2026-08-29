@@ -130,21 +130,37 @@ class Environment:
     def _do_generate(self, *, agent_id, step, text: str, cited_ids: list[str]) -> dict:
         if self.generation_budget is not None and self.generation_budget <= 0:
             return {"error": "generation budget exhausted"}
-        blocked = [c for c in cited_ids if not self._writable(agent_id, c)]
-        if blocked:
-            return {"error": f"cannot write outside your region; blocked cites: {blocked}"}
         scope = self.scopes.get(agent_id)
-        if scope is not None and scope.write_anchors is not None:
-            # Semantic write scope also binds the new idea's OWN content.
-            v = self.embedder.encode([text])[0]
-            if not _within_region(scope.write_anchors, scope.write_radius, v):
-                return {"error": "the idea itself is outside your writable topic region"}
-        node_id = self._apply_generate(text, cited_ids,
+        kept, dropped = list(cited_ids), []
+        if scope is not None:
+            if scope.write is not None:
+                # Community write scope has no content check, so citations
+                # remain the binding proxy: any out-of-region cite is fatal.
+                blocked = [c for c in kept if not self._writable(agent_id, c)]
+                if blocked:
+                    return {"error": f"cannot write outside your region; "
+                                     f"blocked cites: {blocked}"}
+            else:
+                # Citation admissibility follows the READ scope (citing means
+                # having read): a broad reader may cite anywhere; a specialist
+                # only its readable region. Out-of-scope cites are DROPPED,
+                # not fatal — the generate proceeds with the rest.
+                kept = [c for c in cited_ids if self._readable(agent_id, c)]
+                dropped = [c for c in cited_ids if c not in kept]
+            if scope.write_anchors is not None:
+                # The write scope binds the new idea's OWN content.
+                v = self.embedder.encode([text])[0]
+                if not _within_region(scope.write_anchors, scope.write_radius, v):
+                    return {"error": "the idea itself is outside your writable topic region"}
+        node_id = self._apply_generate(text, kept,
                                        meta={"run_id": self.run_id,
                                              "agent_id": agent_id, "step": step})
         if self.generation_budget is not None:
             self.generation_budget -= 1
-        return {"node_id": node_id}
+        result = {"node_id": node_id}
+        if dropped:
+            result["dropped_cites"] = dropped
+        return result
 
     def _do_add_links(self, *, agent_id, step, src_id: str, dst_ids: list[str]) -> dict:
         blocked = [n for n in [src_id, *dst_ids] if not self._writable(agent_id, n)]
@@ -182,7 +198,9 @@ class Environment:
         generated earlier in the trace resolve correctly."""
         for e in events:
             if e["action"] == "generate" and "node_id" in e.get("result", {}):
-                self._apply_generate(e["args"]["text"], e["args"]["cited_ids"],
+                dropped = set(e["result"].get("dropped_cites") or [])
+                kept = [c for c in e["args"]["cited_ids"] if c not in dropped]
+                self._apply_generate(e["args"]["text"], kept,
                                      meta={"run_id": e["run_id"],
                                            "agent_id": e["agent_id"],
                                            "step": e["step"]})
