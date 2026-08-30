@@ -43,7 +43,9 @@ def build_policy(spec: dict, *, llm, model, graph, rng):
 
 def _mass_radii(anchors, corpus_vecs, k: int):
     """Per-anchor radius = cosine distance to the k-th nearest corpus paper,
-    so each anchor's region holds exactly k corpus papers (equal mass)."""
+    so each anchor's region holds exactly k corpus papers (equal mass).
+    k >= corpus size degenerates to the whole corpus being in-region."""
+    k = min(k, len(corpus_vecs))
     sims = corpus_vecs @ anchors.T                     # (n_corpus, m)
     kth = np.partition(sims, -k, axis=0)[-k]           # k-th largest per anchor
     return 1.0 - kth

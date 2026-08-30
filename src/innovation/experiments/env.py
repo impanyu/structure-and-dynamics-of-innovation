@@ -177,8 +177,12 @@ class Environment:
         return self.graph.remove_links(src_id, dst_ids)  # KeyError -> error result
 
     # --- shared by generate and restore ---
-    def _apply_generate(self, text: str, cited_ids: list[str], meta: dict) -> str:
-        node_id = f"gen:{self.run_id}:{self._gen_counter}"
+    def _apply_generate(self, text: str, cited_ids: list[str], meta: dict,
+                        node_id: str | None = None) -> str:
+        # restore passes the RECORDED id so replayed nodes keep their identity
+        # even if the run was later renamed (run_id != original prefix).
+        if node_id is None:
+            node_id = f"gen:{self.run_id}:{self._gen_counter}"
         self.graph.add_idea(node_id, text, cited_ids, meta=meta)  # KeyError propagates
         self.index.add([node_id], self.embedder.encode([text]))
         self._gen_counter += 1
@@ -203,7 +207,8 @@ class Environment:
                 self._apply_generate(e["args"]["text"], kept,
                                      meta={"run_id": e["run_id"],
                                            "agent_id": e["agent_id"],
-                                           "step": e["step"]})
+                                           "step": e["step"]},
+                                     node_id=e["result"]["node_id"])
                 if self.generation_budget is not None:
                     self.generation_budget -= 1
             elif e["action"] == "add_links" and "added" in e.get("result", {}):
