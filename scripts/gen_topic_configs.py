@@ -14,9 +14,10 @@ yaml.safe_dump({"mass": MASS, "topics": topics},
 
 
 def spec_agent(aid):
+    # Specialist = READ-scoped only (user redefinition 2026-08-30): confined
+    # to its topic for reading/citing, but writes freely (no content gate).
     return {"agent_id": aid, "policy": "llm",
-            "read_topics": "random", "read_mass": MASS,
-            "write_topics": "random", "write_mass": MASS}
+            "read_topics": "random", "read_mass": MASS}
 
 
 def broad_agent(aid):
@@ -45,7 +46,7 @@ def write(path, run_id, agents, comment):
 
 write("configs/experiments/core-specialists.yaml", "core-specialists",
       [spec_agent(f"s{i}") for i in range(10)],
-      "C2 core: 10 specialists, each reads+writes one random topic")
+      "C2 core: 10 specialists, each READS only its random topic; writes freely")
 write("configs/experiments/core-broad.yaml", "core-broad",
       [broad_agent(f"b{i}") for i in range(10)],
       "C3 core: 10 broad readers / local writers (read all, write one random topic)")

@@ -13,26 +13,18 @@ run:
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s1
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s2
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s3
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: b0
     policy: llm
     write_topics: random

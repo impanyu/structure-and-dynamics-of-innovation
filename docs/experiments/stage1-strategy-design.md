@@ -37,7 +37,7 @@ then `... evaluate --config <same> --run-id <name>-sK`.
 | id | config | team (N=10) | question |
 |---|---|---|---|
 | C1 | core-generalists | 10 generalists (unrestricted) | dynamics reference |
-| C2 | core-specialists | 10 specialists (read+write own random topic) | deep exploitation: feasibility vs novelty |
+| C2 | core-specialists | 10 specialists (READ confined to own random topic; write free) | narrow input: what does restricted reading do to output? |
 | C3 | core-broad | 10 broad readers / local writers (read all, write own random topic) | T-shaped researcher — pre-registered winner |
 | C4 | core-mixed | 4 specialists + 3 broad + 3 generalists | does behavioral diversity beat pure teams? |
 

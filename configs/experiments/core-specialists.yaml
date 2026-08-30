@@ -2,7 +2,7 @@
 # Specialists get ONE random topic from configs/topics-k50.yaml per run
 # (seeded, distinct within a run, recorded in run_meta.json).
 # Edit the generator, not this file.
-# C2 core: 10 specialists, each reads+writes one random topic
+# C2 core: 10 specialists, each READS only its random topic; writes freely
 extends: ../stage1.yaml
 run:
   run_id: core-specialists
@@ -13,59 +13,39 @@ run:
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s1
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s2
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s3
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s4
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s5
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s6
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s7
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s8
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
   - agent_id: s9
     policy: llm
     read_topics: random
     read_mass: 800
-    write_topics: random
-    write_mass: 800
