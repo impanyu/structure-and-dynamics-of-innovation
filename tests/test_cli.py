@@ -27,7 +27,8 @@ def test_load_config_reads_stage1_yaml():
     for v in recognized:
         assert isinstance(v["name"], str)
         assert isinstance(v["aliases"], list) and v["aliases"]
-    assert cfg["eval"]["recognized_min_citations"] == 51
+    assert cfg["eval"]["recognized_min_citations"] == 50
+    assert len(cfg["ccf_b_aliases"]) > 50
 
 
 def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
@@ -106,19 +107,18 @@ def test_cmd_run_and_evaluate_wiring(tmp_path, monkeypatch):
     assert metrics_file.exists(), f"metrics.json not found at {metrics_file}"
 
     metrics = json.loads(metrics_file.read_text())
-    required_keys = {"mean_level", "acc_ge3", "acc_ge4", "acc_eq5",
-                     "n_ideas", "n_dup_flagged"}
+    required_keys = {"tier1", "tier2", "tier3", "n_ideas", "n_dup_flagged"}
     assert set(metrics.keys()) >= required_keys, \
         f"metrics missing keys. Expected {required_keys}, got {set(metrics.keys())}"
 
-    assert metrics["mean_level"] == 0.0
+    assert metrics["tier1"]["mean_level"] == 0.0
 
     # 9) Assert verdicts.json exists with one entry per generated idea.
     verdicts_file = Path(cfg["out_dir"]) / "t1" / "verdicts.json"
     assert verdicts_file.exists(), f"verdicts.json not found at {verdicts_file}"
     verdict_records = json.loads(verdicts_file.read_text())
     assert len(verdict_records) == metrics["n_ideas"]
-    required_verdict_keys = {"idea_id", "best_level", "best_paper",
+    required_verdict_keys = {"idea_id", "best", "candidates",
                              "excluded_pre_cutoff", "unknown_date", "dup_flag"}
     for rec in verdict_records:
         assert set(rec.keys()) >= required_verdict_keys

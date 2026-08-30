@@ -76,7 +76,8 @@ def test_verify_idea_anticipation_only(tmp_path):
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1, top_k=5)
     assert isinstance(v, Verdict)
-    assert v.best_level == 3 and v.best_paper["paper_id"] == "new"
+    assert v.best["tier1"]["level"] == 3
+    assert v.best["tier1"]["paper"]["paper_id"] == "new"
     assert [p["paper_id"] for p in v.excluded_pre_cutoff] == ["old"]
     assert v.excluded_pre_cutoff[0]["level"] == 4
 
@@ -92,7 +93,7 @@ def test_verify_idea_no_hit_when_only_pre_cutoff(tmp_path):
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert v.best_level == 0 and v.best_paper is None
+    assert v.best["tier3"]["level"] == 0
     assert len(v.excluded_pre_cutoff) == 1
 
 
@@ -108,7 +109,7 @@ def test_verify_idea_unknown_date_not_hit_not_excluded(tmp_path):
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert v.best_level == 0 and v.best_paper is None
+    assert v.best["tier3"]["level"] == 0
     assert v.excluded_pre_cutoff == []
     assert [p["paper_id"] for p in v.unknown_date] == ["unknown"]
 
@@ -126,17 +127,21 @@ def test_verify_idea_keeps_first_of_multiple_post_cutoff_hits(tmp_path):
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert v.best_level == 4 and v.best_paper["paper_id"] == "n2"
+    assert v.best["tier1"]["level"] == 4
+    assert v.best["tier1"]["paper"]["paper_id"] == "n2"
 
 
-def test_is_recognized_venue_alias_or_citations():
-    from innovation.eval.search_verify import is_recognized
-    aliases = ["neural information processing", "iclr"]
-    assert is_recognized({"venue": "Advances in Neural Information Processing Systems",
-                          "citations": 0}, aliases, 10)
-    assert is_recognized({"venue": "Workshop on X", "citations": 25}, aliases, 10)
-    assert not is_recognized({"venue": "Obscure Journal", "citations": 3}, aliases, 10)
-    assert is_recognized({"venue": "", "citations": 0}, None, 10)  # filter off
+def test_tier_of_classification():
+    from innovation.eval.search_verify import tier_of
+    t1 = ["neural information processing", "iclr"]
+    t2 = ["emnlp"]
+    assert tier_of({"venue": "Advances in Neural Information Processing Systems",
+                    "citations": 0}, t1, t2, 50) == "tier1"
+    assert tier_of({"venue": "Workshop on X", "citations": 80}, t1, t2, 50) == "tier1"
+    assert tier_of({"venue": "Proceedings of EMNLP 2025", "citations": 3},
+                   t1, t2, 50) == "tier2"
+    assert tier_of({"venue": "Obscure Journal", "citations": 3}, t1, t2, 50) == "tier3"
+    assert tier_of({"venue": "", "citations": 0}, None, None, 50) == "tier1"  # off
 
 
 def test_verify_idea_hit_requires_recognition(tmp_path):
@@ -160,8 +165,11 @@ def test_verify_idea_hit_requires_recognition(tmp_path):
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1,
                     recognized_aliases=["international conference on learning representations"],
                     recognized_min_citations=10)
-    assert v.best_level == 4 and v.best_paper["paper_id"] == "top"
-    assert [p["paper_id"] for p in v.excluded_unrecognized] == ["lowq"]
+    # top (ICLR alias) -> tier1; lowq (obscure venue, 2 cites) -> tier3
+    assert v.best["tier1"]["level"] == 4
+    assert v.best["tier1"]["paper"]["paper_id"] == "top"
+    assert [p["paper_id"] for p in v.candidates["tier3"]] == ["lowq"]
+    assert v.best["tier3"]["level"] == 4  # cumulative: tier1 paper counts too
 
 
 def test_verify_idea_excludes_in_corpus_titles(tmp_path):
@@ -177,7 +185,7 @@ def test_verify_idea_excludes_in_corpus_titles(tmp_path):
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1,
                     corpus_titles={"a known graph paper"})
-    assert v.best_level == 0
+    assert v.best["tier3"]["level"] == 0
     assert [p["paper_id"] for p in v.excluded_in_corpus] == ["known"]
 
 
@@ -227,4 +235,4 @@ def test_verify_idea_degrades_when_openalex_unavailable(tmp_path):
     v = verify_idea(llm, model="m", idea_id="x", idea_text="idea",
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
-    assert v.best_level == 4 and v.best_paper["paper_id"] == "new"
+    assert v.best["tier1"]["level"] == 4  # no alias lists -> everything tier1

@@ -76,5 +76,5 @@ def test_full_pipeline_smoke(tmp_path):
                  for nid in out["generated"]}
     agg = aggregate_run(verdicts, dup_flags)
     assert agg["n_ideas"] == 3
-    assert 0.0 <= agg["acc_ge3"] <= 1.0
-    assert agg["mean_level"] >= 0.0
+    assert 0.0 <= agg["tier1"]["acc_ge3"] <= 1.0
+    assert agg["tier3"]["mean_level"] >= agg["tier1"]["mean_level"] - 1e-9

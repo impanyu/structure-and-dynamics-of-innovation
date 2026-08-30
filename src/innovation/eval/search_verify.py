@@ -136,38 +136,49 @@ def judge_level(llm: LLM, *, model: str, idea_text: str, candidate: dict) -> tup
     return max(0, min(5, level)), str(obj.get("evidence", ""))[:300]
 
 
+EMPTY_BEST = {"level": 0, "paper": None}
+
+
 @dataclass
 class Verdict:
-    """best_level/best_paper: the highest-graded RECOGNIZED post-cutoff
-    realization (the scoring pair). The exclusion buckets hold level>=2
-    candidates that were disqualified, with their levels, for auditing."""
+    """Three recognition tiers, CUMULATIVE scoring: best["tier1"] considers
+    only tier-1 realizations, best["tier2"] tier-1+2, best["tier3"] any
+    published realization. candidates buckets hold every level>=2
+    post-cutoff, non-corpus candidate in its OWN tier, with level+evidence.
+    Time/corpus gates precede tiering (their buckets unchanged)."""
     idea_id: str
-    best_level: int = 0
-    best_paper: dict | None = None
+    best: dict = field(default_factory=lambda: {
+        "tier1": dict(EMPTY_BEST), "tier2": dict(EMPTY_BEST),
+        "tier3": dict(EMPTY_BEST)})
+    candidates: dict = field(default_factory=lambda: {
+        "tier1": [], "tier2": [], "tier3": []})
     excluded_pre_cutoff: list[dict] = field(default_factory=list)
     unknown_date: list[dict] = field(default_factory=list)
-    excluded_unrecognized: list[dict] = field(default_factory=list)
     excluded_in_corpus: list[dict] = field(default_factory=list)
 
 
-def is_recognized(cand: dict, recognized_aliases: list[str] | None,
-                  min_citations: int) -> bool:
-    """A realizing paper counts as recognized innovation iff its venue matches
-    the recognized top-venue alias list OR its citation count clears the
-    impact floor. With no alias list configured, everything is recognized."""
-    if recognized_aliases is None:
-        return True
+def tier_of(cand: dict, tier1_aliases: list[str] | None,
+            tier2_aliases: list[str] | None, min_citations: int) -> str:
+    """Recognition tier of a realizing paper (user rule 2026-08-30):
+    tier1 = CCF-A venue OR citations >= floor; tier2 = CCF-B venue;
+    tier3 = any other published paper. Unmatched venues fall DOWNWARD
+    (conservative). With no alias lists configured, everything is tier1."""
+    if tier1_aliases is None:
+        return "tier1"
     venue = (cand.get("venue") or "").lower()
-    if venue and any(alias in venue for alias in recognized_aliases):
-        return True
-    return (cand.get("citations") or 0) >= min_citations
+    if (venue and any(a in venue for a in tier1_aliases)) or             (cand.get("citations") or 0) >= min_citations:
+        return "tier1"
+    if venue and tier2_aliases and any(a in venue for a in tier2_aliases):
+        return "tier2"
+    return "tier3"
 
 
 def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 cutoff_date: str, mailto: str, cache_dir, http_get=None,
                 n_queries: int = 3, top_k: int = 5,
                 recognized_aliases: list[str] | None = None,
-                recognized_min_citations: int = 10,
+                tier2_aliases: list[str] | None = None,
+                recognized_min_citations: int = 50,
                 corpus_titles: set[str] | None = None) -> Verdict:
     queries = extract_queries(llm, model=model, idea_text=idea_text, n=n_queries)
     candidates, seen_titles = [], set()
@@ -185,8 +196,7 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 seen_titles.add(title_key)
                 candidates.append(cand)
 
-    best_level, best_paper = 0, None
-    excluded, unknown, unrecognized, in_corpus = [], [], [], []
+    v = Verdict(idea_id=idea_id)
     for cand in candidates:
         level, evidence = judge_level(llm, model=model, idea_text=idea_text,
                                       candidate=cand)
@@ -196,19 +206,24 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
         if (corpus_titles is not None
                 and cand["title"].strip().lower() in corpus_titles):
             # Contamination guard: the paper is IN the initial graph.
-            in_corpus.append(entry)
+            v.excluded_in_corpus.append(entry)
             continue
         if not cand["pub_date"]:
-            unknown.append(entry)
+            v.unknown_date.append(entry)
             continue
         if cand["pub_date"] <= cutoff_date:
-            excluded.append(entry)  # logged, NEVER scored (spec §3.6)
+            v.excluded_pre_cutoff.append(entry)  # NEVER scored (spec §3.6)
             continue
-        if not is_recognized(cand, recognized_aliases, recognized_min_citations):
-            unrecognized.append(entry)
-            continue
-        if level > best_level:
-            best_level, best_paper = level, entry
-    return Verdict(idea_id=idea_id, best_level=best_level, best_paper=best_paper,
-                   excluded_pre_cutoff=excluded, unknown_date=unknown,
-                   excluded_unrecognized=unrecognized, excluded_in_corpus=in_corpus)
+        tier = tier_of(cand, recognized_aliases, tier2_aliases,
+                       recognized_min_citations)
+        entry["tier"] = tier
+        v.candidates[tier].append(entry)
+        # cumulative bests: a tier-1 paper scores at every tier, tier-2 at
+        # tier2+tier3, tier-3 only at tier3
+        reach = {"tier1": ("tier1", "tier2", "tier3"),
+                 "tier2": ("tier2", "tier3"),
+                 "tier3": ("tier3",)}[tier]
+        for t in reach:
+            if level > v.best[t]["level"]:
+                v.best[t] = {"level": level, "paper": entry}
+    return v

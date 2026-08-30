@@ -84,6 +84,104 @@ recognized_venues:
   - {name: "ACM International Joint Conference on Pervasive and Ubiquitous Computing", aliases: ["ubicomp", "pervasive and ubiquitous computing"]}
   - {name: "ACM Symposium on User Interface Software and Technology", aliases: ["user interface software and technology", "uist"]}
   - {name: "IEEE Real-Time Systems Symposium", aliases: ["real-time systems symposium"]}
+# Tier-2 recognition: CCF-B conferences (7th ed. 2026, all categories).
+# Aliases are lowercase substrings matched against search-result venue strings;
+# B venues whose names/abbreviations are too short or ambiguous to match
+# safely (RE, CP, CC, SAT, ISS, PG, I3D, SPM, SGP, SCA, DCC, ITC, ICS, VEE,
+# CGO, PACT, HotOS, LISA, MSST, CIDR, FSE(sec), ...) are omitted and thus fall
+# to tier3 — misclassification errs downward, never upward.
+ccf_b_aliases:
+  - "empirical methods in natural language processing"
+  - "emnlp"
+  - "north american chapter of the association for computational linguistics"
+  - "naacl"
+  - "international conference on computational linguistics"
+  - "coling"
+  - "european conference on computer vision"
+  - "eccv"
+  - "uncertainty in artificial intelligence"
+  - "autonomous agents and multiagent systems"
+  - "adaptive agents and multi-agent"
+  - "conference on learning theory"
+  - "computational learning theory"
+  - "european conference on artificial intelligence"
+  - "ecai"
+  - "international conference on robotics and automation"
+  - "icra"
+  - "knowledge representation and reasoning"
+  - "automated planning and scheduling"
+  - "icaps"
+  - "case-based reasoning"
+  - "parallel problem solving from nature"
+  - "ppsn"
+  - "international joint conference on artificial intelligence"
+  - "ijcai"
+  - "information and knowledge management"
+  - "cikm"
+  - "web search and data mining"
+  - "wsdm"
+  - "machine learning and knowledge discovery in databases"
+  - "ecml"
+  - "ieee international conference on data mining"
+  - "icdm"
+  - "siam international conference on data mining"
+  - "recommender systems"
+  - "recsys"
+  - "database systems for advanced applications"
+  - "dasfaa"
+  - "semantic web conference"
+  - "web information systems engineering"
+  - "extending database technology"
+  - "international conference on database theory"
+  - "acoustics, speech and signal processing"
+  - "icassp"
+  - "interspeech"
+  - "international conference on multimedia and expo"
+  - "international conference on multimedia retrieval"
+  - "eurographics"
+  - "medical image computing and computer-assisted intervention"
+  - "miccai"
+  - "intelligent systems for molecular biology"
+  - "research in computational molecular biology"
+  - "recomb"
+  - "bioinformatics and biomedicine"
+  - "bibm"
+  - "cognitive science society"
+  - "web and internet economics"
+  - "mobile systems, applications"
+  - "mobisys"
+  - "embedded networked sensor systems"
+  - "sensys"
+  - "sigmetrics"
+  - "parallel and distributed processing symposium"
+  - "ipdps"
+  - "distributed computing systems"
+  - "icdcs"
+  - "automata, languages and programming"
+  - "icalp"
+  - "european symposium on research in computer security"
+  - "esorics"
+  - "annual computer security applications"
+  - "asiacrypt"
+  - "dependable systems and networks"
+  - "international conference on functional programming"
+  - "ecoop"
+  - "software reliability engineering"
+  - "software maintenance and evolution"
+  - "software analysis, evolution and reengineering"
+  - "service-oriented computing"
+  - "international conference on web services"
+  - "principles and practice of constraint programming"
+  - "web and social media"
+  - "icwsm"
+  - "pervasive computing and communications"
+  - "intelligent user interfaces"
+  - "field-programmable gate arrays"
+  - "design, automation & test in europe"
+  - "computer-aided design"
+  - "conext"
+  - "internet measurement conference"
+  - "hybrid systems: computation and control"
 year_from: 2020
 # Temporal design: T = agent model's training cutoff month. openai:gpt-5
 # training data cutoff = 2024-09-30. Initial graph = papers published BEFORE
@@ -105,7 +203,7 @@ eval:
   n_queries: 3
   top_k: 5
   dup_ceiling: 0.95
-  recognized_min_citations: 51  # OR-arm of hit recognition: citations > 50 (user rule 2026-08-29)
+  recognized_min_citations: 50  # tier1 OR-arm: citations >= 50 (user rule 2026-08-30)
 run:
   run_id: stage1-pilot
   seed: 0

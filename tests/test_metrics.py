@@ -6,16 +6,25 @@ from innovation.eval.metrics import (aggregate_run, bridging, diversity,
 from innovation.eval.search_verify import Verdict
 
 
+def make_verdict(idea_id, t1=0, t3=None):
+    v = Verdict(idea_id)
+    v.best["tier1"] = {"level": t1, "paper": {"paper_id": "P"} if t1 else None}
+    v.best["tier2"] = dict(v.best["tier1"])
+    t3 = t1 if t3 is None else t3
+    v.best["tier3"] = {"level": t3, "paper": {"paper_id": "P"} if t3 else None}
+    return v
+
+
 def verdicts():
-    return [Verdict("g0", best_level=5, best_paper={"paper_id": "P1"}),
-            Verdict("g1", best_level=3, best_paper={"paper_id": "P1"}),
-            Verdict("g2", best_level=0, best_paper=None),
-            Verdict("g3", best_level=4, best_paper={"paper_id": "P2"})]
+    return [make_verdict("g0", t1=5),
+            make_verdict("g1", t1=3),
+            make_verdict("g2", t1=0),
+            make_verdict("g3", t1=4)]
 
 
 def test_idea_levels_zeroes_dup_flagged():
     dup = {"g0": False, "g1": False, "g2": False, "g3": True}
-    assert idea_levels(verdicts(), dup) == [5, 3, 0, 0]
+    assert idea_levels(verdicts(), dup, "tier1") == [5, 3, 0, 0]
 
 
 def test_embedding_metrics():
@@ -31,13 +40,15 @@ def test_embedding_metrics():
 def test_aggregate_run():
     dup = {"g0": False, "g1": False, "g2": False, "g3": True}
     agg = aggregate_run(verdicts(), dup)
-    assert agg["mean_level"] == pytest.approx(2.0)   # (5+3+0+0)/4
-    assert agg["acc_ge3"] == pytest.approx(0.5)
-    assert agg["acc_ge4"] == pytest.approx(0.25)
-    assert agg["acc_eq5"] == pytest.approx(0.25)
+    t1 = agg["tier1"]
+    assert t1["mean_level"] == pytest.approx(2.0)   # (5+3+0+0)/4
+    assert t1["acc_ge3"] == pytest.approx(0.5)
+    assert t1["acc_ge4"] == pytest.approx(0.25)
+    assert t1["acc_eq5"] == pytest.approx(0.25)
     assert agg["n_ideas"] == 4 and agg["n_dup_flagged"] == 1
+    assert agg["tier3"]["mean_level"] >= t1["mean_level"] - 1e-9
 
 
 def test_empty_edge_cases():
-    assert aggregate_run([], {})["mean_level"] == 0.0
+    assert aggregate_run([], {})["tier1"]["mean_level"] == 0.0
     assert diversity(np.array([[1.0, 0.0]], dtype=np.float32)) == 0.0

@@ -3,10 +3,11 @@
 import numpy as np
 
 
-# --- headline (graded realization, levels 0-5) ---
-def idea_levels(verdicts, dup_flags: dict[str, bool]) -> list[int]:
-    """Per-idea realization level; near-duplicates of the past corpus score 0."""
-    return [0 if dup_flags.get(v.idea_id, False) else v.best_level
+# --- headline (graded realization, levels 0-5, three recognition tiers) ---
+def idea_levels(verdicts, dup_flags: dict[str, bool], tier: str = "tier1") -> list[int]:
+    """Per-idea realization level at a cumulative recognition tier;
+    near-duplicates of the past corpus score 0."""
+    return [0 if dup_flags.get(v.idea_id, False) else v.best[tier]["level"]
             for v in verdicts]
 
 
@@ -35,11 +36,13 @@ def diversity(vecs: np.ndarray) -> float:
 
 
 def aggregate_run(verdicts, dup_flags: dict[str, bool]) -> dict:
-    lv = idea_levels(verdicts, dup_flags)
-    n = len(lv)
-    return {"mean_level": (sum(lv) / n) if n else 0.0,
-            "acc_ge3": (sum(1 for x in lv if x >= 3) / n) if n else 0.0,
-            "acc_ge4": (sum(1 for x in lv if x >= 4) / n) if n else 0.0,
-            "acc_eq5": (sum(1 for x in lv if x == 5) / n) if n else 0.0,
-            "n_ideas": n,
-            "n_dup_flagged": sum(1 for f in dup_flags.values() if f)}
+    out = {"n_ideas": len(verdicts),
+           "n_dup_flagged": sum(1 for f in dup_flags.values() if f)}
+    for tier in ("tier1", "tier2", "tier3"):
+        lv = idea_levels(verdicts, dup_flags, tier)
+        n = len(lv)
+        out[tier] = {"mean_level": (sum(lv) / n) if n else 0.0,
+                     "acc_ge3": (sum(1 for x in lv if x >= 3) / n) if n else 0.0,
+                     "acc_ge4": (sum(1 for x in lv if x >= 4) / n) if n else 0.0,
+                     "acc_eq5": (sum(1 for x in lv if x == 5) / n) if n else 0.0}
+    return out

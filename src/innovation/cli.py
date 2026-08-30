@@ -160,6 +160,7 @@ def cmd_evaluate(cfg):
     # eval.recognized_min_citations.
     recognized = cfg.get("recognized_venues") or []
     aliases = [a.lower() for v in recognized for a in v.get("aliases", [])]
+    tier2_aliases = [a.lower() for a in (cfg.get("ccf_b_aliases") or [])]
     # Contamination guard: papers already in the initial graph can never be
     # anticipation hits (the agent may simply have read them).
     corpus_papers, _ = load_corpus(cfg["data_dir"])
@@ -172,7 +173,8 @@ def cmd_evaluate(cfg):
             cache_dir=run_dir / "search_cache",
             n_queries=cfg["eval"]["n_queries"], top_k=cfg["eval"]["top_k"],
             recognized_aliases=aliases or None,
-            recognized_min_citations=cfg["eval"].get("recognized_min_citations", 10),
+            tier2_aliases=tier2_aliases or None,
+            recognized_min_citations=cfg["eval"].get("recognized_min_citations", 50),
             corpus_titles=corpus_titles))
         dup_flags[nid] = past_dup_flag(emb.encode([text])[0], corpus_vecs,
                                        ceiling=cfg["eval"]["dup_ceiling"])
