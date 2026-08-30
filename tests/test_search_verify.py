@@ -140,6 +140,8 @@ def test_tier_of_classification():
     assert tier_of({"venue": "Workshop on X", "citations": 80}, t1, t2, 50) == "tier1"
     assert tier_of({"venue": "Proceedings of EMNLP 2025", "citations": 3},
                    t1, t2, 50) == "tier2"
+    assert tier_of({"venue": "Obscure Journal", "citations": 12},
+                   t1, t2, 50) == "tier2"   # citations >= 10 arm
     assert tier_of({"venue": "Obscure Journal", "citations": 3}, t1, t2, 50) == "tier3"
     assert tier_of({"venue": "", "citations": 0}, None, None, 50) == "tier1"  # off
 

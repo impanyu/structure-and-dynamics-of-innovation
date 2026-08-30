@@ -175,6 +175,7 @@ def cmd_evaluate(cfg):
             recognized_aliases=aliases or None,
             tier2_aliases=tier2_aliases or None,
             recognized_min_citations=cfg["eval"].get("recognized_min_citations", 50),
+            tier2_min_citations=cfg["eval"].get("tier2_min_citations", 10),
             corpus_titles=corpus_titles))
         dup_flags[nid] = past_dup_flag(emb.encode([text])[0], corpus_vecs,
                                        ceiling=cfg["eval"]["dup_ceiling"])

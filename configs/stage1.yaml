@@ -203,7 +203,8 @@ eval:
   n_queries: 3
   top_k: 5
   dup_ceiling: 0.95
-  recognized_min_citations: 50  # tier1 OR-arm: citations >= 50 (user rule 2026-08-30)
+  recognized_min_citations: 50  # tier1 OR-arm: citations >= 50
+  tier2_min_citations: 10       # tier2 OR-arm: CCF A+B venue OR citations >= 10
 run:
   run_id: stage1-pilot
   seed: 0
