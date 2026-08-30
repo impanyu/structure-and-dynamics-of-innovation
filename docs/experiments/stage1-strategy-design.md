@@ -19,8 +19,8 @@ then `... evaluate --config <same> --run-id <name>-sK`.
 
 ## Controls (identical across all conditions)
 
-- Same graph, `total_steps: 400`, global `generation_budget: 40` — every
-  condition emits the same number of ideas; quality is compared, not quantity.
+- Same graph, `total_steps: 400`, NO generation budget (user decision
+  2026-08-29): agents generate freely; idea count is an outcome variable.
 - Seeds: core matrix runs ONE seed per condition (seed 0) — user decision
   2026-08-29 to control cost; extend to more seeds for the paper's final
   numbers once the pipeline and effect directions are confirmed.
