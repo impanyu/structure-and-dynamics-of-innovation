@@ -2,50 +2,50 @@
 # Specialists get ONE random topic from configs/topics-k50.yaml per run
 # (seeded, distinct within a run, recorded in run_meta.json).
 # Edit the generator, not this file.
-# supplementary mass ablation: 10 read-scoped specialists, read_mass=200 (compare with core-specialists = 800)
+# C6 core: 10 specialists, each READS only its random topic (read_mass=6400); writes freely
 extends: ../stage1.yaml
 run:
-  run_id: supp-mass-200
+  run_id: core-mass-6400
   seed: 0
   total_steps: 400
   agents:
   - agent_id: s0
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s1
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s2
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s3
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s4
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s5
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s6
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s7
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s8
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400
   - agent_id: s9
     policy: llm
     read_topics: random
-    read_mass: 200
+    read_mass: 6400

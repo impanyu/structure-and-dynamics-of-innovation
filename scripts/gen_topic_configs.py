@@ -20,11 +20,6 @@ def spec_agent(aid, mass=MASS):
             "read_topics": "random", "read_mass": mass}
 
 
-def broad_agent(aid):
-    return {"agent_id": aid, "policy": "llm",
-            "write_topics": "random", "write_mass": MASS}
-
-
 def gen_agent(aid):
     return {"agent_id": aid, "policy": "llm"}
 
@@ -44,27 +39,17 @@ def write(path, run_id, agents, comment):
         yaml.safe_dump(cfg, f, allow_unicode=True, sort_keys=False, width=100)
 
 
-write("configs/experiments/core-specialists.yaml", "core-specialists",
-      [spec_agent(f"s{i}") for i in range(10)],
-      "C2 core: 10 specialists, each READS only its random topic; writes freely")
-write("configs/experiments/core-broad.yaml", "core-broad",
-      [broad_agent(f"b{i}") for i in range(10)],
-      "C3 core: 10 broad readers / local writers (read all, write one random topic)")
-write("configs/experiments/core-mixed.yaml", "core-mixed",
-      [spec_agent(f"s{i}") for i in range(4)]
-      + [broad_agent(f"b{i}") for i in range(3)]
-      + [gen_agent(f"g{i}") for i in range(3)],
-      "C4 core: mixed team = 4 specialists + 3 broad + 3 generalists")
-# Mass ablation (user decision 2026-08-30): specialization degree as a
-# continuous variable. Measured purity of the 800-region is only 5-60% own
-# topic (median ~35%), so read_mass IS the specialization dial: 200 ~ median
-# natural topic size (narrow), 800 = C2 core point, 3200 = macro-area.
-# Same seed as C2 -> identical topic draws; only the radius varies.
-for mass in (200, 3200):
-    write(f"configs/experiments/supp-mass-{mass}.yaml", f"supp-mass-{mass}",
+# CORE MATRIX (user redesign 2026-08-30): the specialization dial. C1 =
+# generalists (the mass=infinity endpoint); C2-C6 = 10 read-scoped
+# specialists with read_mass in {400, 800, 1600, 3200, 6400}. Same seed
+# everywhere -> identical topic draws; only the radius varies. (Old C3
+# broad-readers and C4 mixed-team conditions were withdrawn.)
+CORE_MASSES = {"c2": 400, "c3": 800, "c4": 1600, "c5": 3200, "c6": 6400}
+for cid, mass in CORE_MASSES.items():
+    write(f"configs/experiments/core-mass-{mass}.yaml", f"core-mass-{mass}",
           [spec_agent(f"s{i}", mass) for i in range(10)],
-          f"supplementary mass ablation: 10 read-scoped specialists, read_mass={mass} "
-          f"(compare with core-specialists = 800)")
+          f"{cid.upper()} core: 10 specialists, each READS only its random topic "
+          f"(read_mass={mass}); writes freely")
 write("configs/experiments/supp-mixed-spec-heavy.yaml", "supp-mixed-spec-heavy",
       [spec_agent(f"s{i}") for i in range(7)] + [gen_agent(f"g{i}") for i in range(3)],
       "supplementary composition sweep: 7 specialists + 3 generalists")

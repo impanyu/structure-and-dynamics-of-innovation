@@ -32,49 +32,55 @@ then `... evaluate --config <same> --run-id <name>-sK`.
   and pre-cutoff matches excluded). Process observables: novelty, bridging,
   diversity, action-trace statistics from `events.jsonl`.
 
-## Core matrix — run first (4 conditions × 1 seed = 4 runs)
+## Core matrix — the specialization dial (redesign 2026-08-30)
 
-| id | config | team (N=10) | question |
+One axis: how narrowly agents READ. All conditions are 10 agents, writes
+always free; C2–C6 confine each agent's reading to its random topic's
+read_mass nearest corpus papers. Same seed everywhere → identical topic
+draws; only the radius varies. Motivation: measured purity of the 800-paper
+region is 5–60% own topic (median ~35%), so read_mass is a continuous
+specialization dial, not a fixed "one topic" scope. (The former C3
+broad-reader/local-writer and C4 mixed-team conditions were withdrawn.)
+
+| id | config | read_mass | interpretation |
 |---|---|---|---|
-| C1 | core-generalists | 10 generalists (unrestricted) | dynamics reference |
-| C2 | core-specialists | 10 specialists (READ confined to own random topic; write free) | narrow input: what does restricted reading do to output? |
-| C3 | core-broad | 10 broad readers / local writers (read all, write own random topic) | T-shaped researcher — pre-registered winner |
-| C4 | core-mixed | 4 specialists + 3 broad + 3 generalists | does behavioral diversity beat pure teams? |
+| C2 | core-mass-400 | 400 | narrow — ≈ 1–2 natural topics |
+| C3 | core-mass-800 | 800 | sub-area neighborhood (**already run** as `core-mass-800-s0`) |
+| C4 | core-mass-1600 | 1600 | broad sub-area |
+| C5 | core-mass-3200 | 3200 | macro-area (~20% of corpus) |
+| C6 | core-mass-6400 | 6400 | ~40% of corpus |
+| C1 | core-generalists | ∞ | unrestricted endpoint (already run) |
 
-Key contrasts: C1↔C2 (cost/benefit of constraints), C2↔C3 (read breadth,
-write fixed), pure↔C4 (composition diversity).
+Headline question: is accuracy monotone in scope, or is there an
+inverted-U (a "focused-but-not-starved" sweet spot)? C3 beating C1 on all
+tiers already rules out "broader is always better".
 
 ## Supplementary experiments (after core results)
 
 1. **Composition sweep** — `supp-mixed-spec-heavy` (7 spec + 3 gen),
-   `supp-mixed-gen-heavy` (3 spec + 7 gen) vs C4 (4+3+3).
+   `supp-mixed-gen-heavy` (3 spec + 7 gen). NOTE: the 4+3+3 mixed anchor
+   (old C4) was withdrawn; redesign this sweep before running.
 2. **Scaling** — `supp-scaling-n1/n2/n5/n20` (generalists, same total steps
    and budget; N=10 point = C1). N=1 is the single-agent baseline; the curve
    is the stigmergy story.
 3. **Initial-graph ablation** — `supp-noedges-generalists`: same corpus,
    zero edges; isolates the value of citation structure.
 4. **Jump ablation** — `supp-nojump-generalists`: serendipity contribution.
-6. **Mass ablation** — `supp-mass-200` / `supp-mass-3200` (+ C2 = 800 point):
-   specialization degree as a continuous dial. Motivation: measured purity of
-   the 800-region is 5–60% own topic (median ~35%) — 800 papers is a macro-
-   area, not one topic. 200 ≈ median natural topic size. Same seed as C2, so
-   the topic draws are identical; only the radius varies.
 5. **Validity anchors** — `supp-baseline-nonav` (LLM without navigation),
    `supp-baseline-pa` (preferential attachment, no LLM; structural metrics
    only).
 
-## Pre-registered expectations
+## Pre-registered expectations (revised for the dial, 2026-08-30)
 
-| condition | accuracy | novelty | bridging | diversity |
-|---|---|---|---|---|
-| C2 specialists | high | low | low | low |
-| C3 broad/local | **high** | **high** | **high** | mid |
-| C1 generalists | mid | mid | mid | mid |
-| C4 mixed | between C1 and C3 | mid-high | mid-high | **high** |
-| nonav | low (vague, dup-flagged) | spurious-high | random | high |
-
-If C3 wins accuracy AND bridging simultaneously, the headline is "read
-broadly, write narrowly".
+Accuracy vs read_mass is expected to be an **inverted U**: very narrow
+scopes starve agents of recombination material (and diffuse topics can
+produce zero output, cf. s6 at mass 800), very broad scopes reproduce the
+generalist's unfocused wandering. The observed C3(800) > C1(∞) on all
+tiers pins the right side of the curve; the open question is where the
+peak sits and how steep the narrow side is. Secondary expectations:
+novelty and per-idea citation spread grow with mass; idea count may peak
+at moderate mass. nonav baseline: low accuracy (vague, dup-flagged)
+regardless of scope.
 
 ## Analysis plan
 

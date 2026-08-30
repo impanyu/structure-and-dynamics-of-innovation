@@ -2,44 +2,50 @@
 # Specialists get ONE random topic from configs/topics-k50.yaml per run
 # (seeded, distinct within a run, recorded in run_meta.json).
 # Edit the generator, not this file.
-# C4 core: mixed team = 4 specialists + 3 broad + 3 generalists
+# C4 core: 10 specialists, each READS only its random topic (read_mass=1600); writes freely
 extends: ../stage1.yaml
 run:
-  run_id: core-mixed
+  run_id: core-mass-1600
   seed: 0
   total_steps: 400
   agents:
   - agent_id: s0
     policy: llm
     read_topics: random
-    read_mass: 800
+    read_mass: 1600
   - agent_id: s1
     policy: llm
     read_topics: random
-    read_mass: 800
+    read_mass: 1600
   - agent_id: s2
     policy: llm
     read_topics: random
-    read_mass: 800
+    read_mass: 1600
   - agent_id: s3
     policy: llm
     read_topics: random
-    read_mass: 800
-  - agent_id: b0
+    read_mass: 1600
+  - agent_id: s4
     policy: llm
-    write_topics: random
-    write_mass: 800
-  - agent_id: b1
+    read_topics: random
+    read_mass: 1600
+  - agent_id: s5
     policy: llm
-    write_topics: random
-    write_mass: 800
-  - agent_id: b2
+    read_topics: random
+    read_mass: 1600
+  - agent_id: s6
     policy: llm
-    write_topics: random
-    write_mass: 800
-  - agent_id: g0
+    read_topics: random
+    read_mass: 1600
+  - agent_id: s7
     policy: llm
-  - agent_id: g1
+    read_topics: random
+    read_mass: 1600
+  - agent_id: s8
     policy: llm
-  - agent_id: g2
+    read_topics: random
+    read_mass: 1600
+  - agent_id: s9
     policy: llm
+    read_topics: random
+    read_mass: 1600
