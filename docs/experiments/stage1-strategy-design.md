@@ -54,6 +54,11 @@ write fixed), pure↔C4 (composition diversity).
 3. **Initial-graph ablation** — `supp-noedges-generalists`: same corpus,
    zero edges; isolates the value of citation structure.
 4. **Jump ablation** — `supp-nojump-generalists`: serendipity contribution.
+6. **Mass ablation** — `supp-mass-200` / `supp-mass-3200` (+ C2 = 800 point):
+   specialization degree as a continuous dial. Motivation: measured purity of
+   the 800-region is 5–60% own topic (median ~35%) — 800 papers is a macro-
+   area, not one topic. 200 ≈ median natural topic size. Same seed as C2, so
+   the topic draws are identical; only the radius varies.
 5. **Validity anchors** — `supp-baseline-nonav` (LLM without navigation),
    `supp-baseline-pa` (preferential attachment, no LLM; structural metrics
    only).

@@ -13,11 +13,11 @@ yaml.safe_dump({"mass": MASS, "topics": topics},
                open("configs/topics-k50.yaml", "w"), allow_unicode=True)
 
 
-def spec_agent(aid):
+def spec_agent(aid, mass=MASS):
     # Specialist = READ-scoped only (user redefinition 2026-08-30): confined
     # to its topic for reading/citing, but writes freely (no content gate).
     return {"agent_id": aid, "policy": "llm",
-            "read_topics": "random", "read_mass": MASS}
+            "read_topics": "random", "read_mass": mass}
 
 
 def broad_agent(aid):
@@ -55,6 +55,16 @@ write("configs/experiments/core-mixed.yaml", "core-mixed",
       + [broad_agent(f"b{i}") for i in range(3)]
       + [gen_agent(f"g{i}") for i in range(3)],
       "C4 core: mixed team = 4 specialists + 3 broad + 3 generalists")
+# Mass ablation (user decision 2026-08-30): specialization degree as a
+# continuous variable. Measured purity of the 800-region is only 5-60% own
+# topic (median ~35%), so read_mass IS the specialization dial: 200 ~ median
+# natural topic size (narrow), 800 = C2 core point, 3200 = macro-area.
+# Same seed as C2 -> identical topic draws; only the radius varies.
+for mass in (200, 3200):
+    write(f"configs/experiments/supp-mass-{mass}.yaml", f"supp-mass-{mass}",
+          [spec_agent(f"s{i}", mass) for i in range(10)],
+          f"supplementary mass ablation: 10 read-scoped specialists, read_mass={mass} "
+          f"(compare with core-specialists = 800)")
 write("configs/experiments/supp-mixed-spec-heavy.yaml", "supp-mixed-spec-heavy",
       [spec_agent(f"s{i}") for i in range(7)] + [gen_agent(f"g{i}") for i in range(3)],
       "supplementary composition sweep: 7 specialists + 3 generalists")
