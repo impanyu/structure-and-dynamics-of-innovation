@@ -1,0 +1,468 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2026_conference,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% \iclrfinalcopy % Uncomment for camera-ready
+
+\title{Structure and Dynamics of Agentic Innovation}
+
+\author{Anonymous authors\\
+Paper under double-blind review}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We study scientific innovation as a dynamical system: the \emph{state} is a
+citation network of research ideas distilled from published papers, and the
+\emph{dynamics} are LLM agents that navigate the network and write new ideas
+(and links) back into it. Agents propose ideas freely; each proposal is
+scored by whether a real paper published \emph{after} the agent model's
+training cutoff realizes it, verified by literature search and graded by an
+LLM judge on a six-level scale across three venue-recognition tiers. On a
+16{,}208-node network built from NeurIPS, ICLR, ICML, and AAAI papers
+(2020--2024), we manipulate a single \emph{specialization dial}: the number
+of corpus papers an agent is allowed to read, from 400 up to the whole
+corpus. We find (i) an inverted-U in per-idea anticipation accuracy peaking
+at a scope of 800 papers---a coherent sub-area, not one topic---with
+unrestricted generalists strictly worst on every tier; (ii) idea production
+falls monotonically as scope widens; (iii) team size is a pure throughput
+knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits
+scale linearly, because agents are effectively independent---across 10{,}300
+actions we observe a single cross-agent citation of a generated idea.
+Structurally, agent-written links have near-constant semantic reach
+regardless of scope, are degree-decoupled (unlike the preferential
+attachment that built the corpus), and preferentially target recent
+frontier papers. Our results position reading scope---not team size---as
+the operative lever on the quality of machine-generated research ideas.
+\end{abstract}
+
+\section{Introduction}
+
+Can a system of LLM agents, given the recent scientific literature as a
+navigable network, anticipate where science is going next? And if so, what
+features of the system---the structure of the network, the behavioral
+constraints on the agents, the size of the team---determine how well it
+does? These questions matter both for the emerging practice of automated
+research ideation \citep{lu2024aiscientist,si2024llmideas} and for the
+science of science, where the interplay between knowledge structure and
+discovery has long been studied on human data
+\citep{fortunato2018science,uzzi2013atypical,wu2019teams}.
+
+We formalize the setting as a dynamical system. The \textbf{state} is an
+\emph{idea network}: each node is a one-paragraph distillation of a
+published paper, and directed edges are citations. The \textbf{dynamics}
+are LLM agents that act on the state through a small action set---semantic
+search, browsing a node and its neighbors, random jumps, adding or removing
+links, and \emph{generating} a new idea node that cites the ideas it builds
+on. State and dynamics are inseparable: every generated node and link
+becomes part of the network that all agents subsequently navigate
+(a stigmergic channel \citep{theraulaz1999stigmergy}).
+
+Evaluation exploits the arrow of time. The corpus contains only papers
+published before the agent model's training cutoff (September 2024). A
+generated idea scores only if a paper published \emph{after} the cutoff
+realizes it---\emph{anticipation}, verified by live literature search
+\citep{kinney2023s2,priem2022openalex} and graded by an LLM judge on a
+six-level realization scale, reported across three cumulative
+venue-recognition tiers (top venues, top+second-tier venues, any published
+paper). Matches to pre-cutoff papers or to corpus members are excluded, so
+memorization cannot score.
+
+Our central manipulation is deliberately minimal: a single
+\emph{specialization dial}. Each ``specialist'' agent draws one topic from
+a 50-topic pool and may only \emph{read} (search, browse, jump within, and
+hence cite) the $m$ corpus papers nearest its topic anchor in embedding
+space, with $m \in \{400, 800, 1600, 3200, 6400\}$; writing is always
+unconstrained. Unrestricted generalists provide the $m=\infty$ endpoint. A
+second manipulation varies team size $N \in \{10, 50, 100, 150\}$ at fixed
+per-agent interaction depth.
+
+\textbf{Findings.}
+\begin{itemize}
+\item \textbf{An inverted-U in idea quality over reading scope
+  (Sec.~\ref{sec:dial}).} Per-idea anticipation accuracy peaks at $m=800$
+  (tier-1 acc@$\geq$3 of 22\% vs.\ 10\% for generalists), and every scoped
+  condition beats the unrestricted generalists on every tier. Measured
+  region purity shows $m=800$ is a coherent \emph{sub-area neighborhood}
+  (own-topic share only 5--60\%), suggesting the sweet spot is ``focused
+  but not starved'': narrow enough to force depth, wide enough to contain
+  recombination material.
+\item \textbf{Quantity falls monotonically with scope
+  (Sec.~\ref{sec:dial}).} Narrow readers commit to ideas sooner and
+  produce more of them (83 at $m=400$ vs.\ 50 for generalists over the
+  same 80 rounds); generalists spend their actions wandering and curating.
+\item \textbf{Team size is a throughput knob, not a quality knob
+  (Sec.~\ref{sec:scaling}).} From $N=10$ to $N=150$ generalists at fixed
+  depth, per-idea accuracy is flat (11--17\%) while absolute hits grow
+  linearly. The mechanism is stark: agents are effectively independent.
+  Across all scaling runs (575 ideas, 10{,}300 actions) not one agent
+  cited another agent's generated idea.
+\item \textbf{The dynamics have a characteristic ``handwriting''
+  (Sec.~\ref{sec:structure}).} The semantic reach of agent-written links
+  is nearly invariant to scope (median cosine distance 0.144--0.153,
+  slightly \emph{below} the 0.179 of real citations): constraints move
+  \emph{where} agents write, not \emph{how far} they link. Agent citations
+  are degree-decoupled---the median cited paper has in-degree 0--2, versus
+  23 for the target of a real citation edge---and strongly
+  recency-seeking (51\% of citations target papers from the corpus's final
+  two years, vs.\ 8\% for real edges). LLM dynamics grow the network by a
+  different law than the preferential attachment
+  \citep{barabasi1999emergence} that grew it.
+\end{itemize}
+
+Together these results suggest that in the current regime, the quality of
+machine-generated research ideas is governed by how each agent's reading is
+situated in the knowledge structure, while multi-agent organization
+contributes parallelism but not yet collaboration. We release our full
+event logs, evaluation verdicts, and code. % TODO: release URL
+
+\section{Related work}
+
+\textbf{LLM research ideation.} Recent systems generate research ideas or
+entire papers with LLMs \citep{lu2024aiscientist}, and human studies find
+LLM-generated ideas can be judged more novel than expert ideas
+\citep{si2024llmideas}. Evaluation in this literature relies mostly on
+human or LLM preference judgments of the ideas themselves. We instead
+score \emph{anticipation}: an idea counts only if the future literature
+realized it, an outcome measure that needs no human panel and cannot be
+gamed by fluent writing alone.
+
+\textbf{Science of science.} Large-scale studies of human science link
+discovery to network structure: atypical combinations of prior work
+predict impact \citep{uzzi2013atypical}, small teams disrupt while large
+teams develop \citep{wu2019teams}, and citation networks grow by
+preferential attachment \citep{barabasi1999emergence,fortunato2018science}.
+We port these questions to a controlled substrate where the ``researchers''
+are LLM agents whose information diet can be intervened on directly---an
+experiment impossible with human scientists.
+
+\textbf{Multi-agent LLM systems.} Most LLM multi-agent frameworks
+coordinate through explicit messaging. Our agents interact only
+stigmergically \citep{theraulaz1999stigmergy}, through traces left in a
+shared artifact---the mechanism by which real science coordinates through
+the literature itself. Our finding that this channel stays essentially
+unused at present scales (Sec.~\ref{sec:structure}) quantifies how far
+current agent teams are from literature-mediated collaboration.
+
+\section{The environment: state and dynamics}
+\label{sec:framework}
+
+\subsection{State: an idea network from four venues}
+
+We collect the 16{,}208 papers published at NeurIPS, ICLR, ICML, and AAAI
+between January 2020 and August 2024 with at least 25 citations, via the
+Semantic Scholar Open Data Platform \citep{kinney2023s2}. Each paper's
+title and abstract are distilled by an LLM into a self-contained
+one-paragraph \emph{idea}. Citation edges among corpus members are
+recovered from Semantic Scholar (references and citations arms) augmented
+with OpenAlex \citep{priem2022openalex}, yielding 80{,}962 edges (6.4\% of
+nodes isolated). Ideas are embedded with a sentence encoder
+\citep{xiao2023bge}; embeddings define semantic search, agent scopes, and
+the 2-D maps below (PCA + t-SNE \citep{vandermaaten2008tsne}).
+
+\subsection{Dynamics: agents and actions}
+
+Agents share one action interface: \texttt{search} (semantic query, top-$k$
+over readable nodes), \texttt{browse} (read a node and its in/out
+neighbors), \texttt{sample\_frontier} (random jump within readable scope),
+\texttt{generate} (add a new idea node with citations to the ideas it
+builds on), \texttt{add\_links}/\texttt{remove\_links} (curate existing
+edges). Each agent is a single LLM (\texttt{gpt-5}, medium reasoning) with
+a rolling memory of its last 20 action--result pairs and no other channel
+to teammates. Agents act in round-robin; one \emph{round} = every agent
+acts once. There is no generation budget: whether and when to write is the
+agent's choice, so idea count is an outcome variable. Generated nodes and
+edges immediately join the shared state.
+
+\subsection{The specialization dial}
+\label{sec:scopes}
+
+A specialist draws one topic from a pool of 50 corpus-derived subfields
+(clustering + LLM naming; seeded draws, distinct within a run). Its
+\emph{readable region} is the $m$ corpus papers nearest the topic anchor
+in embedding space (an equal-mass region; the radius adapts per topic).
+Reading, searching, jumping, \emph{and citing} are confined to this
+region---citing means having read---while the content of generated ideas
+is unconstrained. We sweep $m \in \{400, 800, 1600, 3200, 6400\}$
+(conditions C2--C6); unrestricted generalists are C1 ($m=\infty$). All
+conditions use $N{=}10$ agents, 80 rounds, and the same seed, so topic
+draws are identical across the sweep and only the radius varies.
+
+Because topics vary in size (natural partition: median 228 papers, range
+44--1096), an $m=800$ region is \emph{not} one topic: measured own-topic
+purity is 5--60\% (median $\sim$35\%), i.e., a coherent sub-area
+neighborhood containing the topic plus its semantic neighbors. This is
+why we treat $m$ as a continuous specialization dial rather than a
+one-topic/many-topic dichotomy.
+
+\section{Evaluation: search-verified anticipation}
+\label{sec:eval}
+
+For each generated idea we extract three literature-search queries
+(problem, method, combination), retrieve candidates from Semantic Scholar
+and OpenAlex, and have an LLM judge grade each candidate's realization
+level on a six-point scale: 0 (different problem) through 3 (same problem,
+same method family) to 5 (same problem, mechanism, and key design
+choices). Candidates published on or before the training cutoff
+(2024-09-30) and candidates whose titles match corpus members are
+excluded before scoring, so neither memorization nor retrieval of the
+corpus can score. Near-duplicates of corpus ideas (embedding cosine
+$\geq 0.95$) are floored to level 0.
+
+Scores are reported in three cumulative recognition tiers:
+\textbf{tier~1} counts realizations in 60 top venues (the 58 CCF-A
+venues plus COLM and RLC) or papers with $\geq 50$ citations;
+\textbf{tier~2} additionally admits CCF-B venues or $\geq 10$ citations;
+\textbf{tier~3} admits any published paper. Per tier we report the mean
+best realization level and acc@$\geq$3, the share of ideas whose best
+match reaches level 3 (same problem and method family)---our headline
+accuracy.
+
+\section{Experiment 1: the specialization dial}
+\label{sec:dial}
+
+\begin{table}[t]
+\caption{The specialization dial: $N{=}10$ agents, 80 rounds, one seed.
+Read scope $m$ is the number of corpus papers each agent may read;
+writes are always free. Acc@$\geq$3 = share of ideas realized at level
+$\geq 3$ by a post-cutoff paper in the tier; hits in parentheses.}
+\label{tab:dial}
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\toprule
+ & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits)} &
+ \textbf{tier-2} & \textbf{tier-3} & \textbf{tier-1 mean lvl} \\
+\midrule
+C2 & 400   & \textbf{83} & 16\% (13) & 24\% & 67\% & 0.89 \\
+C3 & 800   & 74 & \textbf{22\% (16)} & \textbf{30\%} & \textbf{69\%} & \textbf{1.04} \\
+C4 & 1600  & 67 & 18\% (12) & 27\% & 40\% & 0.78 \\
+C5 & 3200  & 55 & 15\% (8)  & 25\% & 55\% & 0.69 \\
+C6 & 6400  & 54 & 15\% (8)  & 24\% & 61\% & 0.74 \\
+C1 & $\infty$ & 50 & 10\% (5) & 12\% & 44\% & 0.50 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=\linewidth]{mass-dial-800-summary.png}
+\end{center}
+\caption{The specialization dial at 80 rounds. Left: acc@$\geq$3 per tier
+vs.\ read scope (log axis); the gray dashed line is the tier-1 curve at
+the 40-round midpoint, whose $m{=}6400$ spike (35\% on 20 ideas)
+regressed to 15\% with doubled samples---small-$n$ noise. Middle: mean
+realization level. Right: idea production and absolute tier-1 hits.}
+\label{fig:dial}
+\end{figure}
+
+Table~\ref{tab:dial} and Figure~\ref{fig:dial} give the core result.
+
+\textbf{A mild inverted-U peaking at a sub-area scope.} Tier-1 accuracy
+runs 16\% $\to$ \textbf{22\%} $\to$ 18\% $\to$ 15\% $\to$ 15\% $\to$ 10\%
+as scope widens; mean realization level tracks the same shape. The
+$m{=}800$ condition is best on rate, absolute hits, and mean level in all
+three tiers. Both the narrow side (fewer recombination options; topics
+with semantically diffuse regions produced agents with zero output) and
+the broad side (unfocused wandering) underperform the sub-area
+neighborhood.
+
+\textbf{Constraint beats freedom everywhere.} Every scoped condition
+dominates the unrestricted generalists on every tier, by rate and by
+absolute hits. Moreover the generalists' accuracy \emph{fell} from 13\%
+to 10\% when the run was extended from 40 to 80 rounds: the marginal
+quality of freely-roaming exploration decays.
+
+\textbf{Narrow readers ship; broad readers browse.} Idea production is
+strictly monotone in scope (83, 74, 67, 55, 54, 50). Behaviorally,
+agents in all conditions spend their first $\sim$20 personal rounds
+exploring before their first \texttt{generate} (median onset: personal
+round 21--24), and narrow scopes reach ``confident enough to write''
+sooner and more often. Generalists redirect effort into curation: they
+performed 71 \texttt{add\_links} actions versus 23--38 for scoped
+conditions.
+
+\section{Experiment 2: team size}
+\label{sec:scaling}
+
+\begin{table}[t]
+\caption{Scaling generalist teams at fixed per-agent depth (30 rounds
+each, one seed). The $N{=}10$ point is the 30-round prefix of C1.
+Per-idea accuracy is flat; absolute hits scale with output.}
+\label{tab:scaling}
+\begin{center}
+\begin{tabular}{rrrrrr}
+\toprule
+\textbf{$N$} & \textbf{ideas (per agent)} & \textbf{tier-1 acc (hits)} &
+\textbf{tier-2} & \textbf{tier-3} \\
+\midrule
+10  & 12 (1.2)  & 17\% (2)  & 25\% (3)  & 50\% (6) \\
+50  & 103 (2.1) & 12\% (12) & 17\% (17) & 49\% (50) \\
+100 & 180 (1.8) & 11\% (20) & 16\% (28) & 44\% (80) \\
+150 & 280 (1.9) & 11\% (32) & 20\% (57) & 50\% (139) \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=\linewidth]{scaling-summary.png}
+\end{center}
+\caption{Team-size scaling at fixed per-agent depth. Left: per-idea
+accuracy is flat in $N$. Middle: total output and absolute hits grow
+linearly. Right: per-capita output is constant while stigmergic coupling
+(citations of teammates' generated ideas) stays at zero.}
+\label{fig:scaling}
+\end{figure}
+
+Holding per-agent depth fixed at 30 rounds and growing the team from 10
+to 150 generalists (Table~\ref{tab:scaling}, Figure~\ref{fig:scaling}),
+per-idea accuracy stays in the 11--17\% band on tier~1---the $N{=}10$
+value of 17\% rests on 2 hits and is within noise of the rest---while
+absolute tier-1 hits grow essentially linearly (2, 12, 20, 32). Team
+size buys throughput, not per-idea quality.
+
+The mechanism is that the agents are, in practice, independent samplers.
+Across all four scaling runs (575 generated ideas, 10{,}300 actions),
+\textbf{zero} citations of another agent's generated idea occurred, and
+only two self-citations; in the dial conditions of
+Sec.~\ref{sec:dial} (which run 80 rounds), 113 of 114 citations of
+generated nodes were \emph{self}-citations---agents building private
+research agendas---and exactly one crossed agents. The stigmergic write
+channel is active (new nodes join the shared graph), but the read-back
+channel is essentially silent: 383 new nodes among 16{,}208 corpus nodes
+are simply too rare for semantic search to surface. Making teammates'
+contributions discoverable (e.g., recency-weighted search or frontier
+sampling) is, on this evidence, the necessary condition for genuine
+collaboration effects---and the natural next intervention.
+
+\section{Analysis: how the dynamics rewrite the state}
+\label{sec:structure}
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=0.7\linewidth]{mass-dial-edge-reach.png}
+\end{center}
+\caption{Semantic reach of newly written links (cosine distance between
+endpoints), per condition. The dynamics' ``handwriting'' is nearly
+invariant to the reading constraint, and slightly tighter than real
+citation edges (dashed).}
+\label{fig:reach}
+\end{figure}
+
+We compare the links written by each condition (generate citations plus
+curation edges) against the 80{,}962 human citation edges that built the
+corpus.
+
+\textbf{Invariant handwriting.} The median semantic distance between the
+endpoints of agent-written links is 0.144--0.153 across all six
+conditions---a band of width 0.009---versus 0.179 for real citations
+(Figure~\ref{fig:reach}). Cross-topic rates hug the corpus baseline
+(58--75\% vs.\ 62\%). Reading constraints move \emph{where} an agent
+writes, not \emph{how far} its links reach; the local radius of citation
+appears to be an intrinsic property of the LLM dynamics.
+
+\textbf{Degree-decoupled, recency-seeking attachment.} Real citation
+edges concentrate on hubs: the median target of a corpus edge has
+in-degree 23. Agent-written links are nearly degree-blind: median target
+in-degree 0--2, against a uniform-selection baseline of 1 (mean 11.6
+vs.\ uniform 5.0, i.e., only a mild hub tail). The reason is the
+discovery channel: agents find papers by semantic search, which is
+degree-agnostic, whereas human discovery historically flows through
+reference lists, the visibility cascade that produces preferential
+attachment \citep{barabasi1999emergence}. Instead of heat, agents seek
+freshness: 51\% of the $m{=}800$ condition's citations target papers
+from 2023 onward, versus 8\% of real citation edges. Two growth laws,
+one state: the human dynamics that built the network and the LLM
+dynamics extending it obey different attachment rules.
+
+\section{Limitations}
+\label{sec:limits}
+
+\textbf{Single seed.} Every condition currently rests on one seeded run;
+per-condition idea counts (50--280) give usable per-idea statistics, but
+between-condition differences---especially the exact peak location on
+the dial---need replication across seeds (and topic draws) before strong
+claims. The clearest findings (scoped $>$ unrestricted on all tiers;
+monotone production; flat scaling; zero coupling) are consistent across
+many runs and both experiments.
+
+\textbf{One agent model, LLM judge.} Dynamics are those of a single
+model (\texttt{gpt-5}); the judge is a smaller LLM whose six-level
+rubric we audited but did not calibrate against human experts at scale.
+The anticipation window (post-2024-09) is still young; scores will only
+grow as the literature fills in.
+
+\textbf{Scope mechanism.} Equal-mass regions leak across topics by
+design (Sec.~\ref{sec:scopes}); we quantified purity rather than
+enforcing single-topic scopes, and treat this as the definition of the
+dial rather than a confound.
+
+\section{Conclusion}
+
+Framing machine-assisted innovation as a dynamical system on an idea
+network lets us intervene on the coupling between researcher and
+knowledge structure directly. On this substrate, the operative lever on
+idea quality is \emph{how reading is situated}---a sub-area scope of
+$\sim$800 papers beats both narrower and broader diets, and any scope
+beats none---while team size sets only throughput, because today's
+agents do not yet read each other. The immediate frontier is switching
+on that silent channel: making agents' contributions discoverable to one
+another, and measuring whether the scaling curve bends.
+
+\subsubsection*{Reproducibility statement}
+All runs are driven by seeded configurations; every agent action and its
+result is logged as an event stream from which the full network state
+can be replayed. Evaluation verdicts record every candidate paper,
+judge level, and exclusion reason. Corpus construction uses the public
+Semantic Scholar and OpenAlex APIs. Code, configurations, event logs,
+and verdicts will be released. % TODO: release URL
+
+\bibliography{references}
+\bibliographystyle{iclr2026_conference}
+
+\appendix
+\section{Appendix}
+
+\subsection{Example trajectory map}
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=\linewidth]{trajectories-c3.png}
+\end{center}
+\caption{Read/write trajectories of the ten specialists in the
+$m{=}800$ condition on the fixed t-SNE map of the corpus. Tinted areas
+are each agent's readable region; dots are reads, stars are generated
+ideas. Although writing is unconstrained, specialists write inside or
+near the regions they read.}
+\label{fig:traj}
+\end{figure}
+
+\subsection{Judge rubric}
+Level 0: different problem entirely. 1: same broad area, different
+goal. 2: same specific problem, unrelated approach. 3: same problem,
+approaches in the same method family. 4: same problem and core
+mechanism, differing in secondary components. 5: essentially the same
+idea (problem, mechanism, and key design choices).
+
+\subsection{Behavioral onset}
+Median personal round of an agent's first \texttt{generate} action:
+21--24 across conditions (minimum 9); the first 40 rounds of a team are
+dominated by \texttt{search}/\texttt{browse}. This is why the scaling
+experiment fixes per-agent depth at 30 rounds: shallower budgets produce
+(near-)zero output for any team size.
+
+\end{document}
