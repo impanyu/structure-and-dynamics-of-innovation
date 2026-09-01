@@ -1,11 +1,11 @@
-# Supplementary — scaling (design 2026-08-31): generalists, CONSTANT per-agent
-# depth of 40 steps, team size N varies; total_steps = 40*N. The N=10 point
-# reuses C1 core-generalists-s0's step-400 snapshot (10 agents x 40 steps).
+# Supplementary — scaling (design 2026-08-31 v2): generalists, 30 ROUNDS
+# (every agent acts once per round; total_steps = 30*N), team size N varies.
+# The N=10 point reuses C1 core-generalists-s0's first 300 actions (30 rounds).
 extends: ../stage1.yaml
 run:
-  run_id: supp-scaling-n40
+  run_id: supp-scaling-n50
   seed: 0
-  total_steps: 1600
+  total_steps: 1500
   agents:
     - {agent_id: g0, policy: llm}
     - {agent_id: g1, policy: llm}
@@ -47,3 +47,13 @@ run:
     - {agent_id: g37, policy: llm}
     - {agent_id: g38, policy: llm}
     - {agent_id: g39, policy: llm}
+    - {agent_id: g40, policy: llm}
+    - {agent_id: g41, policy: llm}
+    - {agent_id: g42, policy: llm}
+    - {agent_id: g43, policy: llm}
+    - {agent_id: g44, policy: llm}
+    - {agent_id: g45, policy: llm}
+    - {agent_id: g46, policy: llm}
+    - {agent_id: g47, policy: llm}
+    - {agent_id: g48, policy: llm}
+    - {agent_id: g49, policy: llm}

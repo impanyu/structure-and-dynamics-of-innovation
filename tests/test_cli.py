@@ -292,9 +292,9 @@ def test_all_experiment_configs_load_and_scopes_build():
         cfg = load_config(f)
         run = cfg["run"]
         assert run["run_id"] == f.stem
-        # core configs use 400 steps; scaling configs use 40 * N (constant
-        # per-agent depth, team size varies — design 2026-08-31).
-        expected = 40 * len(run["agents"]) if "scaling" in f.stem else 400
+        # core configs use 400 steps; scaling configs use 30 rounds = 30 * N
+        # actions (constant per-agent depth, team size varies — 2026-08-31 v2).
+        expected = 30 * len(run["agents"]) if "scaling" in f.stem else 400
         assert run["total_steps"] == expected and "generation_budget" not in run
         for spec in run["agents"]:
             resolved = dict(spec)

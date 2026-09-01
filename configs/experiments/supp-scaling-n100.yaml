@@ -1,11 +1,11 @@
-# Supplementary — scaling (design 2026-08-31): generalists, CONSTANT per-agent
-# depth of 40 steps, team size N varies; total_steps = 40*N. The N=10 point
-# reuses C1 core-generalists-s0's step-400 snapshot (10 agents x 40 steps).
+# Supplementary — scaling (design 2026-08-31 v2): generalists, 30 ROUNDS
+# (every agent acts once per round; total_steps = 30*N), team size N varies.
+# The N=10 point reuses C1 core-generalists-s0's first 300 actions (30 rounds).
 extends: ../stage1.yaml
 run:
-  run_id: supp-scaling-n160
+  run_id: supp-scaling-n100
   seed: 0
-  total_steps: 6400
+  total_steps: 3000
   agents:
     - {agent_id: g0, policy: llm}
     - {agent_id: g1, policy: llm}
@@ -107,63 +107,3 @@ run:
     - {agent_id: g97, policy: llm}
     - {agent_id: g98, policy: llm}
     - {agent_id: g99, policy: llm}
-    - {agent_id: g100, policy: llm}
-    - {agent_id: g101, policy: llm}
-    - {agent_id: g102, policy: llm}
-    - {agent_id: g103, policy: llm}
-    - {agent_id: g104, policy: llm}
-    - {agent_id: g105, policy: llm}
-    - {agent_id: g106, policy: llm}
-    - {agent_id: g107, policy: llm}
-    - {agent_id: g108, policy: llm}
-    - {agent_id: g109, policy: llm}
-    - {agent_id: g110, policy: llm}
-    - {agent_id: g111, policy: llm}
-    - {agent_id: g112, policy: llm}
-    - {agent_id: g113, policy: llm}
-    - {agent_id: g114, policy: llm}
-    - {agent_id: g115, policy: llm}
-    - {agent_id: g116, policy: llm}
-    - {agent_id: g117, policy: llm}
-    - {agent_id: g118, policy: llm}
-    - {agent_id: g119, policy: llm}
-    - {agent_id: g120, policy: llm}
-    - {agent_id: g121, policy: llm}
-    - {agent_id: g122, policy: llm}
-    - {agent_id: g123, policy: llm}
-    - {agent_id: g124, policy: llm}
-    - {agent_id: g125, policy: llm}
-    - {agent_id: g126, policy: llm}
-    - {agent_id: g127, policy: llm}
-    - {agent_id: g128, policy: llm}
-    - {agent_id: g129, policy: llm}
-    - {agent_id: g130, policy: llm}
-    - {agent_id: g131, policy: llm}
-    - {agent_id: g132, policy: llm}
-    - {agent_id: g133, policy: llm}
-    - {agent_id: g134, policy: llm}
-    - {agent_id: g135, policy: llm}
-    - {agent_id: g136, policy: llm}
-    - {agent_id: g137, policy: llm}
-    - {agent_id: g138, policy: llm}
-    - {agent_id: g139, policy: llm}
-    - {agent_id: g140, policy: llm}
-    - {agent_id: g141, policy: llm}
-    - {agent_id: g142, policy: llm}
-    - {agent_id: g143, policy: llm}
-    - {agent_id: g144, policy: llm}
-    - {agent_id: g145, policy: llm}
-    - {agent_id: g146, policy: llm}
-    - {agent_id: g147, policy: llm}
-    - {agent_id: g148, policy: llm}
-    - {agent_id: g149, policy: llm}
-    - {agent_id: g150, policy: llm}
-    - {agent_id: g151, policy: llm}
-    - {agent_id: g152, policy: llm}
-    - {agent_id: g153, policy: llm}
-    - {agent_id: g154, policy: llm}
-    - {agent_id: g155, policy: llm}
-    - {agent_id: g156, policy: llm}
-    - {agent_id: g157, policy: llm}
-    - {agent_id: g158, policy: llm}
-    - {agent_id: g159, policy: llm}
