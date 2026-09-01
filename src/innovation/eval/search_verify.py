@@ -65,7 +65,16 @@ def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
     for attempt in range(attempts):
         r = http_get(url, params=params, **({"headers": headers} if headers else {}))
         if getattr(r, "status_code", 200) in RETRYABLE:
-            time.sleep(min(60.0, max(delay, 1.0) * (2 ** attempt)))
+            # Honor Retry-After when the server sends one; sustained 429
+            # storms (long evaluations) need minutes, not seconds, so the
+            # cap is generous — the disk cache makes reruns cheap anyway.
+            retry_after = 0.0
+            try:
+                retry_after = float(getattr(r, "headers", {}).get("Retry-After", 0))
+            except (TypeError, ValueError):
+                pass
+            time.sleep(max(retry_after,
+                           min(300.0, max(delay, 1.0) * (2 ** attempt))))
             continue
         break
     r.raise_for_status()
