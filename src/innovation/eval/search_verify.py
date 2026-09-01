@@ -1,5 +1,6 @@
 """Search-verified realization: the sole evaluation channel (spec §3.6).
 Semantic Scholar + OpenAlex only; hits count anticipation only."""
+import functools
 import hashlib
 import json
 import time
@@ -91,7 +92,9 @@ def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
 def s2_search(query: str, *, cache_dir, http_get=None) -> list[dict]:
     from innovation.data.s2 import s2_headers
 
-    http_get = http_get or requests.get
+    # 30s timeout: a blackholed connection must fail into the retry/
+    # degradation path, not hang the evaluation for hours.
+    http_get = http_get or functools.partial(requests.get, timeout=30)
     # Fail fast (4 attempts ~15s): since verify_idea degrades S2 failures
     # per-query to OpenAlex-only, long backoffs here would dominate wall
     # clock during sustained S2 429 storms. Failed queries are not cached,
@@ -112,7 +115,9 @@ def s2_search(query: str, *, cache_dir, http_get=None) -> list[dict]:
 def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> list[dict]:
     from innovation.data.openalex import reconstruct_abstract
 
-    http_get = http_get or requests.get
+    # 30s timeout: a blackholed connection must fail into the retry/
+    # degradation path, not hang the evaluation for hours.
+    http_get = http_get or functools.partial(requests.get, timeout=30)
     # fail fast (3 attempts): a budget-exhausted OpenAlex 429 lasts hours and
     # the caller degrades to S2-only rather than stalling minutes per query.
     payload = _cached_get(OPENALEX_BASE,
@@ -213,7 +218,7 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
         try:
             pool += openalex_search(q, mailto=mailto, cache_dir=cache_dir,
                                     http_get=http_get)[:top_k]
-        except requests.HTTPError as exc:
+        except requests.RequestException as exc:
             print(f"WARN openalex_search degraded ({exc}); S2-only for: {q[:60]}")
         for cand in pool:
             title_key = cand["title"].strip().lower()
