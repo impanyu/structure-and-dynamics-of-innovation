@@ -54,10 +54,13 @@ RETRYABLE = {429, 500, 502, 503, 504}
 
 def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
                 headers: dict | None = None, delay: float = 1.1,
-                attempts: int = 10) -> dict:
+                attempts: int = 10, max_sleep: float = 300.0) -> dict:
     """Disk cache with fetched_at timestamp — live indexes drift (spec §3.6).
     Retries rate-limit/server errors with capped exponential backoff and
-    paces live calls (S2 keys allow 1 request/second)."""
+    paces live calls (S2 keys allow 1 request/second). max_sleep caps EVERY
+    per-attempt sleep, including a server-sent Retry-After: a quota-exhausted
+    API advertising hours-long waits must fail into the caller's degradation
+    path, not stall the evaluation."""
     key = hashlib.sha256(json.dumps({"url": url, "params": params},
                                     sort_keys=True).encode()).hexdigest()
     cache_file = Path(cache_dir) / f"{key}.json"
@@ -66,16 +69,13 @@ def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
     for attempt in range(attempts):
         r = http_get(url, params=params, **({"headers": headers} if headers else {}))
         if getattr(r, "status_code", 200) in RETRYABLE:
-            # Honor Retry-After when the server sends one; sustained 429
-            # storms (long evaluations) need minutes, not seconds, so the
-            # cap is generous — the disk cache makes reruns cheap anyway.
             retry_after = 0.0
             try:
                 retry_after = float(getattr(r, "headers", {}).get("Retry-After", 0))
             except (TypeError, ValueError):
                 pass
-            time.sleep(max(retry_after,
-                           min(300.0, max(delay, 1.0) * (2 ** attempt))))
+            time.sleep(min(max_sleep,
+                           max(retry_after, max(delay, 1.0) * (2 ** attempt))))
             continue
         break
     r.raise_for_status()
@@ -89,21 +89,36 @@ def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
     return payload
 
 
+# Circuit breaker: after 5 consecutive s2_search failures the channel is
+# almost certainly quota-exhausted for a while — skip it for 10 minutes
+# instead of burning ~30s of retries per query (OpenAlex still supplies
+# candidates; failed S2 queries are uncached, so a later re-run fills gaps).
+_S2_BREAKER = {"fails": 0, "until": 0.0}
+
+
 def s2_search(query: str, *, cache_dir, http_get=None) -> list[dict]:
     from innovation.data.s2 import s2_headers
 
+    if time.time() < _S2_BREAKER["until"]:
+        return []
     # 30s timeout: a blackholed connection must fail into the retry/
-    # degradation path, not hang the evaluation for hours.
+    # degradation path, not hang the evaluation for hours. Fail fast
+    # (4 attempts, sleeps capped at 10s) since verify_idea degrades S2
+    # failures per-query to OpenAlex-only.
     http_get = http_get or functools.partial(requests.get, timeout=30)
-    # Fail fast (4 attempts ~15s): since verify_idea degrades S2 failures
-    # per-query to OpenAlex-only, long backoffs here would dominate wall
-    # clock during sustained S2 429 storms. Failed queries are not cached,
-    # so a later re-evaluation refetches only the gaps.
-    payload = _cached_get(S2_BASE, {"query": query, "limit": 10,
-                                    "fields": "title,abstract,publicationDate,"
-                                              "venue,citationCount"},
-                          Path(cache_dir), http_get, headers=s2_headers(),
-                          attempts=4)
+    try:
+        payload = _cached_get(S2_BASE, {"query": query, "limit": 10,
+                                        "fields": "title,abstract,publicationDate,"
+                                                  "venue,citationCount"},
+                              Path(cache_dir), http_get, headers=s2_headers(),
+                              attempts=4, max_sleep=10.0)
+    except requests.RequestException:
+        _S2_BREAKER["fails"] += 1
+        if _S2_BREAKER["fails"] >= 5:
+            _S2_BREAKER.update(fails=0, until=time.time() + 600)
+            print("WARN s2_search circuit OPEN for 10min (5 consecutive failures)")
+        raise
+    _S2_BREAKER["fails"] = 0
     return [{"paper_id": p.get("paperId", ""), "title": p.get("title") or "",
              "abstract": p.get("abstract") or "",
              "pub_date": p.get("publicationDate") or "",
