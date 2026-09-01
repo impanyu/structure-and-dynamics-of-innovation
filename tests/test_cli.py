@@ -292,7 +292,10 @@ def test_all_experiment_configs_load_and_scopes_build():
         cfg = load_config(f)
         run = cfg["run"]
         assert run["run_id"] == f.stem
-        assert run["total_steps"] == 400 and "generation_budget" not in run
+        # core configs use 400 steps; scaling configs use 40 * N (constant
+        # per-agent depth, team size varies — design 2026-08-31).
+        expected = 40 * len(run["agents"]) if "scaling" in f.stem else 400
+        assert run["total_steps"] == expected and "generation_budget" not in run
         for spec in run["agents"]:
             resolved = dict(spec)
             for key in ("read_topics", "write_topics"):

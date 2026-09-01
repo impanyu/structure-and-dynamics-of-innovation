@@ -3,9 +3,9 @@
 # reuses C1 core-generalists-s0's step-400 snapshot (10 agents x 40 steps).
 extends: ../stage1.yaml
 run:
-  run_id: supp-scaling-n20
+  run_id: supp-scaling-n40
   seed: 0
-  total_steps: 800
+  total_steps: 1600
   agents:
     - {agent_id: g0, policy: llm}
     - {agent_id: g1, policy: llm}
@@ -27,3 +27,23 @@ run:
     - {agent_id: g17, policy: llm}
     - {agent_id: g18, policy: llm}
     - {agent_id: g19, policy: llm}
+    - {agent_id: g20, policy: llm}
+    - {agent_id: g21, policy: llm}
+    - {agent_id: g22, policy: llm}
+    - {agent_id: g23, policy: llm}
+    - {agent_id: g24, policy: llm}
+    - {agent_id: g25, policy: llm}
+    - {agent_id: g26, policy: llm}
+    - {agent_id: g27, policy: llm}
+    - {agent_id: g28, policy: llm}
+    - {agent_id: g29, policy: llm}
+    - {agent_id: g30, policy: llm}
+    - {agent_id: g31, policy: llm}
+    - {agent_id: g32, policy: llm}
+    - {agent_id: g33, policy: llm}
+    - {agent_id: g34, policy: llm}
+    - {agent_id: g35, policy: llm}
+    - {agent_id: g36, policy: llm}
+    - {agent_id: g37, policy: llm}
+    - {agent_id: g38, policy: llm}
+    - {agent_id: g39, policy: llm}
