@@ -196,12 +196,19 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
     queries = extract_queries(llm, model=model, idea_text=idea_text, n=n_queries)
     candidates, seen_titles = [], set()
     for q in queries:
-        pool = s2_search(q, cache_dir=cache_dir, http_get=http_get)[:top_k]
+        # Both channels degrade independently: a sustained outage on one
+        # (S2 429/5xx storms, OpenAlex daily budget) must not kill a long
+        # evaluation — the other channel still supplies candidates, and the
+        # disk cache lets a later re-run fill the gaps.
+        pool = []
+        try:
+            pool = s2_search(q, cache_dir=cache_dir, http_get=http_get)[:top_k]
+        except requests.RequestException as exc:
+            print(f"WARN s2_search degraded ({exc}); OpenAlex-only for: {q[:60]}")
         try:
             pool += openalex_search(q, mailto=mailto, cache_dir=cache_dir,
                                     http_get=http_get)[:top_k]
         except requests.HTTPError as exc:
-            # Redundant channel down (e.g. daily budget) -> S2-only, keep going.
             print(f"WARN openalex_search degraded ({exc}); S2-only for: {q[:60]}")
         for cand in pool:
             title_key = cand["title"].strip().lower()
