@@ -256,9 +256,15 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 candidates.append(cand)
 
     v = Verdict(idea_id=idea_id)
-    for cand in candidates:
-        level, evidence = judge_level(llm, model=model, idea_text=idea_text,
-                                      candidate=cand)
+    # Judge calls dominate wall clock (~8s each, dozens per idea) and are
+    # independent — run them concurrently; results keep candidate order.
+    # CachedLLM is safe here: distinct prompts hash to distinct cache files.
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as pool_exec:
+        judged = list(pool_exec.map(
+            lambda c: judge_level(llm, model=model, idea_text=idea_text,
+                                  candidate=c), candidates))
+    for cand, (level, evidence) in zip(candidates, judged):
         if level < 2:
             continue  # below "same specific problem" — not informative
         entry = {**cand, "level": level, "evidence": evidence}
