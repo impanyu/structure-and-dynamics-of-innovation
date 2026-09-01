@@ -92,10 +92,15 @@ def s2_search(query: str, *, cache_dir, http_get=None) -> list[dict]:
     from innovation.data.s2 import s2_headers
 
     http_get = http_get or requests.get
+    # Fail fast (4 attempts ~15s): since verify_idea degrades S2 failures
+    # per-query to OpenAlex-only, long backoffs here would dominate wall
+    # clock during sustained S2 429 storms. Failed queries are not cached,
+    # so a later re-evaluation refetches only the gaps.
     payload = _cached_get(S2_BASE, {"query": query, "limit": 10,
                                     "fields": "title,abstract,publicationDate,"
                                               "venue,citationCount"},
-                          Path(cache_dir), http_get, headers=s2_headers())
+                          Path(cache_dir), http_get, headers=s2_headers(),
+                          attempts=4)
     return [{"paper_id": p.get("paperId", ""), "title": p.get("title") or "",
              "abstract": p.get("abstract") or "",
              "pub_date": p.get("publicationDate") or "",
