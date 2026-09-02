@@ -498,6 +498,117 @@ and verdicts will be released. % TODO: release URL
 \appendix
 \section{Appendix}
 
+\subsection{Corpus construction and idea distillation}
+\label{app:corpus}
+
+Papers are retrieved by bulk venue search on the Semantic Scholar Graph
+API: all NeurIPS, ICLR, ICML, and AAAI papers with publication dates
+between 2020-01-01 and 2024-08-31 and at least 25 citations at
+collection time (16{,}208 papers). Citation edges among corpus members
+are recovered by a three-arm pipeline: (i) each paper's reference list;
+(ii) each paper's \emph{citing} list, which recovers edges whose source
+reference list was unavailable; (iii) OpenAlex works matched by MAG id,
+DOI, or arXiv-DataCite DOI. This reduced isolated nodes from 49.7\%
+(references arm alone) to 6.4\%.
+
+Each paper's title and abstract are distilled into an idea node by
+\texttt{gpt-5-mini} with the fixed template:
+\begin{quote}\small\itshape
+Summarize the following paper as ONE paragraph of 3--4 sentences
+covering: (1) the problem it addresses, (2) the key insight, (3) the
+method. Write only the paragraph, no preamble.
+\end{quote}
+Median idea length is $\sim$930 characters. Ideas are embedded with
+bge-small-en-v1.5 \citep{xiao2023bge} (384-d, unit-normalized); all
+similarities are cosine.
+
+\subsection{Agent system prompt}
+\label{app:sysprompt}
+
+Every agent shares the system prompt (verbatim):
+\begin{quote}\small\itshape
+You are a research agent exploring a network of research ideas
+distilled from published papers. Ideas cite the ideas they build on.
+Your goal is to find promising unexplored directions and, when you see
+one, contribute a genuinely new idea to the network. Prefer exploring
+(search, browse) until you understand a neighborhood well enough that
+your new idea is specific and well-grounded. If you notice an idea
+clearly builds on another idea it does not yet reference, you may
+record that missing link. Some of your actions may be restricted to a
+region of the network; if an action returns a restriction error, adapt
+your strategy instead of repeating it.
+\end{quote}
+Each turn's user message consists of an identity header
+(\texttt{[agent run\_id:agent\_id]}), the action documentation, and the
+rolling memory, ending with ``Choose your next action (JSON only)''.
+The identity header also keys the LLM response cache, so identical
+memory states of different agents or runs never share a cached reply.
+
+\subsection{Topic pool and equal-mass scopes}
+\label{app:topics}
+
+The 50-topic pool is built by clustering the corpus embeddings into 50
+groups and having an LLM name each cluster from its central papers
+(e.g., ``backdoor attacks and defenses in ml models'', ``efficient and
+long-range transformer architectures''). A specialist's scope anchors
+on its topic name's embedding; the region radius is set per anchor to
+the cosine distance of the $m$-th nearest corpus paper, so every scope
+holds exactly $m$ corpus papers regardless of how dense its
+neighborhood is. Natural topic sizes (nearest-anchor partition) range
+44--1096 (median 228), which is why even the $m{=}400$ region mixes
+topics; measured own-topic purity of the $m{=}800$ regions used in the
+dial is 5--60\% (median $\sim$35\%). Newly generated nodes classify
+into scopes by the same rule applied to their own embeddings.
+
+\subsection{Evaluation pipeline details}
+\label{app:eval}
+
+For each idea, \texttt{gpt-5-mini} extracts three search queries
+(problem-focused, method-focused, combined). Each query retrieves the
+top 10 results from the Semantic Scholar paper search API and the top
+10 from OpenAlex; per-query results are truncated to the top 5 per
+channel, deduplicated by title. Every candidate is graded by the judge
+(\texttt{gpt-5-mini}, medium reasoning) with the rubric of
+Sec.~\ref{app:rubric}, and then gated in order: (i) title matches a
+corpus member $\to$ excluded (contamination guard); (ii) no publication
+date $\to$ excluded; (iii) published on or before 2024-09-30 $\to$
+excluded (anticipation only). Surviving candidates are assigned tiers:
+tier 1 if the venue matches one of 60 recognized top venues (the 58
+CCF-A venues plus COLM and RLC, matched by alias lists) or citations
+$\geq 50$; tier 2 additionally if a CCF-B venue or citations $\geq
+10$; tier 3 for any published venue. Scoring is cumulative: an idea's
+tier-2 best is the maximum level over tier-1 and tier-2 candidates.
+Ideas whose embedding matches any corpus idea at cosine $\geq 0.95$
+are floored to level 0 (near-duplicate guard); no idea in any reported
+run triggered it. All search responses and judge replies are cached on
+disk; both search channels degrade independently per query on outage,
+and failed queries are uncached so re-evaluation refetches only gaps.
+
+\subsection{Run protocol and hyperparameters}
+\label{app:hyper}
+
+\begin{center}\small
+\begin{tabular}{ll}
+\toprule
+agent model & \texttt{gpt-5}, medium reasoning, 2{,}000-token visible output \\
+judge / distiller / namer & \texttt{gpt-5-mini} \\
+embedding & bge-small-en-v1.5 (384-d) \\
+agent memory & FIFO, 20 (action, result) pairs \\
+search $k$ / eval queries / eval top-$k$ & 5 / 3 / 5 per channel \\
+scheduling & round-robin; 1 round = each agent acts once \\
+dial runs & $N{=}10$, 80 rounds, seed 0, identical topic draws \\
+scaling runs & 30 rounds per agent, seed 0 \\
+generation budget & none (idea count is an outcome variable) \\
+training cutoff / anticipation window & 2024-09-30 / publications after it \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Every action and result is appended to a JSONL event log from which the
+full network state, agent memories, and random streams can be replayed;
+runs can be extended from their logs, and all figures and tables derive
+from the logs plus cached evaluation verdicts.
+
 \subsection{Example trajectory map}
 \begin{figure}[h]
 \begin{center}
@@ -511,7 +622,51 @@ near the regions they read.}
 \label{fig:traj}
 \end{figure}
 
+\subsection{Agent action interface}
+\label{app:actions}
+
+Each agent interacts with the environment exclusively through the
+following six actions, chosen one per turn by emitting a single JSON
+object (\texttt{\{"action": ..., "args": \{...\}\}}); malformed replies
+fall back to \texttt{sample\_frontier}. Every action returns a JSON
+result---including scope-restriction errors, which the agent is
+instructed to adapt to rather than retry.
+
+\begin{itemize}
+\item \texttt{search(query, k{=}5)} --- embed the query and return the
+  top-$k$ nearest ideas \emph{within the agent's readable scope}
+  (over-fetch then filter), each as node id, 300-character preview, and
+  similarity score. This is the agents' primary discovery channel.
+\item \texttt{browse(node\_id)} --- return the node's full idea text
+  plus up to 10 outgoing (cited) and 10 incoming (citing) neighbors,
+  each with a 200-character preview; neighbors outside the readable
+  scope are filtered out. On an edgeless graph
+  (Sec.~\ref{sec:noedges}) this degenerates to reading the node alone.
+\item \texttt{sample\_frontier()} --- jump to one node drawn uniformly
+  at random from the agent's readable scope; the serendipity channel.
+  Disabled in the jump ablation (\texttt{allow\_jump{=}false}), in
+  which case it returns a restriction error.
+\item \texttt{generate(text, cited\_ids)} --- add a new idea node (a
+  3--4 sentence paragraph) citing the existing ideas it builds on.
+  Citation admissibility follows the \emph{read} scope (citing means
+  having read): out-of-scope citations are dropped with notice, and the
+  generate proceeds with the rest. The new node and its edges join the
+  shared graph immediately and permanently.
+\item \texttt{add\_links(src\_id, dst\_ids)} --- record missing
+  reference links from an existing idea to ideas it builds on
+  (curation).
+\item \texttt{remove\_links(src\_id, dst\_ids)} --- remove reference
+  links that do not actually support the source idea.
+\end{itemize}
+
+Each agent carries a FIFO memory of its last 20 (action, result) pairs,
+rendered into every prompt together with a stable identity header (run
+and agent id) and the action documentation; there is no other
+communication channel between agents. Visible output is capped at
+2{,}000 tokens per turn (reasoning tokens budgeted separately).
+
 \subsection{Judge rubric}
+\label{app:rubric}
 Level 0: different problem entirely. 1: same broad area, different
 goal. 2: same specific problem, unrelated approach. 3: same problem,
 approaches in the same method family. 4: same problem and core
