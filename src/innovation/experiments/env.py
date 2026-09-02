@@ -25,6 +25,7 @@ class AgentScope:
     read: set | None = None            # community ids
     write: set | None = None
     allow_jump: bool = True
+    allow_search: bool = True
     read_anchors: object | None = None   # (m, d) topic embeddings
     read_radius: object = 0.0            # float or (m,) array
     write_anchors: object | None = None
@@ -98,6 +99,9 @@ class Environment:
 
     # --- actions (spec §3.4) ---
     def _do_search(self, *, agent_id, step, query: str, k: int = 5) -> dict:
+        scope = self.scopes.get(agent_id)
+        if scope is not None and not scope.allow_search:
+            return {"error": "semantic search is not allowed for this agent"}
         vec = self.embedder.encode([query])[0]
         raw = self.index.search(vec, k=k * 4)  # over-fetch, then scope-filter
         hits = [{"node_id": nid, "text": self.graph.node(nid).text[:300],

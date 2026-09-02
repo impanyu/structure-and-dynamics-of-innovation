@@ -1,0 +1,16 @@
+# Supplementary — nav-channel ablation: C1 without semantic search. Agents
+# must navigate by browsing citation links and random jumps only.
+extends: core-generalists.yaml
+run:
+  run_id: supp-nosearch-generalists
+  agents:
+    - {agent_id: g0, policy: llm, allow_search: false}
+    - {agent_id: g1, policy: llm, allow_search: false}
+    - {agent_id: g2, policy: llm, allow_search: false}
+    - {agent_id: g3, policy: llm, allow_search: false}
+    - {agent_id: g4, policy: llm, allow_search: false}
+    - {agent_id: g5, policy: llm, allow_search: false}
+    - {agent_id: g6, policy: llm, allow_search: false}
+    - {agent_id: g7, policy: llm, allow_search: false}
+    - {agent_id: g8, policy: llm, allow_search: false}
+    - {agent_id: g9, policy: llm, allow_search: false}

@@ -68,8 +68,9 @@ def build_scope(spec: dict, embedder=None, corpus_vecs=None) -> AgentScope | Non
     if write is not None and write_topics:
         raise ValueError("write scope: give communities OR topics, not both")
     allow_jump = spec.get("allow_jump", True)
+    allow_search = spec.get("allow_search", True)
     if (read is None and write is None and not read_topics
-            and not write_topics and allow_jump):
+            and not write_topics and allow_jump and allow_search):
         return None
     read_anchors = embedder.encode(read_topics) if read_topics else None
     write_anchors = embedder.encode(write_topics) if write_topics else None
@@ -86,6 +87,7 @@ def build_scope(spec: dict, embedder=None, corpus_vecs=None) -> AgentScope | Non
         read=set(read) if read is not None else None,
         write=set(write) if write is not None else None,
         allow_jump=allow_jump,
+        allow_search=allow_search,
         read_anchors=read_anchors,
         read_radius=radii(read_anchors, "read_mass", "read_radius"),
         write_anchors=write_anchors,
@@ -210,6 +212,12 @@ def run_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
     cfg = RunConfig(run_id=cfg.run_id, seed=cfg.seed, total_steps=cfg.total_steps,
                     generation_budget=cfg.generation_budget, agents=agents,
                     topic_pool=cfg.topic_pool)
+    # Write run_meta BEFORE driving: an interrupted run must stay resumable
+    # (resume reuses the recorded topic draws instead of re-sampling).
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "run_meta.json").write_text(json.dumps(
+        {"run_id": cfg.run_id, "seed": cfg.seed,
+         "topic_assignments": assignments}, indent=1))
     # index.vecs holds exactly the corpus at run start (nothing generated yet)
     scopes = {a["agent_id"]: s for a in cfg.agents
               if (s := build_scope(a, embedder, corpus_vecs=index.vecs)) is not None}
