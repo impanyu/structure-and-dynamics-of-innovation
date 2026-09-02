@@ -324,6 +324,46 @@ rate, while broad scopes stall in recurring exploration plateaus.
 Generalists redirect effort into curation: they performed 71
 \texttt{add\_links} actions versus 23--38 for scoped conditions.
 
+\textbf{What feeds a realized idea.} The event logs let us trace each
+idea's provenance: we take the generating agent's preceding 20 actions
+(exactly its FIFO memory window) and classify every read in that window
+by the navigation channel that produced it---the node was surfaced by an
+earlier \emph{search}, exposed as a neighbor \emph{link} in an earlier
+browse, delivered by a random \emph{jump}, or is the agent's \emph{own}
+earlier idea. Table~\ref{tab:provenance} aggregates all 1{,}069
+evaluated ideas across our experiments. Realized and unrealized ideas
+are preceded by the \emph{same volume} of reading ($\sim$10.5 reads);
+what differs is its composition. Ideas realized in recognized venues
+(tier~1) grew out of windows with more search-driven reads (6.27
+vs.\ 5.45), fewer link-driven reads (3.23 vs.\ 3.82), fewer jumps, and
+almost no re-reading of the agent's own output. This is the per-idea
+mirror of the structural ablation in Sec.~\ref{sec:noedges}: material
+found by directed semantic search feeds anticipation; material found by
+following citation links does not.
+
+\begin{table}[t]
+\caption{Provenance of the reading that precedes each generated idea:
+average composition of the generating agent's 20-action lookback window
+(= its memory), grouped by realization outcome (tiers are cumulative;
+``unrealized'' = no tier-3 match at level $\geq 2$). Pooled over all
+1{,}069 evaluated ideas from every run in the paper.}
+\label{tab:provenance}
+\begin{center}\small
+\begin{tabular}{lrcccccc}
+\toprule
+ & $n$ & \textbf{reads} & \textbf{searches} &
+ \textbf{search-fed} & \textbf{link-fed} & \textbf{jump-fed} &
+ \textbf{own-idea} \\
+\midrule
+tier-1 realized & 301 & 10.48 & 6.05 & \textbf{6.27} & \textbf{3.23} & 0.92 & 0.06 \\
+tier-2 realized & 404 & 10.46 & 5.97 & 6.15 & 3.31 & 0.95 & 0.05 \\
+tier-3 realized & 767 & 10.62 & 5.88 & 6.09 & 3.49 & 0.96 & 0.08 \\
+unrealized      & 302 & 10.50 & 5.86 & 5.45 & 3.82 & 1.06 & 0.17 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
 \section{Experiment 2: team size}
 \label{sec:scaling}
 
