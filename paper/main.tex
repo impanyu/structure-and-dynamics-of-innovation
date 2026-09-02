@@ -252,9 +252,9 @@ verdicts.
 \begin{table}[t]
 \caption{The specialization dial: $N{=}10$ agents, 80 rounds, one seed.
 Read scope $m$ is the number of corpus papers each agent may read;
-writes are always free. Each tier cell reports acc@$\geq$2 (share of
-ideas realized at level $\geq 2$ by a post-cutoff paper in the tier;
-hits in parentheses) and the mean best realization level.}
+writes are always free. Each tier cell reports acc@$\geq$2, the number of
+realized ideas (level $\geq 2$, in parentheses), and the mean best
+realization level.}
 \label{tab:dial}
 \begin{center}\small
 \begin{tabular}{lrrccc}
@@ -262,12 +262,12 @@ hits in parentheses) and the mean best realization level.}
  & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-C3 & 400   & \textbf{83} & 36\% (30) / 0.89 & 47\% / 1.19 & \textbf{89\%} / \textbf{2.48} \\
-C4 & 800   & 74 & \textbf{41\% (30) / 1.04} & \textbf{53\% / 1.38} & 84\% / 2.43 \\
-C5 & 1600  & 67 & 30\% (20) / 0.78 & 39\% / 1.04 & 60\% / 1.60 \\
-C6 & 3200  & 55 & 27\% (15) / 0.69  & 40\% / 1.05 & 73\% / 2.02 \\
-C7 & 6400  & 54 & 30\% (16) / 0.74  & 41\% / 1.06 & 78\% / 2.22 \\
-C1 & $\infty$ & 50 & 20\% (10) / 0.50 & 26\% / 0.64 & 62\% / 1.68 \\
+C3 & 400   & \textbf{83} & 36\% (30) / 0.89 & 47\% (39) / 1.19 & \textbf{89\% (74)} / \textbf{2.48} \\
+C4 & 800   & 74 & \textbf{41\% (30) / 1.04} & \textbf{53\% (39) / 1.38} & 84\% (62) / 2.43 \\
+C5 & 1600  & 67 & 30\% (20) / 0.78 & 39\% (26) / 1.04 & 60\% (40) / 1.60 \\
+C6 & 3200  & 55 & 27\% (15) / 0.69  & 40\% (22) / 1.05 & 73\% (40) / 2.02 \\
+C7 & 6400  & 54 & 30\% (16) / 0.74  & 41\% (22) / 1.06 & 78\% (42) / 2.22 \\
+C1 & $\infty$ & 50 & 20\% (10) / 0.50 & 26\% (13) / 0.64 & 62\% (31) / 1.68 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -281,7 +281,8 @@ C1 & $\infty$ & 50 & 20\% (10) / 0.50 & 26\% / 0.64 & 62\% / 1.68 \\
 vs.\ read scope (log axis); the gray dashed line is the tier-1 curve at
 the 40-round midpoint, whose deviations from the 80-round curve
 illustrate small-$n$ noise. Middle: mean
-realization level. Right: idea production and absolute tier-1 hits.}
+realization level per tier. Right: total idea production and the number
+of realized ideas (level $\geq 2$) per tier.}
 \label{fig:dial}
 \end{figure}
 
@@ -304,14 +305,16 @@ quality of freely-roaming exploration decays.
 
 \begin{figure}[t]
 \begin{center}
-\includegraphics[width=0.72\linewidth]{mass-dial-accumulation.png}
+\includegraphics[width=0.95\linewidth]{mass-dial-accumulation.png}
 \end{center}
-\caption{Cumulative idea production over rounds. All conditions start
-producing between rounds 8--17; the production gap is a
-\emph{steady-state rate} effect, not a head start: narrow scopes settle
-into $\sim$1 idea/round while broad scopes run at $\sim$0.65/round with
-recurring plateaus where agents fall back into exploration. No curve
-saturates by round 80.}
+\caption{Cumulative idea production over rounds: all generated ideas
+(top left) and the subsets realized at level $\geq 2$ in each
+recognition tier. All conditions start producing between rounds 8--17;
+the production gap is a \emph{steady-state rate} effect, not a head
+start: narrow scopes settle into $\sim$1 idea/round while broad scopes
+run at $\sim$0.65/round with recurring plateaus. The realized subsets
+accumulate in near-constant proportion to production---no condition's
+quality drifts over the run---and no curve saturates by round 80.}
 \label{fig:accum}
 \end{figure}
 
@@ -817,6 +820,22 @@ searches free) $\sim$\$40--80. Total on the order of \$350--600. A
 single dial-style run (10 agents, 80 rounds) costs $\sim$\$15--25 and
 $\sim$1 hour wall clock; evaluation of its ideas a further
 $\sim$\$5--10.
+
+\subsection{Realization-level distributions}
+\label{app:leveldist}
+
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[width=0.62\linewidth]{dial-levels-tier1.png}\\
+\includegraphics[width=0.62\linewidth]{dial-levels-tier2.png}\\
+\includegraphics[width=0.62\linewidth]{dial-levels-tier3.png}
+\end{center}
+\caption{Idea counts by best realization level for each dial condition,
+one panel per recognition tier (stacked bars; bar height = total ideas
+generated). Level 1 (``same broad area, different goal'') is never the
+best match in any tier---the judge's effective scale is 0/2/3/4/5.}
+\label{fig:leveldist}
+\end{figure}
 
 \subsection{Behavioral observations}
 
