@@ -41,7 +41,10 @@ def aggregate_run(verdicts, dup_flags: dict[str, bool]) -> dict:
     for tier in ("tier1", "tier2", "tier3"):
         lv = idea_levels(verdicts, dup_flags, tier)
         n = len(lv)
+        # Headline accuracy is acc@>=2 — "same specific problem" (user
+        # decision 2026-09-02); higher thresholds kept as secondary detail.
         out[tier] = {"mean_level": (sum(lv) / n) if n else 0.0,
+                     "acc_ge2": (sum(1 for x in lv if x >= 2) / n) if n else 0.0,
                      "acc_ge3": (sum(1 for x in lv if x >= 3) / n) if n else 0.0,
                      "acc_ge4": (sum(1 for x in lv if x >= 4) / n) if n else 0.0,
                      "acc_eq5": (sum(1 for x in lv if x == 5) / n) if n else 0.0}

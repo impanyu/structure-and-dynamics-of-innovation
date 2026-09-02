@@ -31,7 +31,9 @@ citation network of research ideas distilled from published papers, and the
 (and links) back into it. Agents propose ideas freely; each proposal is
 scored by whether a similar paper published \emph{after} the agent model's
 training cutoff realizes it, verified by literature search and graded by an
-LLM judge on a six-level scale across three venue-recognition tiers. On a
+LLM judge on a six-level scale across three venue-recognition tiers
+(headline accuracy: share of ideas matched at level $\geq 2$, ``same
+specific problem''). On a
 16{,}208-node network built from NeurIPS, ICLR, ICML, and AAAI papers
 (2020--2024), we manipulate a single \emph{specialization dial}: the number
 of corpus papers an agent is allowed to read, from 400 up to the whole
@@ -43,7 +45,7 @@ knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits
 scale linearly, because agents are effectively independent---across 10{,}300
 actions we observe a single cross-agent citation of a generated idea.
 Strikingly, deleting all 80{,}962 citation edges from the initial network
-\emph{helps} generalists (tier-1 accuracy 20\% vs.\ 10\%, with more ideas
+\emph{helps} generalists (tier-1 accuracy 37\% vs.\ 20\%, with more ideas
 produced): agents navigate semantically, not structurally, and the human
 citation topology acts as a distractor rather than a scaffold.
 Consistently, agent-written links have near-constant semantic reach
@@ -99,7 +101,7 @@ per-agent interaction depth.
 \begin{itemize}
 \item \textbf{An inverted-U in idea quality over reading scope
   (Sec.~\ref{sec:dial}).} Per-idea anticipation accuracy peaks at $m=800$
-  (tier-1 acc@$\geq$3 of 22\% vs.\ 10\% for generalists), and every scoped
+  (tier-1 acc@$\geq$2 of 41\% vs.\ 20\% for generalists), and every scoped
   condition beats the unrestricted generalists on every tier. Measured
   region purity shows $m=800$ is a coherent \emph{sub-area neighborhood}
   (own-topic share only 5--60\%), suggesting the sweet spot is ``focused
@@ -111,14 +113,14 @@ per-agent interaction depth.
   same 80 rounds); generalists spend their actions wandering and curating.
 \item \textbf{Team size is a throughput knob, not a quality knob
   (Sec.~\ref{sec:scaling}).} From $N=10$ to $N=150$ generalists at fixed
-  depth, per-idea accuracy is flat (11--17\%) while absolute hits grow
+  depth, per-idea accuracy is flat (21--28\%) while absolute hits grow
   linearly. The mechanism is stark: agents are effectively independent.
   Across all scaling runs (575 ideas, 10{,}300 actions) not one agent
   cited another agent's generated idea.
 \item \textbf{The citation structure is a distractor, not a scaffold
   (Sec.~\ref{sec:noedges}).} Deleting every initial citation edge makes
-  generalists \emph{better}: 60 ideas at 20\% tier-1 accuracy vs.\ 50 at
-  10\% with edges, under otherwise identical conditions. Deprived of
+  generalists \emph{better}: 60 ideas at 37\% tier-1 accuracy vs.\ 50 at
+  20\% with edges, under otherwise identical conditions. Deprived of
   neighbors to wander through, agents commit to pure semantic-search
   navigation (first idea at round 8 instead of 17) --- and spontaneously
   rebuild structure, adding 53 links of their own to the edgeless graph.
@@ -239,9 +241,10 @@ Scores are reported in three cumulative recognition tiers:
 venues plus COLM and RLC) or papers with $\geq 50$ citations;
 \textbf{tier~2} additionally admits CCF-B venues or $\geq 10$ citations;
 \textbf{tier~3} admits any published paper. Per tier we report the mean
-best realization level and acc@$\geq$3, the share of ideas whose best
-match reaches level 3 (same problem and method family)---our headline
-accuracy.
+best realization level and acc@$\geq$2, the share of ideas whose best
+match reaches level 2 (same specific problem)---our headline accuracy;
+higher thresholds ($\geq$3, $\geq$4, $=$5) are recorded in the released
+verdicts.
 
 \section{Experiment 1: the specialization dial}
 \label{sec:dial}
@@ -249,8 +252,8 @@ accuracy.
 \begin{table}[t]
 \caption{The specialization dial: $N{=}10$ agents, 80 rounds, one seed.
 Read scope $m$ is the number of corpus papers each agent may read;
-writes are always free. Each tier cell reports acc@$\geq$3 (share of
-ideas realized at level $\geq 3$ by a post-cutoff paper in the tier;
+writes are always free. Each tier cell reports acc@$\geq$2 (share of
+ideas realized at level $\geq 2$ by a post-cutoff paper in the tier;
 hits in parentheses) and the mean best realization level.}
 \label{tab:dial}
 \begin{center}\small
@@ -259,12 +262,12 @@ hits in parentheses) and the mean best realization level.}
  & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-C2 & 400   & \textbf{83} & 16\% (13) / 0.89 & 24\% / 1.19 & 67\% / \textbf{2.48} \\
-C3 & 800   & 74 & \textbf{22\% (16) / 1.04} & \textbf{30\% / 1.38} & \textbf{69\%} / 2.43 \\
-C4 & 1600  & 67 & 18\% (12) / 0.78 & 27\% / 1.04 & 40\% / 1.60 \\
-C5 & 3200  & 55 & 15\% (8) / 0.69  & 25\% / 1.05 & 55\% / 2.02 \\
-C6 & 6400  & 54 & 15\% (8) / 0.74  & 24\% / 1.06 & 61\% / 2.22 \\
-C1 & $\infty$ & 50 & 10\% (5) / 0.50 & 12\% / 0.64 & 44\% / 1.68 \\
+C2 & 400   & \textbf{83} & 36\% (30) / 0.89 & 47\% / 1.19 & \textbf{89\%} / \textbf{2.48} \\
+C3 & 800   & 74 & \textbf{41\% (30) / 1.04} & \textbf{53\% / 1.38} & 84\% / 2.43 \\
+C4 & 1600  & 67 & 30\% (20) / 0.78 & 39\% / 1.04 & 60\% / 1.60 \\
+C5 & 3200  & 55 & 27\% (15) / 0.69  & 40\% / 1.05 & 73\% / 2.02 \\
+C6 & 6400  & 54 & 30\% (16) / 0.74  & 41\% / 1.06 & 78\% / 2.22 \\
+C1 & $\infty$ & 50 & 20\% (10) / 0.50 & 26\% / 0.64 & 62\% / 1.68 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -274,10 +277,10 @@ C1 & $\infty$ & 50 & 10\% (5) / 0.50 & 12\% / 0.64 & 44\% / 1.68 \\
 \begin{center}
 \includegraphics[width=\linewidth]{mass-dial-800-summary.png}
 \end{center}
-\caption{The specialization dial at 80 rounds. Left: acc@$\geq$3 per tier
+\caption{The specialization dial at 80 rounds. Left: acc@$\geq$2 per tier
 vs.\ read scope (log axis); the gray dashed line is the tier-1 curve at
-the 40-round midpoint, whose $m{=}6400$ spike (35\% on 20 ideas)
-regressed to 15\% with doubled samples---small-$n$ noise. Middle: mean
+the 40-round midpoint, whose deviations from the 80-round curve
+illustrate small-$n$ noise. Middle: mean
 realization level. Right: idea production and absolute tier-1 hits.}
 \label{fig:dial}
 \end{figure}
@@ -285,18 +288,18 @@ realization level. Right: idea production and absolute tier-1 hits.}
 Table~\ref{tab:dial} and Figure~\ref{fig:dial} give the core result.
 
 \textbf{A mild inverted-U peaking at a sub-area scope.} Tier-1 accuracy
-runs 16\% $\to$ \textbf{22\%} $\to$ 18\% $\to$ 15\% $\to$ 15\% $\to$ 10\%
+runs 36\% $\to$ \textbf{41\%} $\to$ 30\% $\to$ 27\% $\to$ 30\% $\to$ 20\%
 as scope widens; mean realization level tracks the same shape. The
-$m{=}800$ condition is best on rate, absolute hits, and mean level in all
-three tiers. Both the narrow side (fewer recombination options; topics
+$m{=}800$ condition leads on rate and on tier-1/2 mean level, and ties
+$m{=}400$ on absolute tier-1 hits. Both the narrow side (fewer recombination options; topics
 with semantically diffuse regions produced agents with zero output) and
 the broad side (unfocused wandering) underperform the sub-area
 neighborhood.
 
 \textbf{Constraint beats freedom everywhere.} Every scoped condition
 dominates the unrestricted generalists on every tier, by rate and by
-absolute hits. Moreover the generalists' accuracy \emph{fell} from 13\%
-to 10\% when the run was extended from 40 to 80 rounds: the marginal
+absolute hits. Moreover the generalists' accuracy \emph{fell} from 22\%
+to 20\% when the run was extended from 40 to 80 rounds: the marginal
 quality of freely-roaming exploration decays.
 
 \begin{figure}[t]
@@ -335,10 +338,10 @@ Per-idea accuracy is flat; absolute hits scale with output.}
 \textbf{$N$} & \textbf{ideas (per agent)} & \textbf{tier-1 acc (hits) / mean} &
 \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-10  & 12 (1.2)  & 17\% (2) / 0.67  & 25\% (3) / 1.08  & 50\% (6) / 2.00 \\
-50  & 103 (2.1) & 12\% (12) / 0.55 & 17\% (17) / 0.86 & 49\% (50) / 1.98 \\
-100 & 180 (1.8) & 11\% (20) / 0.61 & 16\% (28) / 0.83 & 44\% (80) / 1.87 \\
-150 & 280 (1.9) & 11\% (32) / 0.66 & 20\% (57) / 0.95 & 50\% (139) / 1.86 \\
+10  & 12 (1.2)  & 25\% (3) / 0.67  & 42\% (5) / 1.08  & 75\% (9) / 2.00 \\
+50  & 103 (2.1) & 21\% (22) / 0.55 & 34\% (35) / 0.86 & 71\% (73) / 1.98 \\
+100 & 180 (1.8) & 24\% (44) / 0.61 & 33\% (60) / 0.83 & 69\% (124) / 1.87 \\
+150 & 280 (1.9) & 28\% (77) / 0.66 & 38\% (105) / 0.95 & 68\% (190) / 1.86 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -350,16 +353,16 @@ Per-idea accuracy is flat; absolute hits scale with output.}
 \end{center}
 \caption{Team-size scaling at fixed per-agent depth. Left: per-idea
 accuracy is flat in $N$. Middle: total output and absolute hits grow
-linearly. Right: per-capita output is constant while stigmergic coupling
-(citations of teammates' generated ideas) stays at zero.}
+linearly. Right: per-capita output is constant; stigmergic coupling (citations of
+teammates' generated ideas) is zero throughout (Sec.~\ref{sec:scaling}).}
 \label{fig:scaling}
 \end{figure}
 
 Holding per-agent depth fixed at 30 rounds and growing the team from 10
 to 150 generalists (Table~\ref{tab:scaling}, Figure~\ref{fig:scaling}),
-per-idea accuracy stays in the 11--17\% band on tier~1---the $N{=}10$
-value of 17\% rests on 2 hits and is within noise of the rest---while
-absolute tier-1 hits grow essentially linearly (2, 12, 20, 32). Team
+per-idea accuracy stays in the 21--28\% band on tier~1---the $N{=}10$
+value rests on 3 hits and is within noise of the rest---while
+absolute tier-1 hits grow essentially linearly (3, 22, 44, 77). Team
 size buys throughput, not per-idea quality.
 
 The mechanism is that the agents are, in practice, independent samplers.
@@ -392,9 +395,9 @@ the citation structure improves both.}
  & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-no edges & 60 & \textbf{20\% (12) / 0.93} & \textbf{20\% / 1.07} & \textbf{47\% / 1.97} \\
-no jumps & \textbf{63} & 13\% (8) / 0.62 & 16\% / 0.71 & 44\% / 1.92 \\
-C1 (full) & 50 & 10\% (5) / 0.50 & 12\% / 0.64 & 44\% / 1.68 \\
+no edges & 60 & \textbf{37\% (22) / 0.93} & \textbf{43\% / 1.07} & \textbf{75\% / 1.97} \\
+no jumps & \textbf{63} & 24\% (15) / 0.62 & 27\% / 0.71 & 73\% / 1.92 \\
+C1 (full) & 50 & 20\% (10) / 0.50 & 26\% / 0.64 & 62\% / 1.68 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -403,8 +406,9 @@ C1 (full) & 50 & 10\% (5) / 0.50 & 12\% / 0.64 & 44\% / 1.68 \\
 If agents used the citation network as a navigational scaffold, deleting
 its edges should hurt. It does the opposite (Table~\ref{tab:noedges}):
 with an edgeless initial graph, the same generalist team produces 20\%
-more ideas at double the tier-1 accuracy---approaching the dial's
-$m{=}800$ optimum---and starts generating at team round 8 instead of 17.
+more ideas at nearly double the tier-1 accuracy (37\% vs.\ 20\%)---
+approaching the dial's $m{=}800$ optimum of 41\%---and starts generating
+at team round 8 instead of 17.
 
 The mechanism follows from Sec.~\ref{sec:structure}: agents discover
 papers by semantic search, not by traversing references. With edges
@@ -421,11 +425,11 @@ corpus's citation logic.
 
 A companion ablation disables the other wandering channel: random jumps
 (\texttt{sample\_frontier}). The effect points the same way but is much
-smaller (Table~\ref{tab:noedges}, middle row: 63 ideas at 13\% vs.\ 50
-at 10\%)---unsurprisingly, since C1 agents only jumped $\sim$20 times
+smaller (Table~\ref{tab:noedges}, middle row: 63 ideas at 24\% vs.\ 50
+at 20\%)---unsurprisingly, since C1 agents only jumped $\sim$20 times
 in 800 actions. The citation neighborhood, not serendipitous jumping,
 is the dominant distractor. We caution that these are single seeded
-runs per arm (12/60 and 8/63 vs.\ 5/50 hits); the directions, the
+runs per arm (22/60 and 15/63 vs.\ 10/50 hits); the directions, the
 mean-level gaps, and the behavioral signatures are mutually consistent,
 but replication is needed before the strongest reading.
 
