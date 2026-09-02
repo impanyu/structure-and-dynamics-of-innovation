@@ -484,6 +484,17 @@ switching on the silent agent-to-agent channel---making contributions
 discoverable to teammates---and measuring whether the scaling curve
 bends.
 
+\subsubsection*{Ethics statement}
+This work involves no human subjects and no sensitive data; all corpus
+material derives from public scholarly metadata (titles, abstracts,
+citations) accessed through the Semantic Scholar and OpenAlex APIs
+within their terms of use. The broader practice this paper studies ---
+automated generation of research ideas --- raises questions about
+scientific credit and about flooding venues with machine-generated
+submissions; our evaluation protocol deliberately scores ideas only by
+later independent human realization, and we do not submit, publish, or
+disseminate any agent-generated idea as a research claim.
+
 \subsubsection*{Reproducibility statement}
 All runs are driven by seeded configurations; every agent action and its
 result is logged as an event stream from which the full network state
@@ -610,7 +621,7 @@ runs can be extended from their logs, and all figures and tables derive
 from the logs plus cached evaluation verdicts.
 
 \subsection{Example trajectory map}
-\begin{figure}[h]
+\begin{figure}[ht]
 \begin{center}
 \includegraphics[width=\linewidth]{trajectories-c3.png}
 \end{center}
@@ -673,11 +684,105 @@ approaches in the same method family. 4: same problem and core
 mechanism, differing in secondary components. 5: essentially the same
 idea (problem, mechanism, and key design choices).
 
+\subsection{Case studies: anticipations and their realizations}
+\label{app:cases}
+
+\textbf{Case 1 (realization level 5).} Agent g11 of the $N{=}50$
+scaling run proposed:
+\begin{quote}\small\itshape
+We propose Conformal Early-Stopping Self-Consistency (CESS), a
+black-box, distribution-free procedure that turns self-consistency
+sampling into a risk-controlled stopping rule with finite-sample
+guarantees. On a calibration set, we run deep self-consistency to learn
+a mapping from the trajectory of vote-share (and simple diversity
+features) to correctness, then derive nondecreasing stopping boundaries
+via conformal calibration so that when the live vote-trajectory crosses
+the boundary we stop and output the modal answer with $1-\alpha$
+coverage; if the boundary is not reached within a budget, we abstain.
+[\ldots]
+\end{quote}
+The judge matched it at level 5 to \emph{Black-Box Reliability
+Certification for AI Agents via Self-Consistency Sampling and Conformal
+Calibration} (arXiv, February 2026), with the evidence: ``the paper
+implements black-box self-consistency sampling combined with conformal
+calibration to produce sequential early-stopping rules with
+finite-sample guarantees.''
+
+\textbf{Case 2 (tier 1, level 4).} Agent g37 of the same run proposed
+\emph{Path-of-Thought Distillation for text-rich graphs}: prompt an LLM
+with ordered node/edge texts along candidate evidence paths to generate
+structured relational rationales, then distill those rationales into a
+hybrid tokenized graph transformer with attention-alignment and
+counterfactual edge-text robustness losses, so that test-time inference
+requires no LLM. The judge matched it at level 4 to \emph{Mitigating
+Adversarial Attacks by Transferring LLM-generated Narrative Reasoning
+for Robust Fake News Detection} (SIGIR 2026, a tier-1 venue): both
+distill LLM-generated reasoning into graph models for robust graph
+tasks with no runtime LLM, differing in the target domain.
+
+\subsection{The 50-topic pool}
+\label{app:topiclist}
+
+{\small adaptive and robust stochastic optimization methods; efficient and inductive vision transformers; inductive and contextual knowledge graph representation; 3d object detection on point clouds; graph structure learning and generalization; evaluation and augmentation of language models; single-image to 3d generative modeling; continual learning and lifelong adaptation; causal representation learning under interventions; sparse neural network training and pruning; differentially private learning and optimization; self-supervised controllable video representation learning; task-oriented and knowledge-grounded dialogue modeling; efficient and long-range transformer architectures; adversarial robustness and training methods; offline and constrained reinforcement learning with pessimism; accelerated sampling and analysis of diffusion models; 3d generative models for molecular design; federated learning optimization and heterogeneity; learning-based combinatorial optimization methods; efficient model compression and adaptation for llms; semantic segmentation with limited supervision; foundation models and generative modeling for time series; multi-view graph-based clustering methods; language model alignment and calibration; efficient transfer and adaptation of models; backdoor attacks and defenses in ml models; out-of-distribution generalization and robustness; multi-step mathematical reasoning with lm prompts; evaluation and improvement of code generation models; retrieval-augmented multimodal question answering; contrastive representation learning and robustness; neural operator and physics-informed pde solvers; individual fairness and robustness in ML; representation learning for sequential decision making; multimodal representation learning for missing modalities; implicit bias and dynamics of deep learning; multimodal generative and robust audio models; language-models as autonomous decision agents; spatio-temporal traffic and trajectory modeling; vision-language foundation models and benchmarks; recommendation systems and sequential user modeling; offline reinforcement learning methods and theory; robust semi-supervised and noisy-label learning; interpretable and causally-grounded model explanations; few-shot and domain-adaptive object detection; high-resolution diffusion-based image synthesis; online learning and multiagent decision-making; out-of-distribution detection and outlier synthesis; embodied multimodal world-models for agents.}
+
+\subsection{Recognized venues (tier 1)}
+\label{app:venues}
+
+Tier-1 recognition matches 60 venues by alias lists: the 58 venues rated A by the
+CCF (2026 edition) across all categories, plus COLM and RLC. The full list:
+
+{\small AAAI Conference on Artificial Intelligence; Neural Information Processing Systems; Annual Meeting of the Association for Computational Linguistics; Computer Vision and Pattern Recognition; IEEE International Conference on Computer Vision; International Conference on Machine Learning; International Conference on Learning Representations; Knowledge Discovery and Data Mining; International ACM SIGIR Conference on Research and Development in Information Retrieval; ACM SIGMOD International Conference on Management of Data; IEEE International Conference on Data Engineering; Very Large Data Bases; The Web Conference; ACM Multimedia; Conference on Language Modeling; Reinforcement Learning Conference; ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming; USENIX Conference on File and Storage Technologies; Design Automation Conference; IEEE International Symposium on High Performance Computer Architecture; IEEE/ACM International Symposium on Microarchitecture; International Conference for High Performance Computing, Networking, Storage and Analysis; International Conference on Architectural Support for Programming Languages and Operating Systems; International Symposium on Computer Architecture; USENIX Annual Technical Conference; European Conference on Computer Systems; International Symposium on High-Performance Parallel and Distributed Computing; ACM SIGCOMM Conference; ACM International Conference on Mobile Computing and Networking; IEEE International Conference on Computer Communications; Symposium on Networked Systems Design and Implementation; ACM Conference on Computer and Communications Security; International Conference on the Theory and Applications of Cryptographic Techniques; IEEE Symposium on Security and Privacy; International Cryptology Conference; USENIX Security Symposium; Network and Distributed System Security Symposium; ACM SIGPLAN Conference on Programming Language Design and Implementation; ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages; ACM International Conference on the Foundations of Software Engineering; ACM Symposium on Operating Systems Principles; Conference on Object-Oriented Programming Systems, Languages, and Applications; International Conference on Automated Software Engineering; International Conference on Software Engineering; International Symposium on Software Testing and Analysis; USENIX Symposium on Operating Systems Design and Implementation; International Symposium on Formal Methods; ACM Symposium on the Theory of Computing; ACM-SIAM Symposium on Discrete Algorithms; International Conference on Computer Aided Verification; IEEE Annual Symposium on Foundations of Computer Science; ACM/IEEE Symposium on Logic in Computer Science; ACM SIGGRAPH; IEEE Conference on Virtual Reality and 3D User Interfaces; IEEE Visualization Conference; ACM Conference on Computer Supported Cooperative Work and Social Computing; ACM Conference on Human Factors in Computing Systems; ACM International Joint Conference on Pervasive and Ubiquitous Computing; ACM Symposium on User Interface Software and Technology; IEEE Real-Time Systems Symposium.}
+
+Tier-2 additionally matches the $\sim$90 CCF-B venue aliases; the exact alias
+lists (including abbreviation variants used for matching) ship with the released
+configurations.
+
+\subsection{Compute and cost}
+\label{app:cost}
+
+All experiments ran on commodity hardware; the only significant cost is
+LLM API usage. Approximate totals: corpus distillation (16{,}208
+summaries, \texttt{gpt-5-mini}) $\sim$\$15; the six dial runs (4{,}800
+\texttt{gpt-5} actions) $\sim$\$90--150; the scaling runs (9{,}300
+actions) $\sim$\$170--280; ablations (1{,}600 actions) $\sim$\$30--60;
+evaluation (judging $\sim$1{,}000 ideas with \texttt{gpt-5-mini},
+searches free) $\sim$\$40--80. Total on the order of \$350--600. A
+single dial-style run (10 agents, 80 rounds) costs $\sim$\$15--25 and
+$\sim$1 hour wall clock; evaluation of its ideas a further
+$\sim$\$5--10.
+
 \subsection{Behavioral onset}
 Median personal round of an agent's first \texttt{generate} action:
 21--24 across conditions (minimum 9); the first 40 rounds of a team are
 dominated by \texttt{search}/\texttt{browse}. This is why the scaling
 experiment fixes per-agent depth at 30 rounds: shallower budgets produce
 (near-)zero output for any team size.
+
+\section{LLM usage}
+\label{app:llm}
+
+LLMs play three distinct roles in this work, disclosed here per the
+ICLR 2026 LLM policy.
+
+\textbf{As the object of study.} The agents whose dynamics we measure
+are LLMs (\texttt{gpt-5}), and the evaluation judge, corpus distiller,
+and topic namer are LLMs (\texttt{gpt-5-mini}). Every ``idea'' analyzed
+in this paper is, by design, LLM-generated; all quantitative claims are
+about LLM behavior.
+
+\textbf{As research infrastructure.} The experimental platform ---
+simulation environment, evaluation pipeline, and analysis code --- was
+implemented with the assistance of an LLM-based coding agent operating
+under continuous human direction. The human authors specified the
+research questions, experimental designs, evaluation criteria, and all
+design decisions (including mid-course redesigns reported in the
+paper); the coding agent implemented, executed, and monitored the
+experiments and proposed analyses that the authors accepted, rejected,
+or redirected.
+
+\textbf{In writing.} The manuscript was drafted with LLM assistance
+from the authors' experimental records and instructions; the authors
+reviewed and edited the text and take full responsibility for its
+content. LLMs are not authors of this paper.
 
 \end{document}
