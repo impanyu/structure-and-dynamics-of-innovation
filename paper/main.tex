@@ -298,14 +298,27 @@ absolute hits. Moreover the generalists' accuracy \emph{fell} from 13\%
 to 10\% when the run was extended from 40 to 80 rounds: the marginal
 quality of freely-roaming exploration decays.
 
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=0.72\linewidth]{mass-dial-accumulation.png}
+\end{center}
+\caption{Cumulative idea production over rounds. All conditions start
+producing between rounds 8--17; the production gap is a
+\emph{steady-state rate} effect, not a head start: narrow scopes settle
+into $\sim$1 idea/round while broad scopes run at $\sim$0.65/round with
+recurring plateaus where agents fall back into exploration. No curve
+saturates by round 80.}
+\label{fig:accum}
+\end{figure}
+
 \textbf{Narrow readers ship; broad readers browse.} Idea production is
-strictly monotone in scope (83, 74, 67, 55, 54, 50). Behaviorally,
-agents in all conditions spend their first $\sim$20 personal rounds
-exploring before their first \texttt{generate} (median onset: personal
-round 21--24), and narrow scopes reach ``confident enough to write''
-sooner and more often. Generalists redirect effort into curation: they
-performed 71 \texttt{add\_links} actions versus 23--38 for scoped
-conditions.
+strictly monotone in scope (83, 74, 67, 55, 54, 50), and
+Figure~\ref{fig:accum} shows why: after a comparable exploration onset
+(first team idea between rounds 8 and 17; median personal onset round
+21--24), narrow scopes settle into a faster and steadier production
+rate, while broad scopes stall in recurring exploration plateaus.
+Generalists redirect effort into curation: they performed 71
+\texttt{add\_links} actions versus 23--38 for scoped conditions.
 
 \section{Experiment 2: team size}
 \label{sec:scaling}
