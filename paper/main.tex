@@ -379,10 +379,11 @@ collaboration effects---and the natural next intervention.
 \label{sec:noedges}
 
 \begin{table}[t]
-\caption{Initial-graph ablation: identical to C1 (10 generalists, 80
-rounds, same seed and corpus) except the initial network carries no
-citation edges. Removing the structure improves both output and
-accuracy.}
+\caption{Exploration-channel ablations: identical to C1 (10 generalists,
+80 rounds, same seed and corpus) except the initial network carries no
+citation edges (top) or random jumps are disabled (middle). Removing
+wandering channels improves output without hurting accuracy; removing
+the citation structure improves both.}
 \label{tab:noedges}
 \begin{center}
 \begin{tabular}{lrrrrr}
@@ -390,8 +391,9 @@ accuracy.}
  & \textbf{ideas} & \textbf{tier-1 acc (hits)} & \textbf{tier-2} &
  \textbf{tier-3} & \textbf{tier-1 mean lvl} \\
 \midrule
-no edges & \textbf{60} & \textbf{20\% (12)} & \textbf{20\%} & \textbf{47\%} & \textbf{0.93} \\
-C1 (80{,}962 edges) & 50 & 10\% (5) & 12\% & 44\% & 0.50 \\
+no edges & 60 & \textbf{20\% (12)} & \textbf{20\%} & \textbf{47\%} & \textbf{0.93} \\
+no jumps & \textbf{63} & 13\% (8) & 16\% & 44\% & 0.62 \\
+C1 (full) & 50 & 10\% (5) & 12\% & 44\% & 0.50 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -414,10 +416,17 @@ exploration converges faster on writeable niches. Notably, the agents do
 not leave the graph bare: they spontaneously performed 65 curation
 actions, adding 53 links of their own to the edgeless network---they
 rebuild structure, but by their own semantic logic rather than the
-corpus's citation logic. We caution that this is a single seeded run per
-arm (12/60 vs.\ 5/50 hits); the direction, the mean-level gap, and the
-behavioral signature are mutually consistent, but replication is needed
-before the strongest reading.
+corpus's citation logic.
+
+A companion ablation disables the other wandering channel: random jumps
+(\texttt{sample\_frontier}). The effect points the same way but is much
+smaller (Table~\ref{tab:noedges}, middle row: 63 ideas at 13\% vs.\ 50
+at 10\%)---unsurprisingly, since C1 agents only jumped $\sim$20 times
+in 800 actions. The citation neighborhood, not serendipitous jumping,
+is the dominant distractor. We caution that these are single seeded
+runs per arm (12/60 and 8/63 vs.\ 5/50 hits); the directions, the
+mean-level gaps, and the behavioral signatures are mutually consistent,
+but replication is needed before the strongest reading.
 
 \section{Analysis: how the dynamics rewrite the state}
 \label{sec:structure}
@@ -764,12 +773,25 @@ single dial-style run (10 agents, 80 rounds) costs $\sim$\$15--25 and
 $\sim$1 hour wall clock; evaluation of its ideas a further
 $\sim$\$5--10.
 
-\subsection{Behavioral onset}
-Median personal round of an agent's first \texttt{generate} action:
-21--24 across conditions (minimum 9); the first 40 rounds of a team are
-dominated by \texttt{search}/\texttt{browse}. This is why the scaling
-experiment fixes per-agent depth at 30 rounds: shallower budgets produce
+\subsection{Behavioral observations}
+
+\textbf{Onset.} Median personal round of an agent's first
+\texttt{generate} action: 21--24 across conditions (minimum 9); the
+first 40 rounds of a team are dominated by
+\texttt{search}/\texttt{browse}. This is why the scaling experiment
+fixes per-agent depth at 30 rounds: shallower budgets produce
 (near-)zero output for any team size.
+
+\textbf{Error-driven adaptation, and its memory horizon.} Constraints
+are never described in the prompt; agents discover them through error
+results. The jump ablation shows this cleanly: at cold start, 9 of 10
+agents' very first action was \texttt{sample\_frontier} (their standard
+opening move), each received the restriction error, and all switched to
+\texttt{search}-based cold starts immediately. Across the remaining 790
+actions only three further jump attempts occurred (team steps 400, 455,
+719)---each long after the original error had been evicted from the
+agent's 20-entry FIFO memory. The rolling memory length thus sets the
+time scale on which learned constraints are forgotten.
 
 \section{LLM usage}
 \label{app:llm}
