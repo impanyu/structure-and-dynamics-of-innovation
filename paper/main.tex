@@ -249,21 +249,22 @@ accuracy.
 \begin{table}[t]
 \caption{The specialization dial: $N{=}10$ agents, 80 rounds, one seed.
 Read scope $m$ is the number of corpus papers each agent may read;
-writes are always free. Acc@$\geq$3 = share of ideas realized at level
-$\geq 3$ by a post-cutoff paper in the tier; hits in parentheses.}
+writes are always free. Each tier cell reports acc@$\geq$3 (share of
+ideas realized at level $\geq 3$ by a post-cutoff paper in the tier;
+hits in parentheses) and the mean best realization level.}
 \label{tab:dial}
-\begin{center}
-\begin{tabular}{lrrrrrr}
+\begin{center}\small
+\begin{tabular}{lrrccc}
 \toprule
- & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits)} &
- \textbf{tier-2} & \textbf{tier-3} & \textbf{tier-1 mean lvl} \\
+ & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
+ \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-C2 & 400   & \textbf{83} & 16\% (13) & 24\% & 67\% & 0.89 \\
-C3 & 800   & 74 & \textbf{22\% (16)} & \textbf{30\%} & \textbf{69\%} & \textbf{1.04} \\
-C4 & 1600  & 67 & 18\% (12) & 27\% & 40\% & 0.78 \\
-C5 & 3200  & 55 & 15\% (8)  & 25\% & 55\% & 0.69 \\
-C6 & 6400  & 54 & 15\% (8)  & 24\% & 61\% & 0.74 \\
-C1 & $\infty$ & 50 & 10\% (5) & 12\% & 44\% & 0.50 \\
+C2 & 400   & \textbf{83} & 16\% (13) / 0.89 & 24\% / 1.19 & 67\% / \textbf{2.48} \\
+C3 & 800   & 74 & \textbf{22\% (16) / 1.04} & \textbf{30\% / 1.38} & \textbf{69\%} / 2.43 \\
+C4 & 1600  & 67 & 18\% (12) / 0.78 & 27\% / 1.04 & 40\% / 1.60 \\
+C5 & 3200  & 55 & 15\% (8) / 0.69  & 25\% / 1.05 & 55\% / 2.02 \\
+C6 & 6400  & 54 & 15\% (8) / 0.74  & 24\% / 1.06 & 61\% / 2.22 \\
+C1 & $\infty$ & 50 & 10\% (5) / 0.50 & 12\% / 0.64 & 44\% / 1.68 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -328,16 +329,16 @@ Generalists redirect effort into curation: they performed 71
 each, one seed). The $N{=}10$ point is the 30-round prefix of C1.
 Per-idea accuracy is flat; absolute hits scale with output.}
 \label{tab:scaling}
-\begin{center}
-\begin{tabular}{rrrrrr}
+\begin{center}\small
+\begin{tabular}{rrccc}
 \toprule
-\textbf{$N$} & \textbf{ideas (per agent)} & \textbf{tier-1 acc (hits)} &
-\textbf{tier-2} & \textbf{tier-3} \\
+\textbf{$N$} & \textbf{ideas (per agent)} & \textbf{tier-1 acc (hits) / mean} &
+\textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-10  & 12 (1.2)  & 17\% (2)  & 25\% (3)  & 50\% (6) \\
-50  & 103 (2.1) & 12\% (12) & 17\% (17) & 49\% (50) \\
-100 & 180 (1.8) & 11\% (20) & 16\% (28) & 44\% (80) \\
-150 & 280 (1.9) & 11\% (32) & 20\% (57) & 50\% (139) \\
+10  & 12 (1.2)  & 17\% (2) / 0.67  & 25\% (3) / 1.08  & 50\% (6) / 2.00 \\
+50  & 103 (2.1) & 12\% (12) / 0.55 & 17\% (17) / 0.86 & 49\% (50) / 1.98 \\
+100 & 180 (1.8) & 11\% (20) / 0.61 & 16\% (28) / 0.83 & 44\% (80) / 1.87 \\
+150 & 280 (1.9) & 11\% (32) / 0.66 & 20\% (57) / 0.95 & 50\% (139) / 1.86 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -385,15 +386,15 @@ citation edges (top) or random jumps are disabled (middle). Removing
 wandering channels improves output without hurting accuracy; removing
 the citation structure improves both.}
 \label{tab:noedges}
-\begin{center}
-\begin{tabular}{lrrrrr}
+\begin{center}\small
+\begin{tabular}{lrccc}
 \toprule
- & \textbf{ideas} & \textbf{tier-1 acc (hits)} & \textbf{tier-2} &
- \textbf{tier-3} & \textbf{tier-1 mean lvl} \\
+ & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
+ \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-no edges & 60 & \textbf{20\% (12)} & \textbf{20\%} & \textbf{47\%} & \textbf{0.93} \\
-no jumps & \textbf{63} & 13\% (8) & 16\% & 44\% & 0.62 \\
-C1 (full) & 50 & 10\% (5) & 12\% & 44\% & 0.50 \\
+no edges & 60 & \textbf{20\% (12) / 0.93} & \textbf{20\% / 1.07} & \textbf{47\% / 1.97} \\
+no jumps & \textbf{63} & 13\% (8) / 0.62 & 16\% / 0.71 & 44\% / 1.92 \\
+C1 (full) & 50 & 10\% (5) / 0.50 & 12\% / 0.64 & 44\% / 1.68 \\
 \bottomrule
 \end{tabular}
 \end{center}
