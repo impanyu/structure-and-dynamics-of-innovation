@@ -42,11 +42,16 @@ falls monotonically as scope widens; (iii) team size is a pure throughput
 knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits
 scale linearly, because agents are effectively independent---across 10{,}300
 actions we observe a single cross-agent citation of a generated idea.
-Structurally, agent-written links have near-constant semantic reach
+Strikingly, deleting all 80{,}962 citation edges from the initial network
+\emph{helps} generalists (tier-1 accuracy 20\% vs.\ 10\%, with more ideas
+produced): agents navigate semantically, not structurally, and the human
+citation topology acts as a distractor rather than a scaffold.
+Consistently, agent-written links have near-constant semantic reach
 regardless of scope, are degree-decoupled (unlike the preferential
 attachment that built the corpus), and preferentially target recent
-frontier papers. Our results position reading scope---not team size---as
-the operative lever on the quality of machine-generated research ideas.
+frontier papers. Our results position reading scope---not team size or
+citation structure---as the operative lever on the quality of
+machine-generated research ideas.
 \end{abstract}
 
 \section{Introduction}
@@ -110,6 +115,13 @@ per-agent interaction depth.
   linearly. The mechanism is stark: agents are effectively independent.
   Across all scaling runs (575 ideas, 10{,}300 actions) not one agent
   cited another agent's generated idea.
+\item \textbf{The citation structure is a distractor, not a scaffold
+  (Sec.~\ref{sec:noedges}).} Deleting every initial citation edge makes
+  generalists \emph{better}: 60 ideas at 20\% tier-1 accuracy vs.\ 50 at
+  10\% with edges, under otherwise identical conditions. Deprived of
+  neighbors to wander through, agents commit to pure semantic-search
+  navigation (first idea at round 8 instead of 17) --- and spontaneously
+  rebuild structure, adding 53 links of their own to the edgeless graph.
 \item \textbf{The dynamics have a characteristic ``handwriting''
   (Sec.~\ref{sec:structure}).} The semantic reach of agent-written links
   is nearly invariant to scope (median cosine distance 0.144--0.153,
@@ -350,6 +362,50 @@ contributions discoverable (e.g., recency-weighted search or frontier
 sampling) is, on this evidence, the necessary condition for genuine
 collaboration effects---and the natural next intervention.
 
+\section{Experiment 3: is the citation structure a scaffold?}
+\label{sec:noedges}
+
+\begin{table}[t]
+\caption{Initial-graph ablation: identical to C1 (10 generalists, 80
+rounds, same seed and corpus) except the initial network carries no
+citation edges. Removing the structure improves both output and
+accuracy.}
+\label{tab:noedges}
+\begin{center}
+\begin{tabular}{lrrrrr}
+\toprule
+ & \textbf{ideas} & \textbf{tier-1 acc (hits)} & \textbf{tier-2} &
+ \textbf{tier-3} & \textbf{tier-1 mean lvl} \\
+\midrule
+no edges & \textbf{60} & \textbf{20\% (12)} & \textbf{20\%} & \textbf{47\%} & \textbf{0.93} \\
+C1 (80{,}962 edges) & 50 & 10\% (5) & 12\% & 44\% & 0.50 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+If agents used the citation network as a navigational scaffold, deleting
+its edges should hurt. It does the opposite (Table~\ref{tab:noedges}):
+with an edgeless initial graph, the same generalist team produces 20\%
+more ideas at double the tier-1 accuracy---approaching the dial's
+$m{=}800$ optimum---and starts generating at team round 8 instead of 17.
+
+The mechanism follows from Sec.~\ref{sec:structure}: agents discover
+papers by semantic search, not by traversing references. With edges
+present, \texttt{browse} surfaces each node's citation neighborhood, and
+agents wander along the \emph{human} citation topology---which pulls
+toward older, hub-heavy regions that their own attachment behavior
+demonstrably avoids. Removing the edges removes the distractor: browsing
+degenerates to reading, navigation collapses onto semantic search, and
+exploration converges faster on writeable niches. Notably, the agents do
+not leave the graph bare: they spontaneously performed 65 curation
+actions, adding 53 links of their own to the edgeless network---they
+rebuild structure, but by their own semantic logic rather than the
+corpus's citation logic. We caution that this is a single seeded run per
+arm (12/60 vs.\ 5/50 hits); the direction, the mean-level gap, and the
+behavioral signature are mutually consistent, but replication is needed
+before the strongest reading.
+
 \section{Analysis: how the dynamics rewrite the state}
 \label{sec:structure}
 
@@ -420,9 +476,13 @@ knowledge structure directly. On this substrate, the operative lever on
 idea quality is \emph{how reading is situated}---a sub-area scope of
 $\sim$800 papers beats both narrower and broader diets, and any scope
 beats none---while team size sets only throughput, because today's
-agents do not yet read each other. The immediate frontier is switching
-on that silent channel: making agents' contributions discoverable to one
-another, and measuring whether the scaling curve bends.
+agents do not yet read each other. The human citation structure itself,
+scaffold of every account of cumulative science, is at best inert and at
+worst a distractor for these semantically-navigating dynamics: removing
+it outright improved both output and accuracy. The immediate frontier is
+switching on the silent agent-to-agent channel---making contributions
+discoverable to teammates---and measuring whether the scaling curve
+bends.
 
 \subsubsection*{Reproducibility statement}
 All runs are driven by seeded configurations; every agent action and its
