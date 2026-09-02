@@ -211,7 +211,7 @@ in embedding space (an equal-mass region; the radius adapts per topic).
 Reading, searching, jumping, \emph{and citing} are confined to this
 region---citing means having read---while the content of generated ideas
 is unconstrained. We sweep $m \in \{400, 800, 1600, 3200, 6400\}$
-(conditions C2--C6); unrestricted generalists are C1 ($m=\infty$). All
+(conditions C3--C7, numbered by ascending scope); unrestricted generalists are C1 ($m=\infty$). All
 conditions use $N{=}10$ agents, 80 rounds, and the same seed, so topic
 draws are identical across the sweep and only the radius varies.
 
@@ -262,11 +262,11 @@ hits in parentheses) and the mean best realization level.}
  & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-C2 & 400   & \textbf{83} & 36\% (30) / 0.89 & 47\% / 1.19 & \textbf{89\%} / \textbf{2.48} \\
-C3 & 800   & 74 & \textbf{41\% (30) / 1.04} & \textbf{53\% / 1.38} & 84\% / 2.43 \\
-C4 & 1600  & 67 & 30\% (20) / 0.78 & 39\% / 1.04 & 60\% / 1.60 \\
-C5 & 3200  & 55 & 27\% (15) / 0.69  & 40\% / 1.05 & 73\% / 2.02 \\
-C6 & 6400  & 54 & 30\% (16) / 0.74  & 41\% / 1.06 & 78\% / 2.22 \\
+C3 & 400   & \textbf{83} & 36\% (30) / 0.89 & 47\% / 1.19 & \textbf{89\%} / \textbf{2.48} \\
+C4 & 800   & 74 & \textbf{41\% (30) / 1.04} & \textbf{53\% / 1.38} & 84\% / 2.43 \\
+C5 & 1600  & 67 & 30\% (20) / 0.78 & 39\% / 1.04 & 60\% / 1.60 \\
+C6 & 3200  & 55 & 27\% (15) / 0.69  & 40\% / 1.05 & 73\% / 2.02 \\
+C7 & 6400  & 54 & 30\% (16) / 0.74  & 41\% / 1.06 & 78\% / 2.22 \\
 C1 & $\infty$ & 50 & 20\% (10) / 0.50 & 26\% / 0.64 & 62\% / 1.68 \\
 \bottomrule
 \end{tabular}

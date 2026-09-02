@@ -44,9 +44,9 @@ def write(path, run_id, agents, comment):
 # specialists with read_mass in {400, 800, 1600, 3200, 6400}. Same seed
 # everywhere -> identical topic draws; only the radius varies. (Old C3
 # broad-readers and C4 mixed-team conditions were withdrawn.)
-# c7 = 100 added 2026-09-02 (extreme-narrow end of the dial).
-CORE_MASSES = {"c2": 400, "c3": 800, "c4": 1600, "c5": 3200, "c6": 6400,
-               "c7": 100}
+# Numbered ascending by mass (user convention 2026-09-02); C1 = generalists.
+CORE_MASSES = {"c2": 100, "c3": 400, "c4": 800, "c5": 1600, "c6": 3200,
+               "c7": 6400}
 for cid, mass in CORE_MASSES.items():
     write(f"configs/experiments/core-mass-{mass}.yaml", f"core-mass-{mass}",
           [spec_agent(f"s{i}", mass) for i in range(10)],
