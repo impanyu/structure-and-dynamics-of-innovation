@@ -41,8 +41,10 @@ matched at level $\geq 2$, ``same specific problem''). On a
 of corpus papers an agent is allowed to read, from 100 up to the whole
 corpus. We find (i) an inverted-U in anticipation accuracy over reading
 scope, peaking at 800 papers---a coherent sub-area, not one topic---at
-tier-1 accuracy 31\% vs.\ 14\% for unrestricted generalists, with the
-whole narrow band (100--800) well ahead of broad scopes; (ii) idea
+tier-1 accuracy 31\%, with the whole narrow band (100--800) well ahead
+of broad scopes, and \emph{both} dial endpoints on the parametric
+floor: agents reading nothing (13\%) and unrestricted generalists
+reading anything (14\%) are indistinguishable; (ii) idea
 production peaks at a mid-narrow scope and falls as reading widens; (iii) team size is a pure throughput
 knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits
 scale linearly, because agents are effectively independent---across 10{,}300
@@ -116,7 +118,10 @@ per-agent interaction depth.
   narrow scopes would starve agents of recombination material did not
   materialize---but the narrow end's advantage over the peak appears
   only under memory-contaminated scoring, not under the guarded
-  metric.
+  metric. Both endpoints of the dial sit on the \emph{parametric
+  floor}: agents that read nothing (topic name only, 13\%) and
+  agents that may read everything (14\%) are indistinguishable---
+  reading pays only when it is narrow.
 \item \textbf{Quantity peaks at mid-narrow scope
   (Sec.~\ref{sec:dial}).} Scoped readers commit to ideas sooner and
   produce more of them (83 at $m{=}400$ vs.\ 50 for generalists over
@@ -226,9 +231,14 @@ Reading, searching, jumping, \emph{and citing} are confined to this
 region---citing means having read---while the content of generated ideas
 is unconstrained. We sweep $m \in \{100, 400, 800, 1600, 3200, 6400\}$
 (conditions C2--C7, numbered by ascending scope); unrestricted
-generalists are C1 ($m=\infty$). All
-conditions use $N{=}10$ agents, 80 rounds, and the same seed, so topic
-draws are identical across the sweep and only the radius varies.
+generalists are C1 ($m=\infty$), and a zero endpoint C0 gives each
+agent ONLY its topic name---no reading, no navigation, direct
+topic-conditioned generation (7 ideas per agent, each prompted to
+differ from the agent's previous ones)---measuring what parametric
+knowledge alone achieves. All
+conditions use $N{=}10$ agents, 80 rounds ($\leq$7 for C0), and the
+same seed, so topic draws are identical across the sweep and only the
+radius varies.
 
 Because topics vary in size (natural partition: median 228 papers, range
 44--1096), an $m=800$ region is \emph{not} one topic: measured own-topic
@@ -277,10 +287,12 @@ recorded in the released verdicts.
 \begin{table}[t]
 \caption{The specialization dial: $N{=}10$ agents, 80 rounds, one seed.
 Read scope $m$ is the number of corpus papers each agent may read;
-writes are always free. Only realizations published on/after 2025-06-01
-count (Sec.~\ref{sec:eval}). Each tier cell reports acc@$\geq$2, the
-number of realized ideas (level $\geq 2$, in parentheses), and the mean
-best realization level.}
+writes are always free. C0 is the zero endpoint: agents receive ONLY
+their topic name and generate with no reading of any kind---the
+parametric-ideation floor. Only realizations published on/after
+2025-06-01 count (Sec.~\ref{sec:eval}). Each tier cell reports
+acc@$\geq$2, the number of realized ideas (level $\geq 2$, in
+parentheses), and the mean best realization level.}
 \label{tab:dial}
 \begin{center}\small
 \begin{tabular}{lrrccc}
@@ -288,6 +300,7 @@ best realization level.}
  & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
+C0 & 0 (topic name only) & 70 & 13\% (9) / 0.30 & 19\% (13) / 0.43 & 67\% (47) / 1.64 \\
 C2 & 100   & 67 & 24\% (16) / 0.57 & 33\% (22) / 0.78 & 73\% (49) / 1.99 \\
 C3 & 400   & \textbf{83} & 24\% (20) / 0.57 & 30\% (25) / 0.73 & \textbf{88\% (73)} / \textbf{2.40} \\
 C4 & 800   & 74 & \textbf{31\% (23) / 0.77} & \textbf{41\% (30) / 1.00} & 80\% (59) / 2.24 \\
@@ -329,6 +342,15 @@ pre-registered fear of material starvation at the narrow end.
 a caution documented in Appendix~\ref{app:probes}.) Broad scopes
 underperform throughout (unfocused wandering; a semantically diffuse
 topic region produced an agent with zero output).
+
+\textbf{Both ends of the dial sit on the parametric floor.} The zero
+endpoint C0---agents given only their topic name, generating from
+parametric knowledge alone---scores 13\%, statistically identical to
+the unrestricted generalists' 14\%. Reading the \emph{entire} corpus
+adds nothing over reading nothing; only situated, narrow reading
+does, roughly doubling the floor at the $m{=}800$ peak. Every
+condition in this paper should be read against this 13\% zero point:
+it is what the underlying model gives away for free.
 
 \textbf{Constraint beats freedom everywhere.} Every scoped condition
 matches or beats the unrestricted generalists on every tier, by rate
@@ -855,12 +877,16 @@ earliest month at which no probe format shows above-guessing knowledge.
 Without this window, contamination is material---64\% of face-value
 tier-1 hits fall in 2024-10 to 2025-08, and the no-search ablation,
 which forces agents onto parametric knowledge, loses its hits fastest
-when the window is applied (Sec.~\ref{sec:noedges}). Two residual
-risks remain: the window is behavioral evidence, not a provider
-guarantee, and a paper published in-window may have circulated as a
-preprint earlier; both bias reported accuracies in opposite directions
-and neither affects between-condition comparisons, which all use the
-same window.
+when the window is applied (Sec.~\ref{sec:noedges}). The topic-only condition C0 closes the loop behaviorally: generating
+from parametric knowledge alone scores 20\% at face value but 13\%
+under the window---the residue is the model's genuine ability to
+propose realizable ideas from priors, and it is exactly this floor
+that situated reading must (and, when narrow, does) exceed. Two
+residual risks remain: the window is behavioral evidence, not a
+provider guarantee, and a paper published in-window may have
+circulated as a preprint earlier; both bias reported accuracies in
+opposite directions and neither affects between-condition comparisons,
+which all use the same window.
 
 \subsection{Case studies: anticipations and their realizations}
 \label{app:cases}
