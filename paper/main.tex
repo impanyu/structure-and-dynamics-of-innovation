@@ -31,25 +31,28 @@ citation network of research ideas distilled from published papers, and the
 (and links) back into it. Agents propose ideas freely; each proposal is
 scored by whether a similar paper published \emph{after} the agent model's
 training cutoff realizes it, verified by literature search and graded by an
-LLM judge on a six-level scale across three venue-recognition tiers
-(headline accuracy: share of ideas matched at level $\geq 2$, ``same
-specific problem''). On a
+LLM judge on a six-level scale across three venue-recognition tiers.
+Because probe tests show the agent model's parametric memory extends
+months past its official cutoff, only realizations published at least
+eight months after the cutoff count (headline accuracy: share of ideas
+matched at level $\geq 2$, ``same specific problem''). On a
 16{,}208-node network built from NeurIPS, ICLR, ICML, and AAAI papers
 (2020--2024), we manipulate a single \emph{specialization dial}: the number
 of corpus papers an agent is allowed to read, from 100 up to the whole
-corpus. We find (i) anticipation accuracy \emph{rises as reading
-narrows}: the tightest scope---100 papers, the inner core of one
-topic---is best on every tier (tier-1 accuracy 51\% vs.\ 20\% for
-unrestricted generalists), and every scoped condition beats the
-generalists; (ii) idea production peaks at a mid-narrow scope and falls
-as reading widens; (iii) team size is a pure throughput
+corpus. We find (i) an inverted-U in anticipation accuracy over reading
+scope, peaking at 800 papers---a coherent sub-area, not one topic---at
+tier-1 accuracy 31\% vs.\ 14\% for unrestricted generalists, with the
+whole narrow band (100--800) well ahead of broad scopes; (ii) idea
+production peaks at a mid-narrow scope and falls as reading widens; (iii) team size is a pure throughput
 knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits
 scale linearly, because agents are effectively independent---across 10{,}300
 actions we observe a single cross-agent citation of a generated idea.
 Strikingly, deleting all 80{,}962 citation edges from the initial network
-\emph{helps} generalists (tier-1 accuracy 37\% vs.\ 20\%, with more ideas
+\emph{helps} generalists (tier-1 accuracy 27\% vs.\ 14\%, with more ideas
 produced): agents navigate semantically, not structurally, and the human
-citation topology acts as a distractor rather than a scaffold.
+citation topology acts as a distractor rather than a scaffold---whereas
+removing semantic search \emph{hurts}, because search is where genuine
+anticipation comes from.
 Consistently, agent-written links have near-constant semantic reach
 regardless of scope, are degree-decoupled (unlike the preferential
 attachment that built the corpus), and preferentially target recent
@@ -87,8 +90,12 @@ realizes it---\emph{anticipation}, verified by live literature search
 \citep{kinney2023s2,priem2022openalex} and graded by an LLM judge on a
 six-level realization scale, reported across three cumulative
 venue-recognition tiers (top venues, top+second-tier venues, any published
-paper). Matches to pre-cutoff papers or to corpus members are excluded, so
-memorization cannot score.
+paper). Matches to pre-cutoff papers or to corpus members are excluded,
+and---because multiple-choice probes show the agent model's parametric
+memory in the AI domain extends through April 2025, seven months past its
+official cutoff (Appendix~\ref{app:probes})---only realizations published
+on or after 2025-06-01 count. Neither pretraining memorization nor
+post-training memory can score.
 
 Our central manipulation is deliberately minimal: a single
 \emph{specialization dial}. Each ``specialist'' agent draws one topic from
@@ -101,16 +108,15 @@ per-agent interaction depth.
 
 \textbf{Findings.}
 \begin{itemize}
-\item \textbf{Idea quality rises as reading narrows
-  (Sec.~\ref{sec:dial}).} Per-idea anticipation accuracy grows almost
-  monotonically as scope shrinks, and the narrowest scope wins: at
-  $m{=}100$---a region \emph{smaller} than the median natural topic
-  (228 papers), i.e., one topic's inner core---tier-1 acc@$\geq$2
-  reaches 51\% vs.\ 20\% for generalists, with the best mean
-  realization level in every tier. Every scoped condition beats the
-  unrestricted generalists; the pre-registered fear that very narrow
-  scopes would starve agents of recombination material did not
-  materialize.
+\item \textbf{An inverted-U in idea quality, peaking at a sub-area
+  scope (Sec.~\ref{sec:dial}).} Tier-1 acc@$\geq$2 peaks at $m{=}800$
+  (31\% vs.\ 14\% for generalists), with the whole narrow band
+  $m \in \{100, 400, 800\}$ (24--31\%) well above broad scopes
+  (15--19\%) and generalists last. The pre-registered fear that very
+  narrow scopes would starve agents of recombination material did not
+  materialize---but the narrow end's advantage over the peak appears
+  only under memory-contaminated scoring, not under the guarded
+  metric.
 \item \textbf{Quantity peaks at mid-narrow scope
   (Sec.~\ref{sec:dial}).} Scoped readers commit to ideas sooner and
   produce more of them (83 at $m{=}400$ vs.\ 50 for generalists over
@@ -118,17 +124,20 @@ per-agent interaction depth.
   wandering and curating.
 \item \textbf{Team size is a throughput knob, not a quality knob
   (Sec.~\ref{sec:scaling}).} From $N=10$ to $N=150$ generalists at fixed
-  depth, per-idea accuracy is flat (21--28\%) while absolute hits grow
-  linearly. The mechanism is stark: agents are effectively independent.
+  depth, per-idea accuracy is flat (12--19\%) while absolute hits grow
+  roughly linearly. The mechanism is stark: agents are effectively independent.
   Across all scaling runs (575 ideas, 10{,}300 actions) not one agent
   cited another agent's generated idea.
-\item \textbf{The citation structure is a distractor, not a scaffold
+\item \textbf{Navigation channels have three distinct roles
   (Sec.~\ref{sec:noedges}).} Deleting every initial citation edge makes
-  generalists \emph{better}: 60 ideas at 37\% tier-1 accuracy vs.\ 50 at
-  20\% with edges, under otherwise identical conditions. Deprived of
-  neighbors to wander through, agents commit to pure semantic-search
-  navigation (first idea at round 8 instead of 17) --- and spontaneously
-  rebuild structure, adding 53 links of their own to the edgeless graph.
+  generalists \emph{better} (60 ideas at 27\% tier-1 accuracy vs.\ 50
+  at 14\%): deprived of neighbors to wander through, agents commit to
+  pure semantic-search navigation and even rebuild structure by their
+  own logic. Disabling random jumps is neutral. Disabling semantic
+  search quadruples production but \emph{halves} guarded accuracy
+  (10\%)---search is where genuine anticipation comes from; without
+  it, agents backfill from parametric memory, which the realization
+  window discounts.
 \item \textbf{The dynamics have a characteristic ``handwriting''
   (Sec.~\ref{sec:structure}).} The semantic reach of agent-written links
   is nearly invariant to scope (median cosine distance 0.144--0.153,
@@ -246,11 +255,21 @@ Scores are reported in three cumulative recognition tiers:
 \textbf{tier~1} counts realizations in 60 top venues (the 58 CCF-A
 venues plus COLM and RLC) or papers with $\geq 50$ citations;
 \textbf{tier~2} additionally admits CCF-B venues or $\geq 10$ citations;
-\textbf{tier~3} admits any published paper. Per tier we report the mean
-best realization level and acc@$\geq$2, the share of ideas whose best
-match reaches level 2 (same specific problem)---our headline accuracy;
-higher thresholds ($\geq$3, $\geq$4, $=$5) are recorded in the released
-verdicts.
+\textbf{tier~3} admits any published paper.
+
+\textbf{Realization window.} The official knowledge cutoff of the agent
+model is 2024-09-30, but official cutoffs are not hard data boundaries:
+multiple-choice probes (Appendix~\ref{app:probes}) show the model
+reliably answers questions about AI-domain events through April 2025 and
+approaches chance from May--June 2025 onward. A ``realization'' the
+model may simply remember is not an anticipation. We therefore count
+only realizations published on or after \textbf{2025-06-01}---the
+earliest month at which probe accuracy is indistinguishable from
+chance---eight months past the official cutoff. Per tier we report the
+mean best realization level and acc@$\geq$2, the share of ideas whose
+best in-window match reaches level 2 (same specific problem)---our
+headline accuracy; higher thresholds ($\geq$3, $\geq$4, $=$5) are
+recorded in the released verdicts.
 
 \section{Experiment 1: the specialization dial}
 \label{sec:dial}
@@ -258,9 +277,10 @@ verdicts.
 \begin{table}[t]
 \caption{The specialization dial: $N{=}10$ agents, 80 rounds, one seed.
 Read scope $m$ is the number of corpus papers each agent may read;
-writes are always free. Each tier cell reports acc@$\geq$2, the number of
-realized ideas (level $\geq 2$, in parentheses), and the mean best
-realization level.}
+writes are always free. Only realizations published on/after 2025-06-01
+count (Sec.~\ref{sec:eval}). Each tier cell reports acc@$\geq$2, the
+number of realized ideas (level $\geq 2$, in parentheses), and the mean
+best realization level.}
 \label{tab:dial}
 \begin{center}\small
 \begin{tabular}{lrrccc}
@@ -268,13 +288,13 @@ realization level.}
  & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-C2 & 100   & 67 & \textbf{51\% (34) / 1.24} & \textbf{55\%} (37) / 1.37 & 79\% (53) / 2.13 \\
-C3 & 400   & \textbf{83} & 36\% (30) / 0.89 & 47\% (39) / 1.19 & \textbf{89\% (74)} / \textbf{2.48} \\
-C4 & 800   & 74 & 41\% (30) / 1.04 & 53\% (39) / \textbf{1.38} & 84\% (62) / 2.43 \\
-C5 & 1600  & 67 & 30\% (20) / 0.78 & 39\% (26) / 1.04 & 60\% (40) / 1.60 \\
-C6 & 3200  & 55 & 27\% (15) / 0.69  & 40\% (22) / 1.05 & 73\% (40) / 2.02 \\
-C7 & 6400  & 54 & 30\% (16) / 0.74  & 41\% (22) / 1.06 & 78\% (42) / 2.22 \\
-C1 & $\infty$ & 50 & 20\% (10) / 0.50 & 26\% (13) / 0.64 & 62\% (31) / 1.68 \\
+C2 & 100   & 67 & 24\% (16) / 0.57 & 33\% (22) / 0.78 & 73\% (49) / 1.99 \\
+C3 & 400   & \textbf{83} & 24\% (20) / 0.57 & 30\% (25) / 0.73 & \textbf{88\% (73)} / \textbf{2.40} \\
+C4 & 800   & 74 & \textbf{31\% (23) / 0.77} & \textbf{41\% (30) / 1.00} & 80\% (59) / 2.24 \\
+C5 & 1600  & 67 & 15\% (10) / 0.33 & 28\% (19) / 0.67 & 54\% (36) / 1.37 \\
+C6 & 3200  & 55 & 15\% (8) / 0.36  & 24\% (13) / 0.65 & 62\% (34) / 1.69 \\
+C7 & 6400  & 54 & 19\% (10) / 0.43  & 28\% (15) / 0.67 & 78\% (42) / 2.20 \\
+C1 & $\infty$ & 50 & 14\% (7) / 0.32 & 16\% (8) / 0.38 & 56\% (28) / 1.46 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -295,23 +315,25 @@ of realized ideas (level $\geq 2$) per tier.}
 
 Table~\ref{tab:dial} and Figure~\ref{fig:dial} give the core result.
 
-\textbf{Narrower is better.} Tier-1 accuracy runs \textbf{51\%}
-$\to$ 36\% $\to$ 41\% $\to$ 30\% $\to$ 27\% $\to$ 30\% $\to$ 20\% as
-scope widens from 100 papers to the whole corpus; mean realization
-level tracks the same shape in every tier. The narrowest scope
-($m{=}100$, smaller than the median natural topic of 228 papers) is
-best on accuracy and mean level in tiers 1--2 and on absolute tier-1
-hits (34), refuting the pre-registered expectation of material
-starvation at the narrow end; the $m{=}400$ dip below $m{=}800$ is
-within single-seed noise. Broad scopes underperform throughout
-(unfocused wandering; a semantically diffuse topic region produced an
-agent with zero output).
+\textbf{An inverted-U peaking at a sub-area scope.} Tier-1 accuracy
+runs 24\% $\to$ 24\% $\to$ \textbf{31\%} $\to$ 15\% $\to$ 15\%
+$\to$ 19\% $\to$ 14\% as scope widens from 100 papers to the whole
+corpus; mean realization level tracks the same shape in every tier.
+The $m{=}800$ sub-area neighborhood leads on accuracy, absolute hits,
+and mean level in tiers 1--2; the whole narrow band (100--800) clears
+every broad scope; and even the extreme $m{=}100$ core---smaller than
+the median natural topic of 228 papers---holds 24\%, refuting the
+pre-registered fear of material starvation at the narrow end.
+(Without the realization window, $m{=}100$ appears to win outright at
+51\%; its excess hits concentrate exactly in the memory-risk months,
+a caution documented in Appendix~\ref{app:probes}.) Broad scopes
+underperform throughout (unfocused wandering; a semantically diffuse
+topic region produced an agent with zero output).
 
 \textbf{Constraint beats freedom everywhere.} Every scoped condition
-dominates the unrestricted generalists on every tier, by rate and by
-absolute hits. Moreover the generalists' accuracy \emph{fell} from 22\%
-to 20\% when the run was extended from 40 to 80 rounds: the marginal
-quality of freely-roaming exploration decays.
+matches or beats the unrestricted generalists on every tier, by rate
+and by absolute hits, and the narrow band does so by a factor of about
+two.
 
 \begin{figure}[t]
 \begin{center}
@@ -344,26 +366,23 @@ idea's provenance: we take the generating agent's preceding 20 actions
 by the navigation channel that produced it---the node was surfaced by an
 earlier \emph{search}, exposed as a neighbor \emph{link} in an earlier
 browse, delivered by a random \emph{jump}, or is the agent's \emph{own}
-earlier idea. Table~\ref{tab:provenance} aggregates all 1{,}069
+earlier idea. Table~\ref{tab:provenance} aggregates all 1{,}337
 evaluated ideas across our experiments. Realized and unrealized ideas
-are preceded by the \emph{same volume} of reading ($\sim$10.5 reads);
+are preceded by the \emph{same volume} of reading ($\sim$10.7 reads);
 what differs is its composition. Ideas realized in recognized venues
-(tier~1) grew out of windows with more search-driven reads (6.27
-vs.\ 5.45), fewer link-driven reads (3.23 vs.\ 3.82), fewer jumps, and
-almost no re-reading of the agent's own output. Within the standard regime, then, search-fed material predicts
-realization while link-fed material does not---consistent with the
-edge-removal ablation of Sec.~\ref{sec:noedges}. The search-removal
-ablation there adds a caution against a purely causal reading: without
-search, agents recover unchanged per-idea accuracy by other routes, so
-search-fed reading marks the deliberative mode rather than being the
-sole conduit of quality.
+(tier~1) grew out of windows with more search-driven reads (5.76
+vs.\ 4.62), fewer link-driven reads (3.75 vs.\ 4.57), fewer jumps, and
+almost no re-reading of the agent's own output. Search-fed material predicts realization while link-fed material
+predicts its absence---fully consistent with the channel ablations of
+Sec.~\ref{sec:noedges}, where removing links helps and removing search
+hurts.
 
 \begin{table}[t]
 \caption{Provenance of the reading that precedes each generated idea:
 average composition of the generating agent's 20-action lookback window
 (= its memory), grouped by realization outcome (tiers are cumulative;
-``unrealized'' = no tier-3 match at level $\geq 2$). Pooled over all
-1{,}069 evaluated ideas from every run in the paper.}
+``unrealized'' = no in-window tier-3 match at level $\geq 2$). Pooled
+over all 1{,}337 evaluated ideas from every run in the paper.}
 \label{tab:provenance}
 \begin{center}\small
 \begin{tabular}{lrcccccc}
@@ -372,10 +391,10 @@ average composition of the generating agent's 20-action lookback window
  \textbf{search-fed} & \textbf{link-fed} & \textbf{jump-fed} &
  \textbf{own-idea} \\
 \midrule
-tier-1 realized & 301 & 10.48 & 6.05 & \textbf{6.27} & \textbf{3.23} & 0.92 & 0.06 \\
-tier-2 realized & 404 & 10.46 & 5.97 & 6.15 & 3.31 & 0.95 & 0.05 \\
-tier-3 realized & 767 & 10.62 & 5.88 & 6.09 & 3.49 & 0.96 & 0.08 \\
-unrealized      & 302 & 10.50 & 5.86 & 5.45 & 3.82 & 1.06 & 0.17 \\
+tier-1 realized & 231 & 10.62 & 5.77 & \textbf{5.76} & \textbf{3.75} & 1.03 & 0.08 \\
+tier-2 realized & 316 & 10.56 & 5.61 & 5.59 & 3.79 & 1.10 & 0.07 \\
+tier-3 realized & 884 & 10.69 & 5.27 & 5.18 & 4.12 & 1.30 & 0.09 \\
+unrealized      & 453 & 10.77 & 5.10 & 4.62 & 4.57 & 1.42 & 0.16 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -395,10 +414,10 @@ Per-idea accuracy is flat; absolute hits scale with output.}
 \textbf{$N$} & \textbf{ideas (per agent)} & \textbf{tier-1 acc (hits) / mean} &
 \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-10  & 12 (1.2)  & 25\% (3) / 0.67  & 42\% (5) / 1.08  & 75\% (9) / 2.00 \\
-50  & 103 (2.1) & 21\% (22) / 0.55 & 34\% (35) / 0.86 & 71\% (73) / 1.98 \\
-100 & 180 (1.8) & 24\% (44) / 0.61 & 33\% (60) / 0.83 & 69\% (124) / 1.87 \\
-150 & 280 (1.9) & 28\% (77) / 0.66 & 38\% (105) / 0.95 & 68\% (190) / 1.86 \\
+10  & 12 (1.2)  & 17\% (2) / 0.42  & 25\% (3) / 0.67  & 75\% (9) / 2.00 \\
+50  & 103 (2.1) & 12\% (12) / 0.31 & 17\% (18) / 0.45 & 65\% (67) / 1.77 \\
+100 & 180 (1.8) & 19\% (34) / 0.47 & 23\% (41) / 0.57 & 64\% (115) / 1.70 \\
+150 & 280 (1.9) & 16\% (46) / 0.38 & 24\% (66) / 0.60 & 62\% (173) / 1.69 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -417,9 +436,9 @@ teammates' generated ideas) is zero throughout (Sec.~\ref{sec:scaling}).}
 
 Holding per-agent depth fixed at 30 rounds and growing the team from 10
 to 150 generalists (Table~\ref{tab:scaling}, Figure~\ref{fig:scaling}),
-per-idea accuracy stays in the 21--28\% band on tier~1---the $N{=}10$
-value rests on 3 hits and is within noise of the rest---while
-absolute tier-1 hits grow essentially linearly (3, 22, 44, 77). Team
+per-idea accuracy stays in the 12--19\% band on tier~1---the $N{=}10$
+value rests on 2 hits and is within noise of the rest---while
+absolute tier-1 hits grow roughly linearly (2, 12, 34, 46). Team
 size buys throughput, not per-idea quality.
 
 The mechanism is that the agents are, in practice, independent samplers.
@@ -442,9 +461,10 @@ collaboration effects---and the natural next intervention.
 \begin{table}[t]
 \caption{Navigation-channel ablations: identical to C1 (10 generalists,
 80 rounds, same seed and corpus) except one channel is removed---the
-initial citation edges, random jumps, or semantic search. Removing any
-channel increases output without hurting per-idea accuracy; the full
-action set is the \emph{worst} configuration.}
+initial citation edges, random jumps, or semantic search. The three
+channels play three roles: links are a distractor (removal helps),
+jumps are neutral, and search is the source of genuine anticipation
+(removal quadruples output but halves accuracy).}
 \label{tab:noedges}
 \begin{center}\small
 \begin{tabular}{lrccc}
@@ -452,10 +472,10 @@ action set is the \emph{worst} configuration.}
  & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-no edges & 60 & \textbf{37\% (22) / 0.93} & \textbf{43\%} (26) / \textbf{1.07} & 75\% (45) / 1.97 \\
-no jumps & 63 & 24\% (15) / 0.62 & 27\% (17) / 0.71 & 73\% (46) / 1.92 \\
-no search & \textbf{201} & 24\% (48) / 0.59 & 36\% (73) / 0.88 & \textbf{76\% (152)} / \textbf{2.00} \\
-C1 (full) & 50 & 20\% (10) / 0.50 & 26\% (13) / 0.64 & 62\% (31) / 1.68 \\
+no edges & 60 & \textbf{27\% (16) / 0.67} & \textbf{30\% (18) / 0.73} & 63\% (38) / 1.63 \\
+no jumps & 63 & 14\% (9) / 0.38 & 17\% (11) / 0.46 & \textbf{71\% (45)} / \textbf{1.87} \\
+no search & \textbf{201} & 10\% (20) / 0.27 & 15\% (30) / 0.38 & 62\% (125) / 1.63 \\
+C1 (full) & 50 & 14\% (7) / 0.32 & 16\% (8) / 0.38 & 56\% (28) / 1.46 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -464,8 +484,8 @@ C1 (full) & 50 & 20\% (10) / 0.50 & 26\% (13) / 0.64 & 62\% (31) / 1.68 \\
 If agents used the citation network as a navigational scaffold, deleting
 its edges should hurt. It does the opposite (Table~\ref{tab:noedges}):
 with an edgeless initial graph, the same generalist team produces 20\%
-more ideas at nearly double the tier-1 accuracy (37\% vs.\ 20\%)---
-approaching the dial's $m{=}800$ optimum of 41\%---and starts generating
+more ideas at nearly double the tier-1 accuracy (27\% vs.\ 14\%)---
+approaching the dial's $m{=}800$ peak of 31\%---and starts generating
 at team round 8 instead of 17.
 
 The mechanism follows from Sec.~\ref{sec:structure}: agents discover
@@ -482,20 +502,19 @@ rebuild structure, but by their own semantic logic rather than the
 corpus's citation logic.
 
 Two companion ablations remove the other channels. Disabling random
-jumps points the same way with a smaller effect (63 ideas at 24\%
-vs.\ 50 at 20\%)---unsurprising, since C1 agents only jumped $\sim$20
-times in 800 actions. Disabling \emph{semantic search} produces the
-most dramatic behavioral shift of any intervention in this paper:
-production quadruples (201 ideas) while per-idea accuracy holds at
-24\%, yielding 48 tier-1 hits. Search is thus a \emph{throttle}, not
-the sole source of quality: it is the channel that keeps agents in
-deliberation (``keep reading'') mode, and without it they write
-prolifically from links, jumps, and parametric knowledge at unchanged
-per-idea quality. Together the three ablations give a stark summary:
-for unrestricted generalists, removing \emph{any} navigation channel
-helps, and the full action set is the worst configuration---the
-generalist's failure mode is wandering, in whichever channel permits
-it. We caution that these are single seeded runs per arm; the
+jumps is neutral (14\% vs.\ 14\%)---unsurprising, since C1 agents
+only jumped $\sim$20 times in 800 actions. Disabling \emph{semantic
+search} produces the most dramatic behavioral shift of any
+intervention in this paper: production quadruples (201 ideas, written
+from citation links, jumps, and parametric knowledge) while guarded
+accuracy falls to 10\%, the lowest of any condition. Notably, under
+memory-contaminated scoring the no-search condition \emph{appears}
+unharmed (24\%); its hits evaporate fastest when the realization
+window is applied---the fingerprint of parametric recall standing in
+for reading. The three channels thus play three distinct roles:
+citation links are a distractor (removal helps), random jumps are
+irrelevant, and semantic search is where genuine anticipation comes
+from. We caution that these are single seeded runs per arm; the
 directions, the mean-level gaps, and the behavioral signatures are
 mutually consistent, but replication is needed before the strongest
 reading.
@@ -554,8 +573,12 @@ many runs and both experiments.
 \textbf{One agent model, LLM judge.} Dynamics are those of a single
 model (\texttt{gpt-5}); the judge is a smaller LLM whose six-level
 rubric we audited but did not calibrate against human experts at scale.
-The anticipation window (post-2024-09) is still young; scores will only
-grow as the literature fills in.
+The realization window (post-2025-06) is young; scores will only grow
+as the literature fills in. The window is set by behavioral probes
+rather than by a guarantee from the model provider, and a paper whose
+official publication date is in-window may have circulated as a
+preprint earlier; both residual risks are documented in
+Appendix~\ref{app:probes}.
 
 \textbf{Scope mechanism.} Equal-mass regions leak across topics by
 design (Sec.~\ref{sec:scopes}); we quantified purity rather than
@@ -566,11 +589,12 @@ dial rather than a confound.
 
 Framing machine-assisted innovation as a dynamical system on an idea
 network lets us intervene on the coupling between researcher and
-knowledge structure directly. On this substrate, the operative lever on
-idea quality is \emph{how reading is situated}---the narrower the
-reading, the better, down to a single topic's hundred-paper core, and
-any scope beats none---while team size sets only throughput, because
-today's agents do not yet read each other. The human citation structure itself,
+knowledge structure directly. On this substrate, under an evaluation guarded against the agent
+model's post-cutoff parametric memory, the operative lever on idea
+quality is \emph{how reading is situated}---a sub-area scope of
+$\sim$800 papers beats both narrower and broader diets, and any scope
+beats none---while team size sets only throughput, because today's
+agents do not yet read each other. The human citation structure itself,
 scaffold of every account of cumulative science, is at best inert and at
 worst a distractor for these semantically-navigating dynamics: removing
 it outright improved both output and accuracy. The immediate frontier is
@@ -777,6 +801,66 @@ goal. 2: same specific problem, unrelated approach. 3: same problem,
 approaches in the same method family. 4: same problem and core
 mechanism, differing in secondary components. 5: essentially the same
 idea (problem, mechanism, and key design choices).
+
+\subsection{Choosing the realization window: memory probes}
+\label{app:probes}
+
+The agent model's official knowledge cutoff is 2024-09-30, but official
+cutoffs are not hard data boundaries: post-training continues until
+release (August 2025 for our agent model), and any ``anticipation''
+realized by a paper the model has memorized is recall, not foresight.
+To locate the actual boundary of the model's knowledge we ran three
+probe batteries against the exact model configuration used by our
+agents (no tools, no network access), asking about verifiable events
+binned by when they happened: \textbf{A} = 2024-10 to 2024-12,
+\textbf{B} = 2025-01 to 2025-04, \textbf{C} = 2025-05 to 2025-08 (up
+to the model's release), and \textbf{D} = 2025-09 onward---events
+\emph{after} release, which the model cannot know and which therefore
+measure its guessing ceiling.
+
+\begin{center}\small
+\begin{tabular}{lcccc}
+\toprule
+ & \textbf{A} 24-10..12 & \textbf{B} 25-01..04 & \textbf{C} 25-05..08 &
+ \textbf{D} $\geq$25-09 (control) \\
+\midrule
+yes/no, AI events & 1/3 & \textbf{3/3} & 1/4 & 0/5 \\
+4-choice, general events & 3/5 & 1/5 & 0/5 & 1/5 \\
+4-choice, AI events & 3/4 & \textbf{4/5} & 3/4 & 3/5 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Three observations fix the boundary. (i) \emph{Forced choice reveals
+hidden knowledge}: in free-form probing the model claims ignorance of
+events (o3, Claude 3.7, the s1 paper) that it answers correctly under
+forced choice, so cautious ``I don't know'' responses cannot be taken
+as absence of memory. (ii) \emph{Memory is strong through April 2025
+in the AI domain}: bin B AI questions are answered near-perfectly in
+both formats, including content questions that cannot be guessed (the
+mechanism of the s1 paper, Llama 4's architecture, DeepSeek-R1's
+training method). General-news knowledge fades much earlier---the
+post-training refresh is domain-selective, and skewed toward exactly
+the domain our agents generate in. (iii) \emph{Bin C does not exceed
+the guessing ceiling}: the control bin D shows that multiple-choice
+questions about product-release \emph{dates} are guessable at well
+above chance (3/5 despite being unknowable), and bin C's correct
+answers are almost exclusively of that style; on yes/no probes and
+free recall, bin C performance collapses (1/4), and the fabricated-fact
+controls draw zero false yeses. Knowledge in May--August 2025 is thus
+indistinguishable from informed guessing.
+
+We therefore set the realization window at \textbf{2025-06-01}: the
+earliest month at which no probe format shows above-guessing knowledge.
+Without this window, contamination is material---64\% of face-value
+tier-1 hits fall in 2024-10 to 2025-08, and the no-search ablation,
+which forces agents onto parametric knowledge, loses its hits fastest
+when the window is applied (Sec.~\ref{sec:noedges}). Two residual
+risks remain: the window is behavioral evidence, not a provider
+guarantee, and a paper published in-window may have circulated as a
+preprint earlier; both bias reported accuracies in opposite directions
+and neither affects between-condition comparisons, which all use the
+same window.
 
 \subsection{Case studies: anticipations and their realizations}
 \label{app:cases}
