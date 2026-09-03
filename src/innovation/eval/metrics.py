@@ -4,11 +4,29 @@ import numpy as np
 
 
 # --- headline (graded realization, levels 0-5, three recognition tiers) ---
-def idea_levels(verdicts, dup_flags: dict[str, bool], tier: str = "tier1") -> list[int]:
+_TIERS = ("tier1", "tier2", "tier3")
+
+
+def idea_levels(verdicts, dup_flags: dict[str, bool], tier: str = "tier1",
+                realized_min_date: str | None = None) -> list[int]:
     """Per-idea realization level at a cumulative recognition tier;
-    near-duplicates of the past corpus score 0."""
-    return [0 if dup_flags.get(v.idea_id, False) else v.best[tier]["level"]
-            for v in verdicts]
+    near-duplicates of the past corpus score 0. With realized_min_date, only
+    realizations published ON/AFTER that date count (memory-contamination
+    guard: the agent model's parametric knowledge demonstrably extends months
+    past its official cutoff, so early 'anticipations' may be recall)."""
+    if realized_min_date is None:
+        return [0 if dup_flags.get(v.idea_id, False) else v.best[tier]["level"]
+                for v in verdicts]
+    out = []
+    upto = _TIERS[:_TIERS.index(tier) + 1]
+    for v in verdicts:
+        if dup_flags.get(v.idea_id, False):
+            out.append(0)
+            continue
+        pool = [c for t in upto for c in (v.candidates.get(t) or [])]
+        out.append(max((c["level"] for c in pool
+                        if c.get("pub_date", "") >= realized_min_date), default=0))
+    return out
 
 
 # --- process observables ---
@@ -35,11 +53,14 @@ def diversity(vecs: np.ndarray) -> float:
     return float(np.mean(1.0 - off_diag))
 
 
-def aggregate_run(verdicts, dup_flags: dict[str, bool]) -> dict:
+def aggregate_run(verdicts, dup_flags: dict[str, bool],
+                  realized_min_date: str | None = None) -> dict:
     out = {"n_ideas": len(verdicts),
            "n_dup_flagged": sum(1 for f in dup_flags.values() if f)}
+    if realized_min_date:
+        out["realized_min_date"] = realized_min_date
     for tier in ("tier1", "tier2", "tier3"):
-        lv = idea_levels(verdicts, dup_flags, tier)
+        lv = idea_levels(verdicts, dup_flags, tier, realized_min_date)
         n = len(lv)
         # Headline accuracy is acc@>=2 — "same specific problem" (user
         # decision 2026-09-02); higher thresholds kept as secondary detail.

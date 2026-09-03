@@ -179,7 +179,8 @@ def cmd_evaluate(cfg):
             corpus_titles=corpus_titles))
         dup_flags[nid] = past_dup_flag(emb.encode([text])[0], corpus_vecs,
                                        ceiling=cfg["eval"]["dup_ceiling"])
-    agg = aggregate_run(verdicts, dup_flags)
+    agg = aggregate_run(verdicts, dup_flags,
+                        realized_min_date=cfg["eval"].get("realized_min_date"))
     (run_dir / "metrics.json").write_text(json.dumps(agg, indent=2))
     verdict_records = [
         {**dataclasses.asdict(v), "dup_flag": dup_flags[v.idea_id]}

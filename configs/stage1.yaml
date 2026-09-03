@@ -203,6 +203,12 @@ eval:
   n_queries: 3
   top_k: 5
   dup_ceiling: 0.95
+  # Realization window floor: only papers published on/after this date count
+  # as realizations. Probe evidence (appendix) shows gpt-5's parametric
+  # memory extends ~7 months past its official 2024-09-30 cutoff, strongly
+  # in the AI domain through 2025-04 and fading by 2025-05; 2025-06 is the
+  # earliest boundary at which probe accuracy is at chance.
+  realized_min_date: "2025-06-01"
   recognized_min_citations: 50  # tier1 OR-arm: citations >= 50
   tier2_min_citations: 10       # tier2 OR-arm: CCF A+B venue OR citations >= 10
 run:
