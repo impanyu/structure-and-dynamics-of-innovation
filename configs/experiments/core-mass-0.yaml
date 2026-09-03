@@ -1,0 +1,20 @@
+# The m=0 endpoint of the specialization dial: agents receive ONLY their
+# random topic name — no reading of any kind. Pure parametric-memory
+# generation; the contamination control for the dial. 70 steps ≈ the idea
+# count of the narrow dial conditions.
+extends: ../stage1.yaml
+run:
+  run_id: core-mass-0
+  seed: 0
+  total_steps: 70
+  agents:
+    - {agent_id: s0, policy: topiconly, read_topics: random}
+    - {agent_id: s1, policy: topiconly, read_topics: random}
+    - {agent_id: s2, policy: topiconly, read_topics: random}
+    - {agent_id: s3, policy: topiconly, read_topics: random}
+    - {agent_id: s4, policy: topiconly, read_topics: random}
+    - {agent_id: s5, policy: topiconly, read_topics: random}
+    - {agent_id: s6, policy: topiconly, read_topics: random}
+    - {agent_id: s7, policy: topiconly, read_topics: random}
+    - {agent_id: s8, policy: topiconly, read_topics: random}
+    - {agent_id: s9, policy: topiconly, read_topics: random}

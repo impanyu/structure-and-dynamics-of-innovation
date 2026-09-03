@@ -1,4 +1,6 @@
 """Baseline policies: isolate the contributions of navigation and of the LLM (spec §3.4)."""
+from collections import deque
+
 import numpy as np
 
 from innovation.experiments.env import Action
@@ -43,3 +45,35 @@ class PreferentialAttachmentPolicy(Policy):
                                                  replace=False, p=weights)]
         text = "A recombination of the ideas in: " + ", ".join(cited) + "."
         return Action("generate", {"text": text, "cited_ids": cited})
+
+
+TOPIC_ONLY_TEMPLATE = """Topic: {topic}
+
+Your previously proposed ideas in this topic:
+{prior}
+
+Propose ONE genuinely new research idea in this topic, different from your \
+previous ones. Write a single 3-4 sentence paragraph covering the problem, \
+the key insight, and the method. Write only the paragraph."""
+
+
+class TopicOnlyPolicy(Policy):
+    """The m=0 endpoint of the specialization dial: the agent is given ONLY
+    its topic name -- no reading of any kind. Ideas come purely from
+    parametric knowledge; a memory-contamination control for the dial."""
+
+    def __init__(self, *, llm, model: str, topic: str, identity: str = "",
+                 memory_size: int = 20):
+        self.llm, self.model, self.topic = llm, model, topic
+        self.identity = identity
+        self.previous: deque[str] = deque(maxlen=memory_size)
+
+    def act(self, obs: dict) -> Action:
+        prior = "\n".join(f"- {t[:250]}" for t in self.previous) or "(none)"
+        header = f"[agent {self.identity}]\n\n" if self.identity else ""
+        text = self.llm.complete(
+            model=self.model, system="You propose new research ideas.",
+            user=header + TOPIC_ONLY_TEMPLATE.format(topic=self.topic, prior=prior),
+            max_tokens=2000).strip()
+        self.previous.append(text)
+        return Action("generate", {"text": text, "cited_ids": []})

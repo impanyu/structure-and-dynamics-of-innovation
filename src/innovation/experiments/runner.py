@@ -6,7 +6,8 @@ from pathlib import Path
 import numpy as np
 
 from innovation.agents.baselines import (NoNavLLMPolicy,
-                                         PreferentialAttachmentPolicy)
+                                         PreferentialAttachmentPolicy,
+                                         TopicOnlyPolicy)
 from innovation.agents.llm_agent import LLMAgentPolicy
 from innovation.experiments.env import AgentScope, Environment
 from innovation.experiments.events import EventLog
@@ -36,6 +37,11 @@ def build_policy(spec: dict, *, llm, model, graph, rng):
     if kind == "nonav":
         return NoNavLLMPolicy(llm=llm, model=model, graph=graph, rng=rng,
                               k=spec.get("k", 3))
+    if kind == "topiconly":
+        return TopicOnlyPolicy(llm=llm, model=model,
+                               topic=spec["read_topics"][0],
+                               identity=spec.get("_identity", ""),
+                               memory_size=spec.get("memory_size", 20))
     if kind == "pa":
         return PreferentialAttachmentPolicy(graph=graph, rng=rng, m=spec.get("m", 3))
     raise ValueError(f"unknown policy kind: {kind}")
