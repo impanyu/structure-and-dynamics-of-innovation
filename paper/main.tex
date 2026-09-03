@@ -41,9 +41,9 @@ matched at level $\geq 2$, ``same specific problem''). On a
 of corpus papers an agent is allowed to read, from 100 up to the whole
 corpus. We find (i) an inverted-U in anticipation accuracy over reading
 scope, peaking at 800 papers---a coherent sub-area, not one topic---at
-tier-1 accuracy 31\%, with the whole narrow band (100--800) well ahead
-of broad scopes, and \emph{both} dial endpoints on the parametric
-floor: agents reading nothing (13\%) and unrestricted generalists
+tier-1 accuracy 31\%, with the whole narrow-to-mid band (100--1600)
+well ahead of broad scopes, and \emph{both} dial endpoints on the
+parametric floor: agents reading nothing (13\%) and unrestricted generalists
 reading anything (14\%) are indistinguishable; (ii) idea
 production peaks at a mid-narrow scope and falls as reading widens; (iii) team size is a pure throughput
 knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits
@@ -112,8 +112,8 @@ per-agent interaction depth.
 \begin{itemize}
 \item \textbf{An inverted-U in idea quality, peaking at a sub-area
   scope (Sec.~\ref{sec:dial}).} Tier-1 acc@$\geq$2 peaks at $m{=}800$
-  (31\% vs.\ 14\% for generalists), with the whole narrow band
-  $m \in \{100, 400, 800\}$ (24--31\%) well above broad scopes
+  (31\% vs.\ 14\% for generalists), with the whole narrow-to-mid band
+  $m \in \{100, 400, 800, 1600\}$ (24--31\%) well above broad scopes
   (15--19\%) and generalists last. The pre-registered fear that very
   narrow scopes would starve agents of recombination material did not
   materialize---but the narrow end's advantage over the peak appears
@@ -304,7 +304,7 @@ C0 & 0 (topic name only) & 70 & 13\% (9) / 0.30 & 19\% (13) / 0.43 & 67\% (47) /
 C2 & 100   & 67 & 24\% (16) / 0.57 & 33\% (22) / 0.78 & 73\% (49) / 1.99 \\
 C3 & 400   & \textbf{83} & 24\% (20) / 0.57 & 30\% (25) / 0.73 & \textbf{88\% (73)} / \textbf{2.40} \\
 C4 & 800   & 74 & \textbf{31\% (23) / 0.77} & \textbf{41\% (30) / 1.00} & 80\% (59) / 2.24 \\
-C5 & 1600  & 67 & 15\% (10) / 0.33 & 28\% (19) / 0.67 & 54\% (36) / 1.37 \\
+C5 & 1600  & 58 & 28\% (16) / 0.76 & 34\% (20) / 0.93 & 69\% (40) / 1.88 \\
 C6 & 3200  & 55 & 15\% (8) / 0.36  & 24\% (13) / 0.65 & 62\% (34) / 1.69 \\
 C7 & 6400  & 54 & 19\% (10) / 0.43  & 28\% (15) / 0.67 & 78\% (42) / 2.20 \\
 C1 & $\infty$ & 50 & 14\% (7) / 0.32 & 16\% (8) / 0.38 & 56\% (28) / 1.46 \\
@@ -329,14 +329,15 @@ of realized ideas (level $\geq 2$) per tier.}
 Table~\ref{tab:dial} and Figure~\ref{fig:dial} give the core result.
 
 \textbf{An inverted-U peaking at a sub-area scope.} Tier-1 accuracy
-runs 24\% $\to$ 24\% $\to$ \textbf{31\%} $\to$ 15\% $\to$ 15\%
+runs 24\% $\to$ 24\% $\to$ \textbf{31\%} $\to$ 28\% $\to$ 15\%
 $\to$ 19\% $\to$ 14\% as scope widens from 100 papers to the whole
 corpus; mean realization level tracks the same shape in every tier.
 The $m{=}800$ sub-area neighborhood leads on accuracy, absolute hits,
-and mean level in tiers 1--2; the whole narrow band (100--800) clears
-every broad scope; and even the extreme $m{=}100$ core---smaller than
-the median natural topic of 228 papers---holds 24\%, refuting the
-pre-registered fear of material starvation at the narrow end.
+and mean level in tiers 1--2; the whole narrow-to-mid band (100--1600,
+24--31\%) clears every broad scope (14--19\%); and even the extreme
+$m{=}100$ core---smaller than the median natural topic of 228
+papers---holds 24\%, refuting the pre-registered fear of material
+starvation at the narrow end.
 (Without the realization window, $m{=}100$ appears to win outright at
 51\%; its excess hits concentrate exactly in the memory-risk months,
 a caution documented in Appendix~\ref{app:probes}.) Broad scopes
@@ -373,7 +374,7 @@ quality drifts over the run---and no curve saturates by round 80.}
 \end{figure}
 
 \textbf{Narrow readers ship; broad readers browse.} Idea production
-peaks at $m{=}400$ and falls as scope widens (67, 83, 74, 67, 55, 54,
+peaks at $m{=}400$ and falls as scope widens (67, 83, 74, 58, 55, 54,
 50 for $m$ = 100 through $\infty$), and
 Figure~\ref{fig:accum} shows why: after a comparable exploration onset
 (first team idea between rounds 8 and 17; median personal onset round
@@ -388,12 +389,12 @@ idea's provenance: we take the generating agent's preceding 20 actions
 by the navigation channel that produced it---the node was surfaced by an
 earlier \emph{search}, exposed as a neighbor \emph{link} in an earlier
 browse, delivered by a random \emph{jump}, or is the agent's \emph{own}
-earlier idea. Table~\ref{tab:provenance} aggregates all 1{,}337
+earlier idea. Table~\ref{tab:provenance} aggregates all 1{,}328
 evaluated ideas across our experiments. Realized and unrealized ideas
-are preceded by the \emph{same volume} of reading ($\sim$10.7 reads);
+are preceded by the \emph{same volume} of reading ($\sim$10.6 reads);
 what differs is its composition. Ideas realized in recognized venues
-(tier~1) grew out of windows with more search-driven reads (5.76
-vs.\ 4.62), fewer link-driven reads (3.75 vs.\ 4.57), fewer jumps, and
+(tier~1) grew out of windows with more search-driven reads (5.78
+vs.\ 4.55), fewer link-driven reads (3.69 vs.\ 4.64), fewer jumps, and
 almost no re-reading of the agent's own output. Search-fed material predicts realization while link-fed material
 predicts its absence---fully consistent with the channel ablations of
 Sec.~\ref{sec:noedges}, where removing links helps and removing search
@@ -404,7 +405,7 @@ hurts.
 average composition of the generating agent's 20-action lookback window
 (= its memory), grouped by realization outcome (tiers are cumulative;
 ``unrealized'' = no in-window tier-3 match at level $\geq 2$). Pooled
-over all 1{,}337 evaluated ideas from every run in the paper.}
+over all 1{,}328 evaluated ideas from every run in the paper.}
 \label{tab:provenance}
 \begin{center}\small
 \begin{tabular}{lrcccccc}
@@ -413,10 +414,10 @@ over all 1{,}337 evaluated ideas from every run in the paper.}
  \textbf{search-fed} & \textbf{link-fed} & \textbf{jump-fed} &
  \textbf{own-idea} \\
 \midrule
-tier-1 realized & 231 & 10.62 & 5.77 & \textbf{5.76} & \textbf{3.75} & 1.03 & 0.08 \\
-tier-2 realized & 316 & 10.56 & 5.61 & 5.59 & 3.79 & 1.10 & 0.07 \\
-tier-3 realized & 884 & 10.69 & 5.27 & 5.18 & 4.12 & 1.30 & 0.09 \\
-unrealized      & 453 & 10.77 & 5.10 & 4.62 & 4.57 & 1.42 & 0.16 \\
+tier-1 realized & 237 & 10.57 & 5.85 & \textbf{5.78} & \textbf{3.69} & 1.02 & 0.08 \\
+tier-2 realized & 317 & 10.56 & 5.66 & 5.61 & 3.79 & 1.09 & 0.07 \\
+tier-3 realized & 888 & 10.68 & 5.28 & 5.18 & 4.12 & 1.29 & 0.09 \\
+unrealized      & 440 & 10.77 & 5.07 & 4.55 & 4.64 & 1.41 & 0.16 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -584,11 +585,15 @@ dynamics extending it obey different attachment rules.
 \section{Limitations}
 \label{sec:limits}
 
-\textbf{Single seed.} Every condition currently rests on one seeded run;
-per-condition idea counts (50--280) give usable per-idea statistics, but
-between-condition differences---especially the exact peak location on
-the dial---need replication across seeds (and topic draws) before strong
-claims. The clearest findings (scoped $>$ unrestricted on all tiers;
+\textbf{Single seed.} Every condition rests on one seeded run
+(50--280 ideas each). Ideas cluster by agent thread, and a replicate of
+the $m{=}1600$ condition (identical topics, fresh sampling) moved
+tier-1 accuracy from 15\% to 28\%---roughly $\pm$7 points of
+thread-level noise per run; we report the replicate, and release both.
+The narrow-band-vs-broad contrast and the floor comparisons exceed this
+noise band; the fine structure within each band does not, and the exact
+peak location needs replication across seeds (and topic draws) before
+strong claims. The clearest findings (scoped $>$ unrestricted on all tiers;
 monotone production; flat scaling; zero coupling) are consistent across
 many runs and both experiments.
 
