@@ -279,7 +279,11 @@ chance---eight months past the official cutoff. Per tier we report the
 mean best realization level and acc@$\geq$2, the share of ideas whose
 best in-window match reaches level 2 (same specific problem)---our
 headline accuracy; higher thresholds ($\geq$3, $\geq$4, $=$5) are
-recorded in the released verdicts.
+recorded in the released verdicts. Verbatim evaluation prompts, the
+full pipeline (retrieval, gating, caching), and sample generated ideas
+with their audit trails appear in
+Appendices~\ref{app:evalprompts}, \ref{app:eval},
+and~\ref{app:samples}.
 
 \section{Experiment 1: the specialization dial}
 \label{sec:dial}
@@ -570,9 +574,13 @@ appears to be an intrinsic property of the LLM dynamics.
 
 \textbf{Degree-decoupled, recency-seeking attachment.} Real citation
 edges concentrate on hubs: the median target of a corpus edge has
-in-degree 23. Agent-written links are nearly degree-blind: median target
-in-degree 0--2, against a uniform-selection baseline of 1 (mean 11.6
-vs.\ uniform 5.0, i.e., only a mild hub tail). The reason is the
+in-degree 23, and a preferential-attachment null model
+\citep{barabasi1999emergence} run on the same graph (800 template
+nodes, citations drawn $\propto$ in-degree) reproduces this
+concentration (median target in-degree 17). Agent-written links sit at
+the opposite end of this scale: median target in-degree 0--2, against a
+uniform-selection baseline of 1 (mean 11.6 vs.\ uniform 5.0, i.e.,
+only a mild hub tail). The reason is the
 discovery channel: agents find papers by semantic search, which is
 degree-agnostic, whereas human discovery historically flows through
 reference lists, the visibility cascade that produces preferential
@@ -821,6 +829,34 @@ and agent id) and the action documentation; there is no other
 communication channel between agents. Visible output is capped at
 2{,}000 tokens per turn (reasoning tokens budgeted separately).
 
+\subsection{Evaluation prompts}
+\label{app:evalprompts}
+
+\textbf{Query extraction} (\texttt{gpt-5-mini}, verbatim template;
+\{n\}=3):
+\begin{quote}\small\itshape
+Give \{n\} short keyword search queries (4--8 words each) for finding
+papers related to this research idea: the FIRST focused on the PROBLEM
+it addresses, the SECOND on its core METHOD, the THIRD combining both.
+One query per line, no numbering, nothing else. \\ Idea: \{idea\}
+\end{quote}
+
+\textbf{Judge} (\texttt{gpt-5-mini}, verbatim template; system prompt:
+``You grade how closely a candidate paper realizes a proposed research
+idea.''):
+\begin{quote}\small\itshape
+Research idea: \{idea\} \\ Candidate paper: Title: \{title\}
+Abstract: \{abstract\} \\ Grade how closely the paper realizes the
+idea on this scale: \\ 0 = different problem entirely \\ 1 = same
+broad area/task, but a different goal \\ 2 = same specific
+problem/goal, unrelated approach \\ 3 = same problem AND the
+approaches belong to the same method family \\ 4 = same problem AND
+the same core mechanism, differing in secondary components \\ 5 =
+essentially the same idea: problem, core mechanism, and key design
+choices match \\ Reply with JSON only: \{``level'': <0-5>,
+``evidence'': ``<one short sentence>''\}
+\end{quote}
+
 \subsection{Judge rubric}
 \label{app:rubric}
 Level 0: different problem entirely. 1: same broad area, different
@@ -892,6 +928,40 @@ provider guarantee, and a paper published in-window may have
 circulated as a preprint earlier; both bias reported accuracies in
 opposite directions and neither affects between-condition comparisons,
 which all use the same window.
+
+\subsection{Sample generated ideas}
+\label{app:samples}
+
+Five verbatim ideas illustrating the range of agent output (realization
+levels are in-window, tier-3 unless noted; the released verdicts contain
+every idea with its full audit trail).
+
+\textbf{C4 ($m{=}800$), realized at level 4.}
+\begin{quote}\small\itshape
+We propose a preconditioned kernel-Hopfield in-context learner that unifies linear-time attention with the associative-memory view to implement curvature-aware, one- to few-step optimization from context. A Transformer block with linear attention learns task-adaptive kernel features and uses an MLP to infer a low-rank preconditioner and prior mean from the prompt, so the associative KV accumulators perform a preconditioned GD-$\beta$ update toward the Bayesian posterior; with non-linear kernels, this becomes a functional-gradient step while retaining linear-time complexity. A meta-objective trains the block to minimize posterior risk over task families, while the Hopfield energy perspective provides a convergence regularizer and layerwise step-size control. This design improves stability on long contexts and sample efficiency over plain linear-attention ICL, and extends naturally to non-linear tasks via learned kernels.
+\end{quote}
+Matched (level 4): \emph{Transformers Can Implement Preconditioned Richardson Iteration for In-Context Gaussian Kernel Regression} (arXiv, May 2026).
+
+\textbf{C1 (generalist), realized at level 3 in a tier-1 venue.}
+\begin{quote}\small\itshape
+I propose latency-targeted threshold learning: insert layer-wise learnable pruning thresholds and jointly optimize weights and thresholds with a differentiable latency objective built from device-specific per-layer LUTs. A Lagrangian enforces a user-specified speedup during training, while structured sparsity (e.g., channel and GPU 2:4) is induced via relaxed top-k/straight-through mask parametrizations and then discretized at the end to preserve measured latency. This unifies speed-constrained allocation with end-to-end sparse training, aiming to deliver the hardware-guaranteed speedups of post-training solvers without the accuracy loss from late pruning. Empirically, this should match or surpass post-hoc speed-aware pruning at equivalent targets while eliminating extra retraining passes.
+\end{quote}
+Matched (level 3): \emph{LightPrune: Latency-Aware Structured Pruning for Efficient Deep Inference on Embedded Devices} (ICCV, October 2025).
+
+\textbf{C4 ($m{=}800$), not (yet) realized.}
+\begin{quote}\small\itshape
+We propose RKHS-Hopfield Linear ICL: parameterize the attention kernel feature map so that linearized attention implements a proximal/gradient step in a reproducing-kernel Hilbert space tailored to the task family, thereby shaping the Hopfield energy landscape to encode desirable attractor basins for in-context learning. Concretely, we learn kernel features and value projections so a single attention update matches a functional gradient descent step on the implicit RKHS loss given the context, with multi-heads covering different step sizes or preconditioners. This yields interpretable, stable associative retrieval aligned with gradient-based learning while retaining linear-time, streaming updates for long contexts. We expect improved non-linear ICL and better extrapolation by aligning the learned kernel with the task NTK and training via a meta-objective that penalizes deviation from the target functional update.
+\end{quote}
+
+\textbf{C0 (topic name only), not realized.}
+\begin{quote}\small\itshape
+Current self-supervised video representations entangle content and dynamics, making them hard to steer along meaningful control dimensions like pose, speed, or viewpoint without labels. Our key insight is to treat controllability as learning a latent operator algebra: mine naturally occurring near-duplicate video segments where only one factor changes, and use their residual differences as pseudo-interventions that reveal control directions. We propose Latent Control Algebra, which retrieves such pairs/triples, estimates dense correspondences to isolate residual changes, factorizes them into a small set of latent generators, and trains an encoder--decoder where content codes plus exponentiated generators reconstruct targets under cycle/inverse consistency and commutator regularization for disentanglement; rolling out generators must also predict short-horizon futures. This yields self-supervised, composable control axes that enable latent steering, controllable editing, and zero-shot policy transfer in downstream tasks.
+\end{quote}
+
+\textbf{No-search ablation, not realized.}
+\begin{quote}\small\itshape
+Adaptive Bias--Variance Compression (ABVC) for federated optimization tunes, per client and round, the bias--variance operating point of a generalized compressor to minimize bits-to-accuracy under heterogeneity and partial participation. ABVC combines EF-BV's error feedback with variance reduction via gradient-difference tracking in the MARINA style, and augments updates with a lightweight Hessian-learning module to form diagonal/low-rank preconditioners that set client-specific compression budgets; once the preconditioner stabilizes, we enable Nesterov-style acceleration as in ACGD. We hypothesize linear convergence under PL/strongly convex objectives with rates that smoothly interpolate between unbiased-VR and biased-contractive regimes, and improved scaling with the number of workers due to independent randomness and preconditioned error dynamics. Empirically, on vision/NLP FL benchmarks with top-k and low-rank compressors, ABVC should reduce communication at fixed accuracy and time-to-$\varepsilon$ versus EF-BV, MARINA, and FedNL variants.
+\end{quote}
 
 \subsection{Case studies: anticipations and their realizations}
 \label{app:cases}
