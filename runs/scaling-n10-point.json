@@ -1,0 +1,26 @@
+{
+  "n_ideas": 12,
+  "n_dup_flagged": 0,
+  "realized_min_date": "2025-06-01",
+  "tier1": {
+    "mean_level": 0.4166666666666667,
+    "acc_ge2": 0.16666666666666666,
+    "acc_ge3": 0.08333333333333333,
+    "acc_ge4": 0.0,
+    "acc_eq5": 0.0
+  },
+  "tier2": {
+    "mean_level": 0.6666666666666666,
+    "acc_ge2": 0.25,
+    "acc_ge3": 0.16666666666666666,
+    "acc_ge4": 0.0,
+    "acc_eq5": 0.0
+  },
+  "tier3": {
+    "mean_level": 2.0,
+    "acc_ge2": 0.75,
+    "acc_ge3": 0.5,
+    "acc_ge4": 0.0,
+    "acc_eq5": 0.0
+  }
+}

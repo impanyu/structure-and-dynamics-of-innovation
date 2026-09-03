@@ -1,0 +1,26 @@
+{
+  "n_ideas": 50,
+  "n_dup_flagged": 0,
+  "realized_min_date": "2025-06-01",
+  "tier1": {
+    "mean_level": 0.32,
+    "acc_ge2": 0.14,
+    "acc_ge3": 0.04,
+    "acc_ge4": 0.0,
+    "acc_eq5": 0.0
+  },
+  "tier2": {
+    "mean_level": 0.38,
+    "acc_ge2": 0.16,
+    "acc_ge3": 0.06,
+    "acc_ge4": 0.0,
+    "acc_eq5": 0.0
+  },
+  "tier3": {
+    "mean_level": 1.46,
+    "acc_ge2": 0.56,
+    "acc_ge3": 0.34,
+    "acc_ge4": 0.0,
+    "acc_eq5": 0.0
+  }
+}

@@ -1,0 +1,20 @@
+{
+ "run_id": "core-mass-3200-s0",
+ "seed": 0,
+ "topic_assignments": {
+  "s0": "representation learning for sequential decision making",
+  "s1": "vision-language foundation models and benchmarks",
+  "s2": "backdoor attacks and defenses in ml models",
+  "s3": "semantic segmentation with limited supervision",
+  "s4": "self-supervised controllable video representation learning",
+  "s5": "efficient and inductive vision transformers",
+  "s6": "adaptive and robust stochastic optimization methods",
+  "s7": "efficient and long-range transformer architectures",
+  "s8": "causal representation learning under interventions",
+  "s9": "3d object detection on point clouds"
+ },
+ "total_steps": 800,
+ "resumed_from": [
+  400
+ ]
+}

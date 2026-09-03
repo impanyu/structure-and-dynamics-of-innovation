@@ -1,0 +1,306 @@
+[
+ {
+  "bin": "A",
+  "domain": "gen",
+  "q": "Which team won the 2024 World Series? A) New York Yankees B) Los Angeles Dodgers C) Houston Astros D) Atlanta Braves",
+  "gold": "B",
+  "pick": "B",
+  "ok": true
+ },
+ {
+  "bin": "A",
+  "domain": "gen",
+  "q": "The 2024 Nobel Peace Prize was awarded to: A) Nihon Hidankyo B) UNRWA C) Volodymyr Zelensky D) the ICRC",
+  "gold": "A",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "A",
+  "domain": "gen",
+  "q": "In early December 2024, South Korea's president briefly declared: A) a snap election B) a currency peg C) martial law D) neutrality in the US-China trade war",
+  "gold": "C",
+  "pick": "C",
+  "ok": true
+ },
+ {
+  "bin": "A",
+  "domain": "gen",
+  "q": "What happened to Syria's Assad government in December 2024? A) it won re-election B) it signed a peace deal with Israel C) it joined BRICS D) it collapsed and Assad fled the country",
+  "gold": "D",
+  "pick": "C",
+  "ok": false
+ },
+ {
+  "bin": "A",
+  "domain": "gen",
+  "q": "Notre-Dame cathedral in Paris: A) reopened to the public in December 2024 B) suffered a second fire in 2024 C) was converted to a museum D) remained closed until 2027",
+  "gold": "A",
+  "pick": "A",
+  "ok": true
+ },
+ {
+  "bin": "A",
+  "domain": "ai",
+  "q": "The 2024 Nobel Prize in Physics was awarded for foundational work on: A) topological insulators B) quantum entanglement experiments C) artificial neural networks D) gravitational-wave detection",
+  "gold": "C",
+  "pick": "A",
+  "ok": false
+ },
+ {
+  "bin": "A",
+  "domain": "ai",
+  "q": "Which model did DeepSeek release in late December 2024? A) DeepSeek-V3 B) DeepSeek-Coder-2 C) DeepSeek-MoE-16B D) DeepSeek-Prover-2",
+  "gold": "A",
+  "pick": "A",
+  "ok": true
+ },
+ {
+  "bin": "A",
+  "domain": "ai",
+  "q": "In December 2024 OpenAI announced a new reasoning model named: A) o2 B) o3 C) GPT-4.5 D) Orion",
+  "gold": "B",
+  "pick": "B",
+  "ok": true
+ },
+ {
+  "bin": "A",
+  "domain": "ai",
+  "q": "In December 2024 Google announced: A) Gemini 1.9 B) PaLM 3 C) Bard Advanced D) Gemini 2.0",
+  "gold": "D",
+  "pick": "D",
+  "ok": true
+ },
+ {
+  "bin": "B",
+  "domain": "gen",
+  "q": "In January 2025, Los Angeles suffered: A) a magnitude-7 earthquake B) catastrophic wildfires C) a hurricane landfall D) a citywide blackout lasting a week",
+  "gold": "B",
+  "pick": "A",
+  "ok": false
+ },
+ {
+  "bin": "B",
+  "domain": "gen",
+  "q": "Which team won Super Bowl LIX in February 2025? A) Kansas City Chiefs B) San Francisco 49ers C) Philadelphia Eagles D) Detroit Lions",
+  "gold": "C",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "B",
+  "domain": "gen",
+  "q": "Pope Francis: A) retired to Argentina in 2025 B) canonized Carlo Acutis in March 2025 C) visited China in April 2025 D) died in April 2025",
+  "gold": "D",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "B",
+  "domain": "gen",
+  "q": "Who became Canada's prime minister in March 2025? A) Mark Carney B) Pierre Poilievre C) Chrystia Freeland D) Justin Trudeau (re-elected)",
+  "gold": "A",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "B",
+  "domain": "gen",
+  "q": "Germany's February 2025 federal election was won by: A) SPD B) AfD C) CDU/CSU D) the Greens",
+  "gold": "C",
+  "pick": "C",
+  "ok": true
+ },
+ {
+  "bin": "B",
+  "domain": "ai",
+  "q": "The January 2025 paper 's1: Simple test-time scaling' achieves reasoning gains primarily via: A) massive-scale RLHF B) mixture-of-experts routing C) retrieval augmentation D) budget forcing with a small curated fine-tuning set",
+  "gold": "D",
+  "pick": "D",
+  "ok": true
+ },
+ {
+  "bin": "B",
+  "domain": "ai",
+  "q": "In February 2025 Anthropic released: A) Claude 3.7 Sonnet B) Claude 4 Opus C) Claude 3.5 Ultra D) Claude Instant 2",
+  "gold": "A",
+  "pick": "A",
+  "ok": true
+ },
+ {
+  "bin": "B",
+  "domain": "ai",
+  "q": "Llama 4 (April 2025) uses which architecture? A) dense transformer B) mixture-of-experts C) state-space model D) diffusion language model",
+  "gold": "B",
+  "pick": "B",
+  "ok": true
+ },
+ {
+  "bin": "B",
+  "domain": "ai",
+  "q": "DeepSeek-R1 improves reasoning primarily through: A) supervised distillation from GPT-4 B) retrieval augmentation C) large-scale reinforcement learning D) constitutional AI",
+  "gold": "C",
+  "pick": "C",
+  "ok": true
+ },
+ {
+  "bin": "B",
+  "domain": "ai",
+  "q": "In April 2025 OpenAI released which API model family? A) GPT-4.1 B) GPT-4.6 C) o2-pro D) GPT-5",
+  "gold": "A",
+  "pick": "C",
+  "ok": false
+ },
+ {
+  "bin": "C",
+  "domain": "gen",
+  "q": "The new pope elected in May 2025 took the name: A) John XXIV B) Leo XIV C) Pius XIII D) Francis II",
+  "gold": "B",
+  "pick": "A",
+  "ok": false
+ },
+ {
+  "bin": "C",
+  "domain": "gen",
+  "q": "In June 2025, Israel and which country fought a ~12-day war? A) Lebanon B) Syria C) Yemen D) Iran",
+  "gold": "D",
+  "pick": "A",
+  "ok": false
+ },
+ {
+  "bin": "C",
+  "domain": "gen",
+  "q": "The June 2025 Air India crash shortly after takeoff involved: A) a Boeing 787 in Ahmedabad B) an Airbus A350 in Delhi C) a Boeing 737 in Mumbai D) an ATR-72 in Kochi",
+  "gold": "A",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "C",
+  "domain": "gen",
+  "q": "Who won the Wimbledon 2025 men's singles title? A) Novak Djokovic B) Carlos Alcaraz C) Jannik Sinner D) Daniil Medvedev",
+  "gold": "C",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "C",
+  "domain": "gen",
+  "q": "In August 2025 Trump met Putin for a summit in: A) Geneva B) Alaska C) Helsinki D) Riyadh",
+  "gold": "B",
+  "pick": "C",
+  "ok": false
+ },
+ {
+  "bin": "C",
+  "domain": "ai",
+  "q": "Claude Opus 4 and Claude Sonnet 4 were released in: A) January 2025 B) May 2025 C) October 2024 D) September 2025",
+  "gold": "B",
+  "pick": "B",
+  "ok": true
+ },
+ {
+  "bin": "C",
+  "domain": "ai",
+  "q": "Kimi K2 (Moonshot AI, July 2025) is: A) a video generation model B) a search engine C) a robotics stack D) a ~1-trillion-parameter open-weight MoE language model",
+  "gold": "D",
+  "pick": "D",
+  "ok": true
+ },
+ {
+  "bin": "C",
+  "domain": "ai",
+  "q": "OpenAI's open-weight gpt-oss models (August 2025) come in which sizes? A) 20B and 120B B) 7B and 70B C) 1B and 8B D) 30B and 300B",
+  "gold": "A",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "C",
+  "domain": "ai",
+  "q": "Grok 4 was released by xAI in: A) March 2025 B) November 2024 C) July 2025 D) December 2025",
+  "gold": "C",
+  "pick": "C",
+  "ok": true
+ },
+ {
+  "bin": "D",
+  "domain": "gen",
+  "q": "The 2025 Nobel Peace Prize went to: A) Maria Corina Machado B) Greta Thunberg C) the WHO D) Alexei Navalny (posthumously)",
+  "gold": "A",
+  "pick": "C",
+  "ok": false
+ },
+ {
+  "bin": "D",
+  "domain": "gen",
+  "q": "Which team won the 2025 World Series? A) Philadelphia Phillies B) Toronto Blue Jays C) Los Angeles Dodgers D) Milwaukee Brewers",
+  "gold": "C",
+  "pick": "C",
+  "ok": true
+ },
+ {
+  "bin": "D",
+  "domain": "gen",
+  "q": "Conservative activist Charlie Kirk: A) ran for Senate in 2026 B) became White House press secretary C) launched a news network D) was assassinated in September 2025",
+  "gold": "D",
+  "pick": "C",
+  "ok": false
+ },
+ {
+  "bin": "D",
+  "domain": "gen",
+  "q": "Who became Japan's prime minister in October 2025? A) Shigeru Ishiba (stayed) B) Sanae Takaichi C) Taro Kono D) Yoshihiko Noda",
+  "gold": "B",
+  "pick": "A",
+  "ok": false
+ },
+ {
+  "bin": "D",
+  "domain": "gen",
+  "q": "The November 2025 New York City mayoral election was won by: A) Zohran Mamdani B) Eric Adams C) Andrew Cuomo D) Curtis Sliwa",
+  "gold": "A",
+  "pick": "B",
+  "ok": false
+ },
+ {
+  "bin": "D",
+  "domain": "ai",
+  "q": "Claude Sonnet 4.5 was released in: A) September 2025 B) March 2025 C) January 2026 D) June 2025",
+  "gold": "A",
+  "pick": "C",
+  "ok": false
+ },
+ {
+  "bin": "D",
+  "domain": "ai",
+  "q": "Gemini 3 was released by Google in: A) June 2025 B) August 2025 C) November 2025 D) February 2026",
+  "gold": "C",
+  "pick": "C",
+  "ok": true
+ },
+ {
+  "bin": "D",
+  "domain": "ai",
+  "q": "GPT-5.1 was released by OpenAI in: A) May 2026 B) November 2025 C) August 2025 D) February 2026",
+  "gold": "B",
+  "pick": "A",
+  "ok": false
+ },
+ {
+  "bin": "D",
+  "domain": "ai",
+  "q": "Claude Opus 4.5 was released in: A) April 2026 B) July 2025 C) January 2025 D) November 2025",
+  "gold": "D",
+  "pick": "D",
+  "ok": true
+ },
+ {
+  "bin": "D",
+  "domain": "ai",
+  "q": "OpenAI's DevDay 2025 took place in: A) October 2025 B) March 2025 C) December 2025 D) July 2026",
+  "gold": "A",
+  "pick": "A",
+  "ok": true
+ }
+]

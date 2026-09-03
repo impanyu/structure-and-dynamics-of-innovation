@@ -1,0 +1,9 @@
+{
+ "run_id": "core-generalists-s0",
+ "seed": 0,
+ "topic_assignments": {},
+ "total_steps": 800,
+ "resumed_from": [
+  400
+ ]
+}
