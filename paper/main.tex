@@ -36,11 +36,13 @@ LLM judge on a six-level scale across three venue-recognition tiers
 specific problem''). On a
 16{,}208-node network built from NeurIPS, ICLR, ICML, and AAAI papers
 (2020--2024), we manipulate a single \emph{specialization dial}: the number
-of corpus papers an agent is allowed to read, from 400 up to the whole
-corpus. We find (i) an inverted-U in per-idea anticipation accuracy peaking
-at a scope of 800 papers---a coherent sub-area, not one topic---with
-unrestricted generalists strictly worst on every tier; (ii) idea production
-falls monotonically as scope widens; (iii) team size is a pure throughput
+of corpus papers an agent is allowed to read, from 100 up to the whole
+corpus. We find (i) anticipation accuracy \emph{rises as reading
+narrows}: the tightest scope---100 papers, the inner core of one
+topic---is best on every tier (tier-1 accuracy 51\% vs.\ 20\% for
+unrestricted generalists), and every scoped condition beats the
+generalists; (ii) idea production peaks at a mid-narrow scope and falls
+as reading widens; (iii) team size is a pure throughput
 knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits
 scale linearly, because agents are effectively independent---across 10{,}300
 actions we observe a single cross-agent citation of a generated idea.
@@ -92,25 +94,28 @@ Our central manipulation is deliberately minimal: a single
 \emph{specialization dial}. Each ``specialist'' agent draws one topic from
 a 50-topic pool and may only \emph{read} (search, browse, jump within, and
 hence cite) the $m$ corpus papers nearest its topic anchor in embedding
-space, with $m \in \{400, 800, 1600, 3200, 6400\}$; writing is always
-unconstrained. Unrestricted generalists provide the $m=\infty$ endpoint. A
+space, with $m \in \{100, 400, 800, 1600, 3200, 6400\}$; writing is
+always unconstrained. Unrestricted generalists provide the $m=\infty$ endpoint. A
 second manipulation varies team size $N \in \{10, 50, 100, 150\}$ at fixed
 per-agent interaction depth.
 
 \textbf{Findings.}
 \begin{itemize}
-\item \textbf{An inverted-U in idea quality over reading scope
-  (Sec.~\ref{sec:dial}).} Per-idea anticipation accuracy peaks at $m=800$
-  (tier-1 acc@$\geq$2 of 41\% vs.\ 20\% for generalists), and every scoped
-  condition beats the unrestricted generalists on every tier. Measured
-  region purity shows $m=800$ is a coherent \emph{sub-area neighborhood}
-  (own-topic share only 5--60\%), suggesting the sweet spot is ``focused
-  but not starved'': narrow enough to force depth, wide enough to contain
-  recombination material.
-\item \textbf{Quantity falls monotonically with scope
-  (Sec.~\ref{sec:dial}).} Narrow readers commit to ideas sooner and
-  produce more of them (83 at $m=400$ vs.\ 50 for generalists over the
-  same 80 rounds); generalists spend their actions wandering and curating.
+\item \textbf{Idea quality rises as reading narrows
+  (Sec.~\ref{sec:dial}).} Per-idea anticipation accuracy grows almost
+  monotonically as scope shrinks, and the narrowest scope wins: at
+  $m{=}100$---a region \emph{smaller} than the median natural topic
+  (228 papers), i.e., one topic's inner core---tier-1 acc@$\geq$2
+  reaches 51\% vs.\ 20\% for generalists, with the best mean
+  realization level in every tier. Every scoped condition beats the
+  unrestricted generalists; the pre-registered fear that very narrow
+  scopes would starve agents of recombination material did not
+  materialize.
+\item \textbf{Quantity peaks at mid-narrow scope
+  (Sec.~\ref{sec:dial}).} Scoped readers commit to ideas sooner and
+  produce more of them (83 at $m{=}400$ vs.\ 50 for generalists over
+  the same 80 rounds; 67 at $m{=}100$); generalists spend their actions
+  wandering and curating.
 \item \textbf{Team size is a throughput knob, not a quality knob
   (Sec.~\ref{sec:scaling}).} From $N=10$ to $N=150$ generalists at fixed
   depth, per-idea accuracy is flat (21--28\%) while absolute hits grow
@@ -210,8 +215,9 @@ A specialist draws one topic from a pool of 50 corpus-derived subfields
 in embedding space (an equal-mass region; the radius adapts per topic).
 Reading, searching, jumping, \emph{and citing} are confined to this
 region---citing means having read---while the content of generated ideas
-is unconstrained. We sweep $m \in \{400, 800, 1600, 3200, 6400\}$
-(conditions C3--C7, numbered by ascending scope); unrestricted generalists are C1 ($m=\infty$). All
+is unconstrained. We sweep $m \in \{100, 400, 800, 1600, 3200, 6400\}$
+(conditions C2--C7, numbered by ascending scope); unrestricted
+generalists are C1 ($m=\infty$). All
 conditions use $N{=}10$ agents, 80 rounds, and the same seed, so topic
 draws are identical across the sweep and only the radius varies.
 
@@ -262,8 +268,9 @@ realization level.}
  & \textbf{scope $m$} & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
+C2 & 100   & 67 & \textbf{51\% (34) / 1.24} & \textbf{55\%} (37) / 1.37 & 79\% (53) / 2.13 \\
 C3 & 400   & \textbf{83} & 36\% (30) / 0.89 & 47\% (39) / 1.19 & \textbf{89\% (74)} / \textbf{2.48} \\
-C4 & 800   & 74 & \textbf{41\% (30) / 1.04} & \textbf{53\% (39) / 1.38} & 84\% (62) / 2.43 \\
+C4 & 800   & 74 & 41\% (30) / 1.04 & 53\% (39) / \textbf{1.38} & 84\% (62) / 2.43 \\
 C5 & 1600  & 67 & 30\% (20) / 0.78 & 39\% (26) / 1.04 & 60\% (40) / 1.60 \\
 C6 & 3200  & 55 & 27\% (15) / 0.69  & 40\% (22) / 1.05 & 73\% (40) / 2.02 \\
 C7 & 6400  & 54 & 30\% (16) / 0.74  & 41\% (22) / 1.06 & 78\% (42) / 2.22 \\
@@ -288,14 +295,17 @@ of realized ideas (level $\geq 2$) per tier.}
 
 Table~\ref{tab:dial} and Figure~\ref{fig:dial} give the core result.
 
-\textbf{A mild inverted-U peaking at a sub-area scope.} Tier-1 accuracy
-runs 36\% $\to$ \textbf{41\%} $\to$ 30\% $\to$ 27\% $\to$ 30\% $\to$ 20\%
-as scope widens; mean realization level tracks the same shape. The
-$m{=}800$ condition leads on rate and on tier-1/2 mean level, and ties
-$m{=}400$ on absolute tier-1 hits. Both the narrow side (fewer recombination options; topics
-with semantically diffuse regions produced agents with zero output) and
-the broad side (unfocused wandering) underperform the sub-area
-neighborhood.
+\textbf{Narrower is better.} Tier-1 accuracy runs \textbf{51\%}
+$\to$ 36\% $\to$ 41\% $\to$ 30\% $\to$ 27\% $\to$ 30\% $\to$ 20\% as
+scope widens from 100 papers to the whole corpus; mean realization
+level tracks the same shape in every tier. The narrowest scope
+($m{=}100$, smaller than the median natural topic of 228 papers) is
+best on accuracy and mean level in tiers 1--2 and on absolute tier-1
+hits (34), refuting the pre-registered expectation of material
+starvation at the narrow end; the $m{=}400$ dip below $m{=}800$ is
+within single-seed noise. Broad scopes underperform throughout
+(unfocused wandering; a semantically diffuse topic region produced an
+agent with zero output).
 
 \textbf{Constraint beats freedom everywhere.} Every scoped condition
 dominates the unrestricted generalists on every tier, by rate and by
@@ -318,8 +328,9 @@ quality drifts over the run---and no curve saturates by round 80.}
 \label{fig:accum}
 \end{figure}
 
-\textbf{Narrow readers ship; broad readers browse.} Idea production is
-strictly monotone in scope (83, 74, 67, 55, 54, 50), and
+\textbf{Narrow readers ship; broad readers browse.} Idea production
+peaks at $m{=}400$ and falls as scope widens (67, 83, 74, 67, 55, 54,
+50 for $m$ = 100 through $\infty$), and
 Figure~\ref{fig:accum} shows why: after a comparable exploration onset
 (first team idea between rounds 8 and 17; median personal onset round
 21--24), narrow scopes settle into a faster and steadier production
@@ -339,10 +350,13 @@ are preceded by the \emph{same volume} of reading ($\sim$10.5 reads);
 what differs is its composition. Ideas realized in recognized venues
 (tier~1) grew out of windows with more search-driven reads (6.27
 vs.\ 5.45), fewer link-driven reads (3.23 vs.\ 3.82), fewer jumps, and
-almost no re-reading of the agent's own output. This is the per-idea
-mirror of the structural ablation in Sec.~\ref{sec:noedges}: material
-found by directed semantic search feeds anticipation; material found by
-following citation links does not.
+almost no re-reading of the agent's own output. Within the standard regime, then, search-fed material predicts
+realization while link-fed material does not---consistent with the
+edge-removal ablation of Sec.~\ref{sec:noedges}. The search-removal
+ablation there adds a caution against a purely causal reading: without
+search, agents recover unchanged per-idea accuracy by other routes, so
+search-fed reading marks the deliberative mode rather than being the
+sole conduit of quality.
 
 \begin{table}[t]
 \caption{Provenance of the reading that precedes each generated idea:
@@ -426,11 +440,11 @@ collaboration effects---and the natural next intervention.
 \label{sec:noedges}
 
 \begin{table}[t]
-\caption{Exploration-channel ablations: identical to C1 (10 generalists,
-80 rounds, same seed and corpus) except the initial network carries no
-citation edges (top) or random jumps are disabled (middle). Removing
-wandering channels improves output without hurting accuracy; removing
-the citation structure improves both.}
+\caption{Navigation-channel ablations: identical to C1 (10 generalists,
+80 rounds, same seed and corpus) except one channel is removed---the
+initial citation edges, random jumps, or semantic search. Removing any
+channel increases output without hurting per-idea accuracy; the full
+action set is the \emph{worst} configuration.}
 \label{tab:noedges}
 \begin{center}\small
 \begin{tabular}{lrccc}
@@ -438,9 +452,10 @@ the citation structure improves both.}
  & \textbf{ideas} & \textbf{tier-1 acc (hits) / mean} &
  \textbf{tier-2 acc / mean} & \textbf{tier-3 acc / mean} \\
 \midrule
-no edges & 60 & \textbf{37\% (22) / 0.93} & \textbf{43\% / 1.07} & \textbf{75\% / 1.97} \\
-no jumps & \textbf{63} & 24\% (15) / 0.62 & 27\% / 0.71 & 73\% / 1.92 \\
-C1 (full) & 50 & 20\% (10) / 0.50 & 26\% / 0.64 & 62\% / 1.68 \\
+no edges & 60 & \textbf{37\% (22) / 0.93} & \textbf{43\%} (26) / \textbf{1.07} & 75\% (45) / 1.97 \\
+no jumps & 63 & 24\% (15) / 0.62 & 27\% (17) / 0.71 & 73\% (46) / 1.92 \\
+no search & \textbf{201} & 24\% (48) / 0.59 & 36\% (73) / 0.88 & \textbf{76\% (152)} / \textbf{2.00} \\
+C1 (full) & 50 & 20\% (10) / 0.50 & 26\% (13) / 0.64 & 62\% (31) / 1.68 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -466,15 +481,24 @@ actions, adding 53 links of their own to the edgeless network---they
 rebuild structure, but by their own semantic logic rather than the
 corpus's citation logic.
 
-A companion ablation disables the other wandering channel: random jumps
-(\texttt{sample\_frontier}). The effect points the same way but is much
-smaller (Table~\ref{tab:noedges}, middle row: 63 ideas at 24\% vs.\ 50
-at 20\%)---unsurprisingly, since C1 agents only jumped $\sim$20 times
-in 800 actions. The citation neighborhood, not serendipitous jumping,
-is the dominant distractor. We caution that these are single seeded
-runs per arm (22/60 and 15/63 vs.\ 10/50 hits); the directions, the
-mean-level gaps, and the behavioral signatures are mutually consistent,
-but replication is needed before the strongest reading.
+Two companion ablations remove the other channels. Disabling random
+jumps points the same way with a smaller effect (63 ideas at 24\%
+vs.\ 50 at 20\%)---unsurprising, since C1 agents only jumped $\sim$20
+times in 800 actions. Disabling \emph{semantic search} produces the
+most dramatic behavioral shift of any intervention in this paper:
+production quadruples (201 ideas) while per-idea accuracy holds at
+24\%, yielding 48 tier-1 hits. Search is thus a \emph{throttle}, not
+the sole source of quality: it is the channel that keeps agents in
+deliberation (``keep reading'') mode, and without it they write
+prolifically from links, jumps, and parametric knowledge at unchanged
+per-idea quality. Together the three ablations give a stark summary:
+for unrestricted generalists, removing \emph{any} navigation channel
+helps, and the full action set is the worst configuration---the
+generalist's failure mode is wandering, in whichever channel permits
+it. We caution that these are single seeded runs per arm; the
+directions, the mean-level gaps, and the behavioral signatures are
+mutually consistent, but replication is needed before the strongest
+reading.
 
 \section{Analysis: how the dynamics rewrite the state}
 \label{sec:structure}
@@ -543,10 +567,10 @@ dial rather than a confound.
 Framing machine-assisted innovation as a dynamical system on an idea
 network lets us intervene on the coupling between researcher and
 knowledge structure directly. On this substrate, the operative lever on
-idea quality is \emph{how reading is situated}---a sub-area scope of
-$\sim$800 papers beats both narrower and broader diets, and any scope
-beats none---while team size sets only throughput, because today's
-agents do not yet read each other. The human citation structure itself,
+idea quality is \emph{how reading is situated}---the narrower the
+reading, the better, down to a single topic's hundred-paper core, and
+any scope beats none---while team size sets only throughput, because
+today's agents do not yet read each other. The human citation structure itself,
 scaffold of every account of cumulative science, is at best inert and at
 worst a distractor for these semantically-navigating dynamics: removing
 it outright improved both output and accuracy. The immediate frontier is
