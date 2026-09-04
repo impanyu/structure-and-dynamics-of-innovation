@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2100 660" font-family="Comic Sans MS, Chalkboard SE, sans-serif">
+<rect width="2100" height="660" fill="white"/>
+
+<!-- ================= PANEL A: STATE ================= -->
+<rect x="18" y="14" width="640" height="630" rx="26" fill="#EDE9F8" stroke="#6B5B95" stroke-width="4"/>
+<text x="338" y="62" font-size="40" font-weight="bold" text-anchor="middle" fill="#1a1a1a">State: <tspan font-style="italic" fill="#4A3B8C">Idea Network</tspan></text>
+
+<!-- network cloud -->
+<g stroke="#9aa" stroke-width="2">
+<line x1="120" y1="200" x2="215" y2="150"/><line x1="215" y1="150" x2="330" y2="205"/>
+<line x1="120" y1="200" x2="180" y2="300"/><line x1="330" y1="205" x2="180" y2="300"/>
+<line x1="330" y1="205" x2="430" y2="140"/><line x1="430" y1="140" x2="545" y2="205"/>
+<line x1="330" y1="205" x2="470" y2="290"/><line x1="470" y1="290" x2="545" y2="205"/>
+<line x1="180" y1="300" x2="300" y2="360"/><line x1="300" y1="360" x2="470" y2="290"/>
+<line x1="120" y1="420" x2="180" y2="300"/><line x1="120" y1="420" x2="300" y2="360"/>
+<line x1="300" y1="360" x2="420" y2="430"/><line x1="420" y1="430" x2="470" y2="290"/>
+<line x1="545" y1="205" x2="560" y2="330"/><line x1="420" y1="430" x2="560" y2="330"/>
+</g>
+<!-- topic region tint -->
+<ellipse cx="385" cy="360" rx="175" ry="125" fill="#FFB74D" opacity="0.28"/>
+<text x="385" y="505" font-size="26" text-anchor="middle" fill="#B26A00" font-weight="bold">read scope: m nearest papers</text>
+<!-- paper nodes -->
+<g font-size="34" text-anchor="middle">
+<text x="120" y="212">📄</text><text x="215" y="162">📄</text><text x="330" y="217">📄</text>
+<text x="430" y="152">📄</text><text x="545" y="217">📄</text><text x="180" y="312">📄</text>
+<text x="300" y="372">📄</text><text x="470" y="302">📄</text><text x="120" y="432">📄</text>
+<text x="560" y="342">📄</text>
+</g>
+<!-- new idea -->
+<text x="420" y="447" font-size="40" text-anchor="middle">⭐</text>
+<text x="493" y="452" font-size="24" fill="#C62828" font-weight="bold">new idea</text>
+<!-- stats box -->
+<rect x="60" y="540" width="556" height="76" rx="16" fill="white" stroke="#6B5B95" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="338" y="572" font-size="25" text-anchor="middle">16,208 ideas (NeurIPS·ICLR·ICML·AAAI ≤ 2024-08)</text>
+<text x="338" y="604" font-size="25" text-anchor="middle">80,962 citation edges · grows as agents write</text>
+
+<!-- ================= PANEL B: DYNAMICS ================= -->
+<rect x="690" y="14" width="700" height="630" rx="26" fill="#EAF6E3" stroke="#558B2F" stroke-width="4"/>
+<text x="1040" y="62" font-size="40" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Dynamics: <tspan font-style="italic" fill="#33691E">LLM Agents</tspan></text>
+
+<!-- agents row -->
+<g font-size="52" text-anchor="middle">
+<text x="810" y="140">🤖</text><text x="920" y="140">🤖</text><text x="1030" y="140">🤖</text>
+<text x="1140" y="140">🤖</text><text x="1250" y="140">🤖</text>
+</g>
+<text x="1310" y="130" font-size="30" font-weight="bold" fill="#33691E">× N</text>
+<text x="1040" y="182" font-size="24" text-anchor="middle" fill="#555">independent · interact only via the shared network</text>
+
+<!-- actions box -->
+<rect x="725" y="205" width="630" height="120" rx="16" fill="white" stroke="#558B2F" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1040" y="240" font-size="27" font-weight="bold" text-anchor="middle">Actions</text>
+<text x="1040" y="278" font-size="25" text-anchor="middle">🔍 search   📖 browse   🎲 jump</text>
+<text x="1040" y="310" font-size="25" text-anchor="middle">✍️ generate   🔗 add/remove links</text>
+
+<!-- memory box -->
+<rect x="725" y="345" width="630" height="112" rx="16" fill="white" stroke="#558B2F" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1040" y="380" font-size="27" font-weight="bold" text-anchor="middle">🧠 Short-term memory</text>
+<g>
+<rect x="775" y="398" width="46" height="36" rx="6" fill="#C5E1A5" stroke="#558B2F" stroke-width="2"/>
+<rect x="827" y="398" width="46" height="36" rx="6" fill="#C5E1A5" stroke="#558B2F" stroke-width="2"/>
+<rect x="879" y="398" width="46" height="36" rx="6" fill="#C5E1A5" stroke="#558B2F" stroke-width="2"/>
+<rect x="931" y="398" width="46" height="36" rx="6" fill="#DCEDC8" stroke="#558B2F" stroke-width="2"/>
+<rect x="983" y="398" width="46" height="36" rx="6" fill="#DCEDC8" stroke="#558B2F" stroke-width="2"/>
+<text x="1055" y="425" font-size="26">…</text>
+<rect x="1090" y="398" width="46" height="36" rx="6" fill="#F1F8E9" stroke="#558B2F" stroke-width="2"/>
+</g>
+<text x="1225" y="424" font-size="24" fill="#555">FIFO, last 20</text>
+<text x="1040" y="450" font-size="21" text-anchor="middle" fill="#777">(action → result) pairs; old entries forgotten</text>
+
+<!-- dial box -->
+<rect x="725" y="477" width="630" height="140" rx="16" fill="white" stroke="#558B2F" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1040" y="512" font-size="27" font-weight="bold" text-anchor="middle">🎛️ Specialization dial (read scope)</text>
+<line x1="775" y1="560" x2="1305" y2="560" stroke="#33691E" stroke-width="4" stroke-linecap="round"/>
+<g font-size="22" text-anchor="middle" fill="#33691E">
+<circle cx="775" cy="560" r="7" fill="#33691E"/><text x="775" y="596">0</text>
+<circle cx="880" cy="560" r="7" fill="#33691E"/><text x="880" y="596">100</text>
+<circle cx="1010" cy="560" r="11" fill="#C62828"/><text x="1010" y="596" fill="#C62828" font-weight="bold">800</text>
+<circle cx="1140" cy="560" r="7" fill="#33691E"/><text x="1140" y="596">6400</text>
+<circle cx="1305" cy="560" r="7" fill="#33691E"/><text x="1300" y="596">∞</text>
+</g>
+
+<!-- read / write arrows between A and B -->
+<g stroke="#C62828" stroke-width="7" fill="none" stroke-linecap="round">
+<path d="M 690 250 L 640 250"/><path d="M 640 390 L 690 390"/>
+</g>
+<polygon points="640,250 662,238 662,262" fill="#C62828"/>
+<polygon points="690,390 668,378 668,402" fill="#C62828"/>
+<text x="665" y="228" font-size="23" text-anchor="middle" fill="#C62828" font-weight="bold">read</text>
+<text x="665" y="428" font-size="23" text-anchor="middle" fill="#C62828" font-weight="bold">write</text>
+
+<!-- ================= PANEL C: EVALUATION ================= -->
+<rect x="1422" y="14" width="660" height="630" rx="26" fill="#E4F0FA" stroke="#1565C0" stroke-width="4"/>
+<text x="1752" y="62" font-size="40" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Evaluation: <tspan font-style="italic" fill="#0D47A1">Anticipation</tspan></text>
+
+<!-- timeline -->
+<line x1="1460" y1="150" x2="2044" y2="150" stroke="#0D47A1" stroke-width="5" stroke-linecap="round"/>
+<polygon points="2052,150 2026,138 2026,162" fill="#0D47A1"/>
+<g font-size="21" text-anchor="middle">
+<circle cx="1520" cy="150" r="8" fill="#0D47A1"/><text x="1520" y="120">corpus</text><text x="1520" y="185">≤ 24-08</text>
+<circle cx="1640" cy="150" r="8" fill="#0D47A1"/><text x="1640" y="120">cutoff</text><text x="1640" y="185">24-09-30</text>
+<rect x="1652" y="139" width="190" height="22" fill="#FFCDD2" opacity="0.85"/>
+<text x="1747" y="210" fill="#C62828" font-weight="bold">memory risk 🚫</text>
+<circle cx="1872" cy="150" r="8" fill="#2E7D32"/><text x="1930" y="120" fill="#2E7D32" font-weight="bold">scored ✅</text>
+<text x="1930" y="185" fill="#2E7D32">≥ 25-06</text>
+</g>
+
+<!-- pipeline -->
+<rect x="1460" y="225" width="584" height="240" rx="16" fill="white" stroke="#1565C0" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1752" y="262" font-size="26" font-weight="bold" text-anchor="middle">For each ⭐ generated idea:</text>
+<text x="1752" y="304" font-size="25" text-anchor="middle">🔎 search the live literature</text>
+<text x="1752" y="338" font-size="21" text-anchor="middle" fill="#777">(Semantic Scholar + OpenAlex)</text>
+<text x="1752" y="378" font-size="25" text-anchor="middle">⚖️ LLM judge: realization level 0–5</text>
+<text x="1752" y="415" font-size="25" text-anchor="middle">🏆 3 venue tiers · acc@≥2 · mean level</text>
+<text x="1752" y="450" font-size="21" text-anchor="middle" fill="#777">a hit = a later real paper realizes the idea</text>
+
+<!-- probes box -->
+<rect x="1460" y="490" width="584" height="126" rx="16" fill="white" stroke="#1565C0" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="1752" y="527" font-size="26" font-weight="bold" text-anchor="middle">🕵️ Memory probes</text>
+<text x="1752" y="562" font-size="23" text-anchor="middle">model quizzed on post-cutoff events</text>
+<text x="1752" y="594" font-size="23" text-anchor="middle">→ sets the guarded scoring window</text>
+
+<!-- arrow B -> C -->
+<g stroke="#C62828" stroke-width="7" fill="none" stroke-linecap="round"><path d="M 1390 330 L 1422 330"/></g>
+<polygon points="1422,330 1400,318 1400,342" fill="#C62828"/>
+<text x="1406" y="305" font-size="23" text-anchor="middle" fill="#C62828" font-weight="bold">ideas</text>
+</svg>

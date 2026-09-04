@@ -194,6 +194,24 @@ current agent teams are from literature-mediated collaboration.
 \section{The environment: state and dynamics}
 \label{sec:framework}
 
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=\linewidth]{architecture.png}
+\end{center}
+\caption{Overview. \textbf{State} (left): a citation network of
+16{,}208 one-paragraph ideas distilled from four venues' papers; a
+specialist's readable scope is the $m$ corpus papers nearest its topic
+anchor, and generated ideas (\smash{$\star$}) join the network
+permanently. \textbf{Dynamics} (middle): $N$ LLM agents that interact
+only through the shared network, each with a five-action interface, a
+20-entry FIFO memory, and a position on the specialization dial.
+\textbf{Evaluation} (right): an idea scores only if a paper published
+in the guarded window realizes it, verified by live literature search
+and graded by an LLM judge; memory probes on post-cutoff events set the
+window's start.}
+\label{fig:arch}
+\end{figure}
+
 \subsection{State: an idea network from four venues}
 
 We collect the 16{,}208 papers published at NeurIPS, ICLR, ICML, and AAAI
