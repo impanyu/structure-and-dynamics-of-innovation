@@ -198,17 +198,18 @@ current agent teams are from literature-mediated collaboration.
 \begin{center}
 \includegraphics[width=\linewidth]{architecture.png}
 \end{center}
-\caption{Overview. \textbf{State} (left): a citation network of
-16{,}208 one-paragraph ideas distilled from four venues' papers; a
-specialist's readable scope is the $m$ corpus papers nearest its topic
-anchor, and generated ideas (\smash{$\star$}) join the network
-permanently. \textbf{Dynamics} (middle): $N$ LLM agents that interact
-only through the shared network, each with a five-action interface, a
-20-entry FIFO memory, and a position on the specialization dial.
-\textbf{Evaluation} (right): an idea scores only if a paper published
-in the guarded window realizes it, verified by live literature search
-and graded by an LLM judge; memory probes on post-cutoff events set the
-window's start.}
+\caption{Overview. \textbf{Dynamics} (left): $N$ LLM agents that
+interact only through the shared network, each with a 20-entry FIFO
+memory and a position on the specialization dial; their five actions
+live on the read/write channels to the state. \textbf{State}
+(middle): a citation network of 16{,}208 one-paragraph ideas distilled
+from four venues' papers; a specialist reads only the $m$ corpus
+papers nearest its topic anchor, and generated ideas
+(\smash{$\star$}) join the network permanently. \textbf{Evaluation}
+(right): each generated idea is matched against the set of papers
+published on/after 2025-06---after the guarded window opens, so the
+agent model cannot have seen them---via live literature search and an
+LLM judge; memory probes on post-cutoff events set the window.}
 \label{fig:arch}
 \end{figure}
 
