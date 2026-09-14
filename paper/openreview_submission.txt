@@ -1,0 +1,36 @@
+ICLR 2026 — OpenReview 提交用（纯文本，可直接粘贴）
+摘要截止：9 月 19 日 11:59pm UTC-12 ｜ 全文截止：9 月 24 日
+
+────────────────────────────────────────
+TITLE
+────────────────────────────────────────
+Structure and Dynamics of Agentic Innovation
+
+────────────────────────────────────────
+ABSTRACT（2420 字符）
+────────────────────────────────────────
+We study scientific innovation as a dynamical system: the state is a citation network of research ideas distilled from published papers, and the dynamics are LLM agents that navigate the network and write new ideas (and links) back into it. Agents propose ideas freely; each proposal is scored by whether a similar paper published after the agent model's training cutoff realizes it, verified by literature search and graded by an LLM judge on a six-level scale across three venue-recognition tiers. Because probe tests show the agent model's parametric memory extends months past its official cutoff, only realizations published at least eight months after the cutoff count (headline accuracy: share of ideas matched at level ≥2, "same specific problem"). On a 16,208-node network built from NeurIPS, ICLR, ICML, and AAAI papers (2020–2024), we manipulate a single specialization dial: the number of corpus papers an agent is allowed to read, from 100 up to the whole corpus. We find (i) an inverted-U in anticipation accuracy over reading scope, peaking at 800 papers—a coherent sub-area, not one topic—at tier-1 accuracy 31%, with the whole narrow-to-mid band (100–1600) well ahead of broad scopes, and both dial endpoints on the parametric floor: agents reading nothing (13%) and unrestricted generalists reading anything (14%) are indistinguishable; (ii) idea production peaks at a mid-narrow scope and falls as reading widens; (iii) team size is a pure throughput knob: per-idea accuracy is flat from 10 to 150 agents while absolute hits scale linearly, because agents are effectively independent—across 10,300 actions we observe a single cross-agent citation of a generated idea. Strikingly, deleting all 80,962 citation edges from the initial network helps generalists (tier-1 accuracy 27% vs. 14%, with more ideas produced): agents navigate semantically, not structurally, and the human citation topology acts as a distractor rather than a scaffold—whereas removing semantic search hurts, because search is where genuine anticipation comes from. Consistently, agent-written links have near-constant semantic reach regardless of scope, are degree-decoupled (unlike the preferential attachment that built the corpus), and preferentially target recent frontier papers. Our results position reading scope—not team size or citation structure—as the operative lever on the quality of machine-generated research ideas.
+
+────────────────────────────────────────
+KEYWORDS（OpenReview 要求逗号分隔，建议）
+────────────────────────────────────────
+LLM agents, multi-agent systems, research ideation, science of science,
+idea networks, scientific discovery, agent memory, evaluation
+
+────────────────────────────────────────
+TL;DR（若表单有此字段，≤250 字符）
+────────────────────────────────────────
+LLM agents on a citation network of research ideas anticipate future papers best
+when each reads a narrow sub-area; team size only adds throughput, and the human
+citation structure is a distractor rather than a scaffold.
+
+────────────────────────────────────────
+提交时还需要你填/确认的项
+────────────────────────────────────────
+1. 作者列表（我没有替你填——请确认合作者与顺序、单位、邮箱）
+2. PDF：从 Overleaf 下载（摘要阶段可先传占位或当前版；9-24 前可替换为终版）
+3. 匿名代码链接（已放进论文正文，无需单独填）：
+   https://anonymous.4open.science/r/structure-and-dynamics-of-innovation-D607/
+4. 勾选项：双盲确认、LLM 使用政策确认（论文附录已有 LLM usage 一节）
+5. 主题领域（primary area）：建议选与 "agentic AI / LLM agents" 或
+   "applications to neuroscience & science" 最接近的一项，按当年下拉菜单实际选项为准
