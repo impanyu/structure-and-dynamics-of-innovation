@@ -1,5 +1,6 @@
-ICLR 2026 — OpenReview 提交用（纯文本，可直接粘贴）
-摘要截止：9 月 19 日 11:59pm UTC-12 ｜ 全文截止：9 月 24 日
+ICLR 2027 — OpenReview 提交用（纯文本，可直接粘贴）
+摘要截止：2026 年 9 月 18 日 AoE ｜ 会议：2027-04-26, San Francisco
+注：ICLR 2026 已于 2026 年 4 月举办完毕，当前开放的是 ICLR 2027
 
 ────────────────────────────────────────
 TITLE
@@ -20,9 +21,10 @@ idea networks, scientific discovery, agent memory, evaluation
 ────────────────────────────────────────
 TL;DR（若表单有此字段，≤250 字符）
 ────────────────────────────────────────
-LLM agents on a citation network of research ideas anticipate future papers best
-when each reads a narrow sub-area; team size only adds throughput, and the human
-citation structure is a distractor rather than a scaffold.
+A multi-agent LLM system generates research ideas by navigating a citation network
+of 16,208 papers and writing new ideas back into it; how narrowly each agent
+reads—not team size or the citation structure—determines whether future papers
+realize them.
 
 ────────────────────────────────────────
 提交时还需要你填/确认的项
