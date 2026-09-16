@@ -1,5 +1,5 @@
 \documentclass{article} % For LaTeX2e
-\usepackage{iclr2026_conference,times}
+\usepackage{iclr2027_conference,times}
 
 % Optional math commands from https://github.com/goodfeli/dlbook_notation.
 \input{math_commands.tex}
@@ -658,6 +658,46 @@ switching on the silent agent-to-agent channel---making contributions
 discoverable to teammates---and measuring whether the scaling curve
 bends.
 
+\subsubsection*{AI use statement}
+This work studies LLM agents, and generative AI tools were used in
+producing it; we disclose all uses here per the ICLR 2027 AI Policy for
+Authors.
+
+\textbf{Research ideation and execution.} The research questions,
+experimental designs, evaluation criteria, and every design decision
+(including the mid-course redesigns reported in the paper) were
+specified by the human authors. An LLM-based coding agent, operating
+under continuous human direction, implemented the simulation
+environment, evaluation pipeline, and analysis code, executed and
+monitored the runs, and proposed analyses that the authors accepted,
+rejected, or redirected.
+
+\textbf{Writing.} The manuscript was drafted with LLM assistance from
+the authors' experimental records and instructions, and LLM assistance
+was also used to polish prose. The authors reviewed and edited all
+text.
+
+\textbf{Retrieval and discovery.} LLM assistance was used in locating
+and organizing related work; all citations were verified by the authors
+against the cited sources.
+
+\textbf{As the object of study.} Every ``idea'' analyzed in this paper
+is by design LLM-generated (\texttt{gpt-5}), and the evaluation judge,
+corpus distiller, and topic namer are LLMs (\texttt{gpt-5-mini});
+these are the experimental apparatus, not authoring aids, and are
+documented in Sections~\ref{sec:framework}--\ref{sec:eval} and the
+appendices. Generative AI was \emph{not} used to prove mathematical
+claims.
+
+We have reviewed all AI-assisted work: agent-generated ideas were
+scored only against independently published papers via the audited
+pipeline of Section~\ref{sec:eval}, code was reviewed by the authors
+and is covered by the released test suite, and every number reported in
+the paper is reproducible from the released event logs and verdicts. We
+take responsibility for the final content of this work, including text,
+claims, and artifacts produced with the aid of generative AI. LLMs are
+not authors of this paper.
+
 \subsubsection*{Ethics statement}
 This work involves no human subjects and no sensitive data; all corpus
 material derives from public scholarly metadata (titles, abstracts,
@@ -680,7 +720,7 @@ available anonymously at
 \url{https://anonymous.4open.science/r/structure-and-dynamics-of-innovation-D607/}.
 
 \bibliography{references}
-\bibliographystyle{iclr2026_conference}
+\bibliographystyle{iclr2027_conference}
 
 \appendix
 \section{Appendix}
@@ -1088,32 +1128,5 @@ actions only three further jump attempts occurred (team steps 400, 455,
 719)---each long after the original error had been evicted from the
 agent's 20-entry FIFO memory. The rolling memory length thus sets the
 time scale on which learned constraints are forgotten.
-
-\section{LLM usage}
-\label{app:llm}
-
-LLMs play three distinct roles in this work, disclosed here per the
-ICLR 2026 LLM policy.
-
-\textbf{As the object of study.} The agents whose dynamics we measure
-are LLMs (\texttt{gpt-5}), and the evaluation judge, corpus distiller,
-and topic namer are LLMs (\texttt{gpt-5-mini}). Every ``idea'' analyzed
-in this paper is, by design, LLM-generated; all quantitative claims are
-about LLM behavior.
-
-\textbf{As research infrastructure.} The experimental platform ---
-simulation environment, evaluation pipeline, and analysis code --- was
-implemented with the assistance of an LLM-based coding agent operating
-under continuous human direction. The human authors specified the
-research questions, experimental designs, evaluation criteria, and all
-design decisions (including mid-course redesigns reported in the
-paper); the coding agent implemented, executed, and monitored the
-experiments and proposed analyses that the authors accepted, rejected,
-or redirected.
-
-\textbf{In writing.} The manuscript was drafted with LLM assistance
-from the authors' experimental records and instructions; the authors
-reviewed and edited the text and take full responsibility for its
-content. LLMs are not authors of this paper.
 
 \end{document}
