@@ -29,8 +29,11 @@ We study scientific innovation as a dynamical system: the \emph{state} is a
 citation network of research ideas distilled from published papers, and the
 \emph{dynamics} are LLM agents that navigate the network and write new ideas
 (and links) back into it. Agents propose ideas freely; each new idea is then
-scored by whether a similar paper is published in later conferences \emph{after} papers in the citation networks and the agent model's
-training cutoff date. 
+scored by whether a similar paper appears in a later conference, published
+\emph{after} both the papers in the network and the agent model's training
+cutoff. A match counts only if that paper attacks the same specific problem
+and appeared at least eight months past the cutoff---probe tests show the
+model's memory runs well past its official date.
 We create multiple agents to navigate a
 16{,}208-node network built from NeurIPS, ICLR, ICML, and AAAI papers
 (2020--2024) and change the number
