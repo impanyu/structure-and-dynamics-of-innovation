@@ -8,6 +8,7 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{float}
 \usepackage{multirow}
 
 % \iclrfinalcopy % Uncomment for camera-ready
@@ -28,26 +29,24 @@ Paper under double-blind review}
 We study scientific innovation as a dynamical system: the \emph{state} is a
 citation network of research ideas distilled from published papers, and the
 \emph{dynamics} are LLM agents that navigate the network and write new ideas
-(and links) back into it. Agents propose ideas freely; each new idea is then
+(and reference links) back into it. Agents propose ideas freely; each new idea is then
 scored by whether a similar paper appears in a later conference, published
 \emph{after} both the papers in the network and the agent model's training
-cutoff. A match counts only if that paper attacks the same specific problem
-and appeared at least eight months past the cutoff---probe tests show the
-model's memory runs well past its official date.
+cutoff. 
 We create multiple agents to navigate a
 16{,}208-node network built from NeurIPS, ICLR, ICML, and AAAI papers
 (2020--2024) and change the number
 of corpus papers an agent is allowed to read, from 100 up to the whole
 corpus. We find three things. First, more reading is not better: the share of
 ideas that later papers go on to realize rises and then falls, peaking at 800
-papers---about one sub-area---at 31\%, while both extremes sink to the same
-floor, agents given no papers (13\%) doing no better than agents free to read
-all 16{,}208 (14\%). The number of ideas produced follows the same curve.
+papers, while both extremes sink to the same
+floor, agents given no papers doing no better than agents free to read
+all 16{,}208. The number of ideas produced follows the same curve.
 Second, team size buys only throughput: the hit rate is flat from 10 to 150
 agents while the total scales linearly, because the agents hardly
 interact---in 10{,}300 actions, one agent cited another's idea exactly once.
 Third, the human citation graph is not what helps them: deleting all 80{,}962
-edges makes generalists better (27\% vs.\ 14\%), while removing semantic
+edges makes generalists better, while removing semantic
 search makes them worse. Agents move through the network by meaning rather
 than by links, and the links they write back ignore a paper's popularity and
 favor recent frontier work. Reading scope---not team size, not citation
@@ -101,49 +100,43 @@ per-agent interaction depth.
 
 \textbf{Findings.}
 \begin{itemize}
-\item \textbf{An inverted-U in idea quality, peaking at a sub-area
-  scope (Sec.~\ref{sec:dial}).} Tier-1 acc@$\geq$2 peaks at $m{=}800$
-  (31\% vs.\ 14\% for generalists), with the whole narrow-to-mid band
-  $m \in \{100, 400, 800, 1600\}$ (24--31\%) well above broad scopes
-  (15--19\%) and generalists last. The pre-registered fear that very
-  narrow scopes would starve agents of recombination material did not
-  materialize---but the narrow end's advantage over the peak appears
-  only under memory-contaminated scoring, not under the guarded
-  metric. Both endpoints of the dial sit on the \emph{parametric
-  floor}: agents that read nothing (topic name only, 13\%) and
-  agents that may read everything (14\%) are indistinguishable---
-  reading pays only when it is narrow.
-\item \textbf{Quantity peaks at mid-narrow scope
-  (Sec.~\ref{sec:dial}).} Scoped readers commit to ideas sooner and
-  produce more of them (83 at $m{=}400$ vs.\ 50 for generalists over
-  the same 80 rounds; 67 at $m{=}100$); generalists spend their actions
-  wandering and curating.
-\item \textbf{Team size is a throughput knob, not a quality knob
-  (Sec.~\ref{sec:scaling}).} From $N=10$ to $N=150$ generalists at fixed
-  depth, per-idea accuracy is flat (12--19\%) while absolute hits grow
-  roughly linearly. The mechanism is stark: agents are effectively independent.
-  Across all scaling runs (575 ideas, 10{,}300 actions) not one agent
-  cited another agent's generated idea.
-\item \textbf{Navigation channels have three distinct roles
+\item \textbf{More reading is not better (Sec.~\ref{sec:dial}).}
+  Accuracy rises and then falls as the dial widens, peaking at $m{=}800$---a
+  coherent sub-area, not a single topic---at 31\% tier-1 acc@$\geq$2, with
+  the whole narrow-to-mid band $m \in \{100, 400, 800, 1600\}$ (24--31\%)
+  ahead of broad scopes (15--19\%). Both ends of the dial sit on the same
+  \emph{parametric floor}: agents given nothing but a topic name (13\%) do
+  no better than agents free to read all 16{,}208 papers (14\%). Reading
+  pays only when it is narrow. Output follows the same curve---83 ideas at
+  $m{=}400$ against 50 for generalists over the same 80 rounds---so narrow
+  reading costs nothing in quantity. We had expected very narrow scopes to
+  starve agents of material to recombine; they did not, though the narrow
+  end's edge over the peak survives only under memory-contaminated scoring,
+  not under the guarded metric.
+\item \textbf{Team size buys throughput, not quality
+  (Sec.~\ref{sec:scaling}).} From $N{=}10$ to $N{=}150$ generalists at
+  fixed depth, per-idea accuracy is flat (12--19\%) while absolute hits grow
+  roughly linearly. The reason is blunt: the agents barely interact. Across
+  all scaling runs (575 ideas, 10{,}300 actions) not one agent cited another
+  agent's generated idea.
+\item \textbf{The human citation graph is not what helps them
   (Sec.~\ref{sec:noedges}).} Deleting every initial citation edge makes
-  generalists \emph{better} (60 ideas at 27\% tier-1 accuracy vs.\ 50
-  at 14\%): deprived of neighbors to wander through, agents commit to
-  pure semantic-search navigation and even rebuild structure by their
-  own logic. Disabling random jumps is neutral. Disabling semantic
-  search quadruples production but \emph{halves} guarded accuracy
-  (10\%)---search is where genuine anticipation comes from; without
-  it, agents backfill from parametric memory, which the realization
-  window discounts.
-\item \textbf{The dynamics have a characteristic ``handwriting''
-  (Sec.~\ref{sec:structure}).} The semantic reach of agent-written links
-  is nearly invariant to scope (median cosine distance 0.144--0.153,
-  slightly \emph{below} the 0.179 of real citations): constraints move
-  \emph{where} agents write, not \emph{how far} they link. Agent citations
-  are degree-decoupled---the median cited paper has in-degree 0--2, versus
-  23 for the target of a real citation edge---and strongly
-  recency-seeking (51\% of citations target papers from the corpus's final
-  two years, vs.\ 8\% for real edges). LLM dynamics grow the network by a
-  different law than the preferential attachment
+  generalists \emph{better} (60 ideas at 27\% tier-1 accuracy against 50 at
+  14\%): with no neighbors to wander through, agents commit to semantic
+  search, and even rebuild structure by their own logic. Disabling random
+  jumps changes nothing. Disabling search quadruples production but
+  \emph{halves} accuracy (10\%)---search is where genuine anticipation comes
+  from; without it agents backfill from parametric memory, which the
+  realization window discounts.
+\item \textbf{The dynamics leave a characteristic handwriting
+  (Sec.~\ref{sec:structure}).} How far agent-written links reach is almost
+  invariant to scope (median cosine distance 0.144--0.153, slightly
+  \emph{below} the 0.179 of real citations): the dial moves \emph{where}
+  agents write, not \emph{how far} they link. Their citations also ignore a
+  paper's popularity---the median cited paper has in-degree 0--2, against 23
+  for the target of a real citation edge---and chase recency: 51\% point at
+  the corpus's final two years, against 8\% for real edges. LLM dynamics
+  grow the network by a different law than the preferential attachment
   \citep{barabasi1999emergence} that grew it.
 \end{itemize}
 
@@ -261,22 +254,52 @@ one-topic/many-topic dichotomy.
 \section{Evaluation: search-verified anticipation}
 \label{sec:eval}
 
+\begin{table}[t]
+\caption{The scoring scheme. \textbf{Top:} the judge's six-point
+realization scale---how close a retrieved paper is to the generated idea.
+Rows on or below the middle rule count as a hit for our headline metric
+acc@$\geq$2. \textbf{Bottom:} the three cumulative recognition tiers,
+which decide \emph{which} retrieved papers are eligible to be scored at
+all. Levels and tiers are independent: an idea has a best level within
+each tier.}
+\label{tab:rubric}
+\begin{center}
+\small
+\begin{tabular}{@{}cl@{}}
+\toprule
+Level & Relation between the matched paper and the generated idea \\
+\midrule
+0 & different problem entirely \\
+1 & same broad area, different goal \\
+\midrule
+2 & same specific problem, unrelated approach \\
+3 & same problem, approaches in the same method family \\
+4 & same problem and core mechanism, differing in secondary components \\
+5 & essentially the same idea (problem, mechanism, and key design choices) \\
+\bottomrule
+\end{tabular}
+
+\begin{tabular}{@{}cl@{}}
+\toprule
+Tier & Realizations admitted (cumulative) \\
+\midrule
+1 & 60 top venues (58 CCF-A, 2026 edition, plus COLM and RLC), or $\geq 50$ citations \\
+2 & tier~1, plus CCF-B venues or $\geq 10$ citations \\
+3 & any published paper \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
 For each generated idea we extract three literature-search queries
 (problem, method, combination), retrieve candidates from Semantic Scholar
-and OpenAlex, and have an LLM judge grade each candidate's realization
-level on a six-point scale: 0 (different problem) through 3 (same problem,
-same method family) to 5 (same problem, mechanism, and key design
-choices). Candidates published on or before the training cutoff
-(2024-09-30) and candidates whose titles match corpus members are
-excluded before scoring, so neither memorization nor retrieval of the
-corpus can score. Near-duplicates of corpus ideas (embedding cosine
+and OpenAlex, and have an LLM judge grade each candidate on the six-point
+realization scale of Table~\ref{tab:rubric}, which also defines the three
+cumulative recognition tiers we report. Candidates published on or before
+the training cutoff (2024-09-30) and candidates whose titles match corpus
+members are excluded before scoring, so neither memorization nor retrieval
+of the corpus can score. Near-duplicates of corpus ideas (embedding cosine
 $\geq 0.95$) are floored to level 0.
-
-Scores are reported in three cumulative recognition tiers:
-\textbf{tier~1} counts realizations in 60 top venues (the 58 CCF-A
-venues plus COLM and RLC) or papers with $\geq 50$ citations;
-\textbf{tier~2} additionally admits CCF-B venues or $\geq 10$ citations;
-\textbf{tier~3} admits any published paper.
 
 \textbf{Realization window.} The official knowledge cutoff of the agent
 model is 2024-09-30, but official cutoffs are not hard data boundaries:
@@ -828,7 +851,14 @@ runs can be extended from their logs, and all figures and tables derive
 from the logs plus cached evaluation verdicts.
 
 \subsection{Example trajectory map}
-\begin{figure}[ht]
+
+Figure~\ref{fig:traj} shows where the ten $m{=}800$ specialists read and
+where they wrote, on a fixed t-SNE map of the corpus. Writing is never
+restricted by scope, so the fact that the stars fall inside or beside the
+tinted read regions is a property of the dynamics rather than of the
+environment.
+
+\begin{figure}[H]
 \begin{center}
 \includegraphics[width=\linewidth]{trajectories-c3.png}
 \end{center}
@@ -1087,7 +1117,11 @@ $\sim$\$5--10.
 \subsection{Realization-level distributions}
 \label{app:leveldist}
 
-\begin{figure}[ht]
+Figure~\ref{fig:leveldist} breaks every dial condition down by best
+realization level, rather than by the acc@$\geq$2 threshold reported in the
+main text, with one panel per recognition tier.
+
+\begin{figure}[H]
 \begin{center}
 \includegraphics[width=0.62\linewidth]{dial-levels-tier1.png}\\
 \includegraphics[width=0.62\linewidth]{dial-levels-tier2.png}\\
