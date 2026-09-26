@@ -140,6 +140,36 @@ def _load_forum_world(cfg):
     return corpus, index, emb
 
 
+def _write_board_metrics(cfg, corpus, index, emb) -> Path:
+    """The board's structure as a function of round (spec §5), replayed from the
+    event log into <run_dir>/board_metrics.json. Round = one action per agent."""
+    from innovation.p2_forum.board_metrics import board_trajectory
+
+    run_dir = Path(cfg["out_dir"]) / cfg["run"]["run_id"]
+    events = load_events(run_dir / "events.jsonl")
+    n_agents = len(cfg["run"]["agents"])
+    series = board_trajectory(events, corpus=corpus, corpus_index=index,
+                              embedder=emb, run_id=cfg["run"]["run_id"],
+                              n_agents=n_agents)
+    out_path = run_dir / "board_metrics.json"
+    out_path.write_text(json.dumps(
+        {"run_id": cfg["run"]["run_id"], "n_agents": n_agents,
+         "n_events": len(events), "n_rounds": len(series),
+         "final": series[-1] if series else None,
+         "rounds": series}, indent=1))
+    return out_path
+
+
+def cmd_board_metrics(cfg):
+    """Re-derive the structural metrics of an existing paper-2 run."""
+    if cfg.get("arch", "p1_dial") != "p2_forum":
+        raise SystemExit("board-metrics applies to arch: p2_forum runs only")
+    corpus, index, emb = _load_forum_world(cfg)
+    path = _write_board_metrics(cfg, corpus, index, emb)
+    print(f"wrote {path}")
+    print(json.dumps(json.loads(path.read_text())["final"], indent=2))
+
+
 def cmd_run(cfg, seed=None, run_id=None, resume=False):
     r = cfg["run"]
     if seed is not None:
@@ -166,6 +196,10 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
         out = forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
                     llm=_llm(cfg), model=cfg["models"]["agent"],
                     out_dir=cfg["out_dir"])
+        # spec §8: a completed run produces headline AND structural metrics.
+        # The headline ones need the judge (cmd_evaluate); the structural ones
+        # are a pure replay of the log we just wrote, so write them here.
+        print(f"wrote {_write_board_metrics(cfg, corpus, index, emb)}")
         print(json.dumps(out, indent=2))
         return
     graph, index, emb, _ = _load_world(cfg)
@@ -237,7 +271,7 @@ def main():
     parser = argparse.ArgumentParser(prog="innovation")
     parser.add_argument("command",
                         choices=["fetch", "summarize", "run", "evaluate",
-                                 "visualize"])
+                                 "visualize", "board-metrics"])
     parser.add_argument("--config", required=True)
     parser.add_argument("--seed", type=int, default=None,
                         help="override run.seed (for multi-seed sweeps)")
@@ -255,10 +289,12 @@ def main():
             cfg["run"]["total_steps"] = args.steps
         cmd_run(cfg, seed=args.seed, run_id=args.run_id, resume=args.resume)
         return
-    if args.command in ("evaluate", "visualize") and args.run_id is not None:
+    if (args.command in ("evaluate", "visualize", "board-metrics")
+            and args.run_id is not None):
         cfg["run"]["run_id"] = args.run_id
     {"fetch": cmd_fetch, "summarize": cmd_summarize,
-     "evaluate": cmd_evaluate, "visualize": cmd_visualize}[args.command](cfg)
+     "evaluate": cmd_evaluate, "visualize": cmd_visualize,
+     "board-metrics": cmd_board_metrics}[args.command](cfg)
 
 
 if __name__ == "__main__":

@@ -158,3 +158,55 @@ def test_the_k_sweep_covers_the_spec_grid():
         run = load_config(f)["run"]
         ks.append(run["agents"][0]["k_topics"])
     assert sorted(ks) == [1, 2, 4, 8, 16, 32, 64]
+
+
+def test_a_completed_forum_run_writes_structural_metrics(forum_cfg, monkeypatch):
+    """Spec §8: a run produces headline AND structural metrics. The headline
+    half needs the judge; the structural half is a replay and lands here."""
+    _use_llm(monkeypatch, FakeLLM(default=POST))
+
+    cli.cmd_run(forum_cfg)
+
+    path = Path(forum_cfg["out_dir"]) / "f1" / "board_metrics.json"
+    doc = json.loads(path.read_text())
+    assert doc["run_id"] == "f1" and doc["n_agents"] == 2
+    # 4 events, 2 agents -> 2 rounds
+    assert doc["n_rounds"] == 2 and [r["round"] for r in doc["rounds"]] == [1, 2]
+    assert [r["n_events"] for r in doc["rounds"]] == [2, 4]
+    assert [r["n_posts"] for r in doc["rounds"]] == [2, 4]
+    assert doc["final"]["n_posts"] == 4
+    # every §5 quantity is present
+    for key in ("post_post_share", "n_components", "longest_chain",
+                "post_in_degree_distribution",
+                "first_cross_agent_citation_step"):
+        assert key in doc["final"]
+
+
+def test_board_metrics_can_be_rederived_without_rerunning(forum_cfg, monkeypatch):
+    _use_llm(monkeypatch, FakeLLM(default=POST))
+    cli.cmd_run(forum_cfg)
+    path = Path(forum_cfg["out_dir"]) / "f1" / "board_metrics.json"
+    first = path.read_text()
+    path.unlink()
+
+    cli.cmd_board_metrics(forum_cfg)
+
+    assert path.read_text() == first
+
+
+def test_board_metrics_refuses_a_paper_one_run(forum_cfg):
+    forum_cfg["arch"] = "p1_dial"
+    with pytest.raises(SystemExit, match="p2_forum"):
+        cli.cmd_board_metrics(forum_cfg)
+
+
+def test_resume_refreshes_the_structural_metrics(forum_cfg, monkeypatch):
+    _use_llm(monkeypatch, FakeLLM(default=POST))
+    cli.cmd_run(forum_cfg)
+    forum_cfg["run"]["total_steps"] = 8
+
+    cli.cmd_run(forum_cfg, resume=True)
+
+    doc = json.loads((Path(forum_cfg["out_dir"]) / "f1"
+                      / "board_metrics.json").read_text())
+    assert doc["n_rounds"] == 4 and doc["final"]["n_posts"] == 8

@@ -26,15 +26,19 @@ class _NullLog(EventLog):
         return []
 
 
-def board_at(events: list[dict], round_index: int, *, corpus, corpus_index,
+def board_at(events: list[dict], n_events: int, *, corpus, corpus_index,
              embedder, run_id: str) -> Workspace:
-    """Rebuild the board as it stood after the first `round_index` events."""
+    """Rebuild the board as it stood after the first `n_events` events.
+
+    The unit is EVENTS, not rounds: with N agents in round-robin one round is N
+    events (`runner._drive`), so a per-round series must step by N — see
+    `board_trajectory`, which is what analysis should call."""
     ws = Workspace(corpus=corpus, corpus_index=corpus_index,
                    board_index=VectorIndex(corpus_index.dim),
                    embedder=embedder, run_id=run_id)
     env = ForumEnvironment(run_id=run_id, workspace=ws, event_log=_NullLog(),
                            rng=np.random.default_rng(0))
-    env.restore(events[:round_index])
+    env.restore(events[:n_events])
     return ws
 
 
@@ -120,3 +124,31 @@ def board_structure(ws: Workspace, events: list[dict]) -> dict:
             if in_degrees else 0.0,
             "first_cross_agent_citation_step": first_cross,
             "cross_agent_edges": cross}
+
+
+def board_trajectory(events: list[dict], *, corpus, corpus_index, embedder,
+                     run_id: str, n_agents: int) -> list[dict]:
+    """The board's structure at each ROUND boundary (spec §5).
+
+    One round is `n_agents` events, because the runner is round-robin. Each
+    entry carries both `round` and the `n_events` it was measured at, so a
+    figure axis can be labelled honestly either way.
+
+    The replay is incremental — one workspace, events fed in chunks — so a
+    run's whole trajectory costs one pass of embedding, not one per round.
+    The final entry is the finished board."""
+    if n_agents < 1:
+        raise ValueError(f"n_agents must be >= 1; got {n_agents}")
+    ws = Workspace(corpus=corpus, corpus_index=corpus_index,
+                   board_index=VectorIndex(corpus_index.dim),
+                   embedder=embedder, run_id=run_id)
+    env = ForumEnvironment(run_id=run_id, workspace=ws, event_log=_NullLog(),
+                           rng=np.random.default_rng(0))
+    series = []
+    for start in range(0, len(events), n_agents):
+        chunk = events[start:start + n_agents]
+        env.restore(chunk)
+        seen = start + len(chunk)
+        series.append({"round": start // n_agents + 1, "n_events": seen,
+                       **board_structure(ws, events[:seen])})
+    return series

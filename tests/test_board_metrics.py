@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from innovation.core.events import EventLog
-from innovation.p2_forum.board_metrics import board_at, board_structure
+from innovation.p2_forum.board_metrics import (board_at, board_structure,
+                                                board_trajectory)
 from innovation.p2_forum.env import Action, ForumEnvironment
 
 
@@ -167,3 +168,56 @@ def test_every_structural_value_survives_a_json_round_trip(
     s = board_structure(rebuilt, events)
 
     assert json.loads(json.dumps(s)) == s
+
+
+def test_board_trajectory_steps_by_one_round_not_one_event(
+        make_workspace, fake_embedder, tmp_path):
+    """One round is N events with N agents round-robin, so a per-round series
+    must stride by N. Each entry says which it is."""
+    ws = make_workspace()
+    env = ForumEnvironment(run_id="t", workspace=ws,
+                           event_log=EventLog(tmp_path / "traj.jsonl"),
+                           rng=np.random.default_rng(0))
+    for step in range(6):
+        env.execute(f"a{step % 2}", step,
+                    Action("generate", {"text": f"idea {step}", "cited_ids": []}))
+    events = env.event_log.read_all()
+
+    fresh = make_workspace()
+    series = board_trajectory(events, corpus=fresh.corpus,
+                              corpus_index=fresh.corpus_index,
+                              embedder=fake_embedder, run_id="t", n_agents=2)
+
+    assert [r["round"] for r in series] == [1, 2, 3]
+    assert [r["n_events"] for r in series] == [2, 4, 6]
+    assert [r["n_posts"] for r in series] == [2, 4, 6]
+
+
+def test_the_trajectorys_last_entry_matches_a_one_shot_replay(
+        make_workspace, fake_embedder, tmp_path):
+    """Incremental replay must give the same answer as board_at on the whole
+    log — the incremental pass exists only to pay for embedding once."""
+    events = build_events(make_workspace, tmp_path)
+    fresh = make_workspace()
+    series = board_trajectory(events, corpus=fresh.corpus,
+                              corpus_index=fresh.corpus_index,
+                              embedder=fake_embedder, run_id="t", n_agents=1)
+
+    other = make_workspace()
+    one_shot = board_structure(
+        board_at(events, len(events), corpus=other.corpus,
+                 corpus_index=other.corpus_index, embedder=fake_embedder,
+                 run_id="t"), events)
+
+    assert {k: v for k, v in series[-1].items()
+            if k not in ("round", "n_events")} == one_shot
+
+
+def test_board_trajectory_rejects_a_zero_agent_stride(make_workspace,
+                                                      fake_embedder, tmp_path):
+    events = build_events(make_workspace, tmp_path)
+    ws = make_workspace()
+    with pytest.raises(ValueError, match="n_agents"):
+        board_trajectory(events, corpus=ws.corpus,
+                         corpus_index=ws.corpus_index, embedder=fake_embedder,
+                         run_id="t", n_agents=0)
