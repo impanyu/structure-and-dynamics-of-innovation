@@ -686,6 +686,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pyyaml" },
     { name = "requests" },
+    { name = "scikit-learn" },
     { name = "sentence-transformers" },
 ]
 
@@ -706,6 +707,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=16" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "requests", specifier = ">=2.32" },
+    { name = "scikit-learn", specifier = ">=1.5" },
     { name = "sentence-transformers", specifier = ">=3" },
 ]
 

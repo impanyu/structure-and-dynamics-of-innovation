@@ -1,0 +1,257 @@
+topics:
+- size: 304
+  topic: Adversarial robustness and defense strategies
+- size: 243
+  topic: Scalable robust algorithms for reinforcement learning
+- size: 232
+  topic: Efficient sparse and memory-optimized attention mechanisms
+- size: 232
+  topic: Federated learning personalization and optimization methods
+- size: 232
+  topic: Robustness and model evaluation under shift
+- size: 223
+  topic: Improving and evaluating multi-step reasoning
+- size: 214
+  topic: Biases and feature preferences in neural networks
+- size: 210
+  topic: Audio-visual crossmodal representation learning
+- size: 200
+  topic: Efficient adaptation and robustness techniques
+- size: 198
+  topic: Robust high-dimensional statistical inference techniques
+- size: 195
+  topic: Spatiotemporal and sequential forecasting methods
+- size: 194
+  topic: Modular hierarchical exploration and representation learning
+- size: 193
+  topic: Scalable, robust learning for non-homophilous graphs
+- size: 193
+  topic: Advances in robust and flexible segmentation
+- size: 192
+  topic: Robust scalable methods for graph generalization
+- size: 187
+  topic: Generalization dynamics and optimization geometry in neural networks
+- size: 186
+  topic: Advances in robust and calibrated classification theory
+- size: 183
+  topic: Representation learning for efficient reinforcement learning
+- size: 181
+  topic: Mixture-of-expert architectures with shared bases
+- size: 180
+  topic: Robust and efficient contextual bandit methods
+- size: 178
+  topic: Robust, efficient, scalable vision transformer design
+- size: 178
+  topic: Discrete interpretable discrete latent representations
+- size: 169
+  topic: Robust pessimistic methods for offline RL
+- size: 167
+  topic: Provably Efficient Reinforcement Learning Algorithms
+- size: 166
+  topic: Understanding and Controlling Model Internal Representations
+- size: 165
+  topic: Instance-aware visual representation learning
+- size: 163
+  topic: Learning-augmented combinatorial optimization algorithms
+- size: 161
+  topic: Video understanding and action recognition methods
+- size: 161
+  topic: Expressive and scalable graph neural architectures
+- size: 160
+  topic: Learning-based compact 3D reconstruction and decomposition
+- size: 157
+  topic: Robustness, bias, and interpretability in vision
+- size: 156
+  topic: Single-step and efficient diffusion model methods
+- size: 155
+  topic: Learning-based mesh- and physics-aware PDE solvers
+- size: 151
+  topic: Calibration and epistemic uncertainty in deep learning
+- size: 150
+  topic: Image restoration and enhancement methods
+- size: 149
+  topic: Optimization and training dynamics in deep models
+- size: 149
+  topic: Optimization algorithms and convergence analysis advances
+- size: 144
+  topic: Privacy-preserving machine learning methods
+- size: 143
+  topic: Controlling and improving pretrained language models
+- size: 141
+  topic: Benchmarking and evaluation of model generalization
+- size: 140
+  topic: Long-horizon memory and planning systems
+- size: 140
+  topic: Theoretical foundations of neural network learning
+- size: 139
+  topic: Adaptive and covert training-data attacks
+- size: 138
+  topic: Scalable cooperative multi-agent reinforcement learning
+- size: 138
+  topic: Scaling-efficient multimodal model adaptation
+- size: 137
+  topic: LLM-driven automated software engineering systems
+- size: 137
+  topic: Adversarial jailbreaks and model robustness techniques
+- size: 135
+  topic: Enhancing controllable multi-expert diffusion generation
+- size: 135
+  topic: Benchmarking and compositional agents for interaction
+- size: 134
+  topic: Continual learning stability and transfer methods
+- size: 132
+  topic: Improving in-context and self-supervised LLM adaptation
+- size: 131
+  topic: Language-guided, human-aligned decision agents
+- size: 128
+  topic: Domain adaptation and transfer learning methods
+- size: 128
+  topic: Fairness interventions for machine learning systems
+- size: 127
+  topic: Multimodal vision-and-language generation and evaluation
+- size: 123
+  topic: Advances in diffusion-based generative modeling
+- size: 123
+  topic: Multimodal biomedical data integration methods
+- size: 122
+  topic: Bayesian-informed transfer and merging methods
+- size: 121
+  topic: Recommender systems bias, scalability, and robustness
+- size: 121
+  topic: Embodied manipulation and control for AI
+- size: 120
+  topic: Data-driven spatio-temporal modeling for autonomous systems
+- size: 120
+  topic: Self-supervised 3D point-cloud representation learning
+- size: 118
+  topic: Sparse and hardware-aware neural pruning methods
+- size: 118
+  topic: Implicit regularization and smoothing in optimization
+- size: 117
+  topic: Learning with Noisy and Limited Supervision
+- size: 115
+  topic: Optimal transport and gradient-based inference
+- size: 115
+  topic: Outlier-aware low-precision neural computation
+- size: 114
+  topic: Multimodal temporal-semantic video understanding
+- size: 114
+  topic: Learning and analysis of recurrent dynamics
+- size: 112
+  topic: Identifiable causal discovery and learning
+- size: 112
+  topic: Advances in practical Bayesian optimization
+- size: 111
+  topic: Spectral and transport-based graph representations
+- size: 111
+  topic: Unified, promptable vision-language modeling systems
+- size: 111
+  topic: Algorithms and theory for multiagent equilibrium computation
+- size: 111
+  topic: Regularized and robust generative adversarial methods
+- size: 110
+  topic: Multimodal representation learning and fusion
+- size: 110
+  topic: Scaling and representation for molecular ML
+- size: 109
+  topic: Interpretable structured neural representation methods
+- size: 109
+  topic: Responsible, equitable dataset and model governance
+- size: 109
+  topic: Scalable and interpretable generative modeling methods
+- size: 108
+  topic: Differential privacy mechanisms for practical systems
+- size: 107
+  topic: Articulated 3D object and human reconstruction
+- size: 107
+  topic: Memory- and compute-efficient long-context inference
+- size: 106
+  topic: Self-supervised and contextual visual representation learning
+- size: 105
+  topic: Scaling and evaluating LLM human-preference alignment
+- size: 104
+  topic: Equivariance and symmetry-aware machine learning methods
+- size: 103
+  topic: Learning and aligning relational semantic structures
+- size: 101
+  topic: Safe and robust reinforcement learning methods
+- size: 100
+  topic: Advances in contrastive representation learning methods
+- size: 98
+  topic: Data-efficient learning across domain and class shifts
+- size: 97
+  topic: Robust reward learning and evaluation methods
+- size: 96
+  topic: Out-of-distribution detection and robustness methods
+- size: 95
+  topic: Multi-modal 3D perception for autonomous driving
+- size: 94
+  topic: Multimodal visual question answering benchmarks
+- size: 92
+  topic: Machine learning methods for biological structures
+- size: 90
+  topic: Robust, generalizable unsupervised anomaly detection
+- size: 89
+  topic: Robust and scalable inverse problem solvers
+- size: 88
+  topic: 3D vision-language spatial reasoning and grounding
+- size: 88
+  topic: Equivariant generative and representation learning for molecules
+- size: 87
+  topic: Communication-efficient distributed and decentralized optimization
+- size: 87
+  topic: Cross-modal embedding alignment for vision-language
+- size: 86
+  topic: Clustering algorithms and theoretical analysis
+- size: 85
+  topic: Monocular 3D motion and geometry processing
+- size: 85
+  topic: Neural-symbolic reasoning and interpretable inference
+- size: 85
+  topic: Advances in training and modeling spiking neural networks
+- size: 85
+  topic: Robust learning under label noise
+- size: 84
+  topic: Variational autoencoder interpretability and disentanglement
+- size: 83
+  topic: Spoken and multimodal conversational modeling
+- size: 83
+  topic: Causal inference under dataset and model shifts
+- size: 83
+  topic: Scalable spatio-temporal visual tracking datasets and methods
+- size: 81
+  topic: Mechanism design for strategic decision-making
+- size: 81
+  topic: Efficient retrieval-augmented generation and indexing
+- size: 80
+  topic: Knowledge distillation and dataset distillation methods
+- size: 79
+  topic: Generative models for structured visual artifacts
+- size: 75
+  topic: Neural radiance-field based inverse rendering methods
+- size: 75
+  topic: Robust and scalable imitation learning methods
+- size: 75
+  topic: Self-supervised disentangled visual representation learning
+- size: 74
+  topic: Neural architecture search methods and optimizations
+- size: 68
+  topic: Global-scale geospatial and biodiversity datasets and models
+- size: 65
+  topic: Neural image representation and compression methods
+- size: 62
+  topic: Watermarking and IP protection for generative models
+- size: 62
+  topic: Dynamic temporal graph representation and reasoning
+- size: 61
+  topic: Advances in machine learning for tabular data
+- size: 59
+  topic: Person re-identification across modalities and domains
+- size: 56
+  topic: Weak and costly annotation strategies for multi-label learning
+- size: 54
+  topic: Adaptive optimization dynamics and convergence analysis
+- size: 49
+  topic: Robust multimodal misinformation and detection methods
+- size: 21
+  topic: K–12 AI education and literacy initiatives

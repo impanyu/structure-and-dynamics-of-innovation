@@ -13,6 +13,7 @@ dependencies = [
     "sentence-transformers>=3",
     "openai>=3.5.0",
     "matplotlib>=3.11.1",
+    "scikit-learn>=1.5",
 ]
 
 [dependency-groups]
