@@ -157,7 +157,7 @@ def test_the_k_sweep_covers_the_spec_grid():
     for f in sorted(Path("configs/p2_forum/experiments").glob("*.yaml")):
         run = load_config(f)["run"]
         ks.append(run["agents"][0]["k_topics"])
-    assert sorted(ks) == [1, 2, 4, 8, 16, 32, 64]
+    assert sorted(ks) == [1, 2, 4, 8, 16, 32, 64, 128]
 
 
 def test_a_completed_forum_run_writes_structural_metrics(forum_cfg, monkeypatch):

@@ -1,14 +1,16 @@
 """Regenerate paper 2's k-sweep configs (spec §6, stage 1).
 
-k in {1,2,4,8,16,32,64} at N=10, 80 rounds = 800 steps — the same per-agent
+k in {1,2,4,8,16,32,64,128} at N=10, 80 rounds = 800 steps — the same per-agent
 depth as paper 1's core runs.
+k=128 is the whole pool: the generalist endpoint, every agent interested
+in everything. It is the analogue of paper 1's m=infinity condition.
 Run: uv run python scripts/gen_forum_configs.py
 """
 from pathlib import Path
 
 import yaml
 
-KS = [1, 2, 4, 8, 16, 32, 64]
+KS = [1, 2, 4, 8, 16, 32, 64, 128]
 N = 10
 ROUNDS = 80
 

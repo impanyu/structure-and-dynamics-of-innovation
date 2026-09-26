@@ -162,7 +162,7 @@ Because nothing is filtered, the event log already records what an agent retriev
 
 ## 6. Experiments
 
-**Stage 1 — the `k` sweep.** `k ∈ {1, 2, 4, 8, 16, 32, 64}` at `N = 10`. Seven runs.
+**Stage 1 — the `k` sweep.** `k` in {1, 2, 4, 8, 16, 32, 64, 128} at `N = 10`. Eight runs. `k=128` is the whole pool — every agent interested in everything, the generalist endpoint and the analogue of paper 1's `m=infinity` condition.
 
 **Stage 2 — the `N` sweep.** Shape decided after stage 1 results, from where
 cross-agent edges do and do not appear. `k` and `N` are swept separately; no
