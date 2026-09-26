@@ -27,6 +27,14 @@ class PostingLLM:
                                     "cited_ids": []}})
 
 
+class RaisingLLM:
+    """Blows up the moment driving starts, to prove run_meta.json was already
+    written before then."""
+
+    def complete(self, *, model, system, user, max_tokens):
+        raise RuntimeError("boom: interrupted mid-resume")
+
+
 def _cfg(total_steps: int) -> ForumRunConfig:
     return ForumRunConfig(run_id="r", seed=0, total_steps=total_steps,
                           agents=AGENTS, topic_pool=POOL)
@@ -102,6 +110,34 @@ def test_resume_reuses_the_recorded_topic_draws(tmp_path, make_workspace,
     assert meta["topic_assignments"] == first["topic_assignments"]
     assert meta["resumed_from"] == [4]
     assert meta["total_steps"] == 7
+
+
+def test_resume_writes_run_meta_before_driving(tmp_path, make_workspace,
+                                               fake_embedder):
+    """Finding 2: resume_forum used to write run_meta.json AFTER _drive, so an
+    interrupted resumed segment lost its own record of total_steps and
+    resumed_from (the topic draws survive regardless -- run_forum already
+    wrote those -- but the run's record of how far THIS segment got would be
+    gone). Mirror run_forum's meta-before-driving rule: the driving loop here
+    raises on its very first step, and run_meta.json must already carry the
+    updated fields on disk despite that."""
+    ws = make_workspace()
+    run_forum(_cfg(4), corpus=ws.corpus, corpus_index=ws.corpus_index,
+             embedder=fake_embedder, llm=PostingLLM(), model="m",
+             out_dir=tmp_path)
+
+    fresh = make_workspace()
+    with pytest.raises(RuntimeError, match="boom: interrupted mid-resume"):
+        resume_forum(_cfg(7), corpus=fresh.corpus,
+                     corpus_index=fresh.corpus_index, embedder=fake_embedder,
+                     llm=RaisingLLM(), model="m", out_dir=tmp_path)
+
+    meta = json.loads((tmp_path / "r" / "run_meta.json").read_text())
+    assert meta["total_steps"] == 7
+    assert meta["resumed_from"] == [4]
+    # driving never got anywhere -- the log is still exactly the first run's
+    events = _events(tmp_path)
+    assert [e["step"] for e in events] == list(range(4))
 
 
 def test_resume_reconstructs_each_agents_memory(tmp_path, make_workspace,

@@ -177,10 +177,17 @@ def resume_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
             pol._last_action = mine[-1]["action"]
         last_result[aid] = mine[-1]["result"] if mine else {}
 
-    out = _drive(cfg, env, policies, order, last_result, start_step)
-    out["topic_assignments"] = assignments
-    out["resumed_from_step"] = start_step
+    # Written BEFORE driving, same rule as run_forum: if this resumed segment
+    # is interrupted, the run's own record of how far it got (total_steps,
+    # resumed_from) must still be on disk, or a later resume has no way to
+    # know this segment was ever attempted. The topic draws survive either
+    # way (run_forum already wrote them), but that is not the same as the
+    # run recording its own progress.
     meta_path.write_text(json.dumps(
         {**meta, "total_steps": cfg.total_steps,
          "resumed_from": meta.get("resumed_from", []) + [start_step]}, indent=1))
+
+    out = _drive(cfg, env, policies, order, last_result, start_step)
+    out["topic_assignments"] = assignments
+    out["resumed_from_step"] = start_step
     return out
