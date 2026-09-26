@@ -1,18 +1,14 @@
 """The simulation environment: executes agent actions on the living idea network (spec §3.4)."""
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
+
+from innovation.core.action import Action  # re-exported: this module's public name
 
 
 def _preview(graph, node_id: str) -> dict:
     return {"node_id": node_id, "text": graph.node(node_id).text[:200]}
-
-
-@dataclass
-class Action:
-    name: str
-    args: dict = field(default_factory=dict)
 
 
 @dataclass

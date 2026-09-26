@@ -5,13 +5,7 @@ The environment filters nothing. Every agent may read every node in either
 store; what an agent cares about is decided by the topics in its prompt, and a
 result it does not want is a result it ignores.
 """
-from dataclasses import dataclass, field
-
-
-@dataclass
-class Action:
-    name: str
-    args: dict = field(default_factory=dict)
+from innovation.core.action import Action  # re-exported: this module's public name
 
 
 class ForumEnvironment:
