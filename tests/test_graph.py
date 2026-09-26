@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from innovation.core.network.graph import IdeaGraph
+from innovation.core.network.graph import FrozenGraphError, IdeaGraph
 
 
 def small_graph():
@@ -88,3 +88,32 @@ def test_remove_links_records_etype_and_validates():
         g.remove_links("missing", ["W1"])
     with pytest.raises(KeyError):
         g.remove_links("W3", ["missing"])
+
+
+def _two_node_graph() -> IdeaGraph:
+    g = IdeaGraph()
+    g.add_idea("a", "idea a", [], source="corpus", year=2020)
+    g.add_idea("b", "idea b", ["a"], source="corpus", year=2021)
+    return g
+
+
+def test_freeze_blocks_every_mutation():
+    g = _two_node_graph()
+    g.freeze()
+
+    assert g.frozen is True
+    with pytest.raises(FrozenGraphError):
+        g.add_idea("c", "idea c", ["a"])
+    with pytest.raises(FrozenGraphError):
+        g.add_links("b", ["a"])
+    with pytest.raises(FrozenGraphError):
+        g.remove_links("b", ["a"])
+
+
+def test_freeze_leaves_reads_working():
+    g = _two_node_graph()
+    g.freeze()
+
+    assert g.num_nodes == 2
+    assert g.citations_out("b") == ["a"]
+    assert g.node("a").text == "idea a"

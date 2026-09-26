@@ -5,6 +5,10 @@ import networkx as nx
 import pandas as pd
 
 
+class FrozenGraphError(RuntimeError):
+    """Raised on any attempt to mutate a frozen graph (the read-only corpus)."""
+
+
 @dataclass
 class IdeaNode:
     node_id: str
@@ -17,6 +21,20 @@ class IdeaNode:
 class IdeaGraph:
     def __init__(self):
         self._g = nx.DiGraph()  # edge src -> dst means "src cites dst"
+        self._frozen = False
+
+    @property
+    def frozen(self) -> bool:
+        return self._frozen
+
+    def freeze(self) -> None:
+        """Make this graph permanently read-only. There is no unfreeze: the
+        corpus is historical fact, and paper 2's claim rests on it."""
+        self._frozen = True
+
+    def _check_mutable(self) -> None:
+        if self._frozen:
+            raise FrozenGraphError("this graph is frozen (read-only corpus)")
 
     @classmethod
     def from_tables(cls, ideas: pd.DataFrame, edges: pd.DataFrame) -> "IdeaGraph":
@@ -62,6 +80,7 @@ class IdeaGraph:
     def add_idea(self, node_id: str, text: str, cited_ids: list[str], *,
                  source: str = "generated", year: int | None = None,
                  meta: dict | None = None) -> None:
+        self._check_mutable()
         if self._g.has_node(node_id):
             raise ValueError(f"duplicate node_id: {node_id}")
         missing = [c for c in cited_ids if not self._g.has_node(c)]
@@ -76,6 +95,7 @@ class IdeaGraph:
                   meta: dict | None = None) -> dict:
         """Add reference edges src->dst between EXISTING nodes. Edges are typed
         "agent_link" so analysis can separate them from the original citations."""
+        self._check_mutable()
         if not self._g.has_node(src_id):
             raise KeyError(f"source id not in graph: {src_id}")
         missing = [d for d in dst_ids if not self._g.has_node(d)]
@@ -94,6 +114,7 @@ class IdeaGraph:
         """Remove reference edges src->dst. The removed edge's etype is returned
         so the event log preserves what was deleted; canonical tables are never
         touched, so the original network stays reconstructible."""
+        self._check_mutable()
         if not self._g.has_node(src_id):
             raise KeyError(f"source id not in graph: {src_id}")
         missing = [d for d in dst_ids if not self._g.has_node(d)]
