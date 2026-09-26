@@ -1,6 +1,6 @@
 import pandas as pd
 
-from innovation.data.corpus import build_corpus, load_corpus, save_corpus
+from innovation.core.data.corpus import build_corpus, load_corpus, save_corpus
 
 
 def make_work(wid, year, refs=(), abstract=True):

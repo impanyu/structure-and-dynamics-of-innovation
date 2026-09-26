@@ -1,4 +1,4 @@
-from innovation.llm import CachedLLM, FakeLLM
+from innovation.core.llm import CachedLLM, FakeLLM
 
 
 def test_fake_llm_returns_canned_responses_and_records_calls():
@@ -22,7 +22,7 @@ def test_cached_llm_hits_disk_cache(tmp_path):
 
 
 def test_routed_llm_dispatches_by_prefix():
-    from innovation.llm import RoutedLLM
+    from innovation.core.llm import RoutedLLM
 
     calls = {}
 
@@ -43,7 +43,7 @@ def test_routed_llm_dispatches_by_prefix():
 
 
 def test_parse_openai_model_effort_suffix():
-    from innovation.llm import parse_openai_model
+    from innovation.core.llm import parse_openai_model
 
     assert parse_openai_model("gpt-5-mini:minimal") == ("gpt-5-mini", "minimal")
     assert parse_openai_model("gpt-5") == ("gpt-5", None)

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from innovation.network.graph import IdeaGraph
+from innovation.core.network.graph import IdeaGraph
 
 
 def small_graph():

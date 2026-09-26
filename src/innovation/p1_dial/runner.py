@@ -5,12 +5,12 @@ from pathlib import Path
 
 import numpy as np
 
-from innovation.agents.baselines import (NoNavLLMPolicy,
+from innovation.p1_dial.agents.baselines import (NoNavLLMPolicy,
                                          PreferentialAttachmentPolicy,
                                          TopicOnlyPolicy)
-from innovation.agents.llm_agent import LLMAgentPolicy
-from innovation.experiments.env import AgentScope, Environment
-from innovation.experiments.events import EventLog
+from innovation.p1_dial.agents.llm_agent import LLMAgentPolicy
+from innovation.p1_dial.env import AgentScope, Environment
+from innovation.core.events import EventLog
 
 
 @dataclass
@@ -143,7 +143,7 @@ def resume_simulation(cfg: RunConfig, *, graph, index, embedder, llm, model,
     topic assignments are reused (never re-sampled). The resumed segment uses
     a fresh rng stream seeded by (seed, start_step) — a resumed run is
     reproducible, but not bit-identical to an uninterrupted one."""
-    from innovation.experiments.events import load_events
+    from innovation.core.events import load_events
 
     run_dir = Path(out_dir) / cfg.run_id
     events = load_events(run_dir / "events.jsonl")

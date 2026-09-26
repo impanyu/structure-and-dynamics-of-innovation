@@ -1,4 +1,4 @@
-from innovation.experiments.events import EventLog, load_events
+from innovation.core.events import EventLog, load_events
 
 
 def test_append_assigns_seq_and_persists(tmp_path):

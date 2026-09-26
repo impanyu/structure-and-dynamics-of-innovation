@@ -3,9 +3,9 @@ import json
 
 import numpy as np
 
-from innovation.analysis.viz import (extract_trajectories, place_new_points,
+from innovation.core.analysis.viz import (extract_trajectories, place_new_points,
                                      plot_run)
-from innovation.ideas.embed import FakeEmbedder, save_embeddings
+from innovation.core.ideas.embed import FakeEmbedder, save_embeddings
 
 
 def test_extract_trajectories_reads_and_writes():

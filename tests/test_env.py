@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 
-from innovation.experiments.env import Action, Environment
-from innovation.experiments.events import EventLog
-from innovation.ideas.embed import FakeEmbedder
-from innovation.network.graph import IdeaGraph
-from innovation.network.index import VectorIndex
+from innovation.p1_dial.env import Action, Environment
+from innovation.core.events import EventLog
+from innovation.core.ideas.embed import FakeEmbedder
+from innovation.core.network.graph import IdeaGraph
+from innovation.core.network.index import VectorIndex
 
 
 def make_env(tmp_path, budget=5):
@@ -128,7 +128,7 @@ COMM = {"A1": 0, "A2": 0, "B1": 1}
 
 
 def test_scoped_read_filters_search_browse_and_jump(tmp_path):
-    from innovation.experiments.env import AgentScope
+    from innovation.p1_dial.env import AgentScope
     scopes = {"a0": AgentScope(read={0}, write={0})}
     env = make_scoped_env(tmp_path, scopes, COMM)
     hits = env.execute("a0", 0, Action("search", {"query": "one", "k": 3}))
@@ -142,14 +142,14 @@ def test_scoped_read_filters_search_browse_and_jump(tmp_path):
 
 
 def test_no_jump_scope_blocks_sample_frontier(tmp_path):
-    from innovation.experiments.env import AgentScope
+    from innovation.p1_dial.env import AgentScope
     scopes = {"a0": AgentScope(allow_jump=False)}
     env = make_scoped_env(tmp_path, scopes, COMM)
     assert "error" in env.execute("a0", 0, Action("sample_frontier", {}))
 
 
 def test_scoped_write_constrains_generate_and_links(tmp_path):
-    from innovation.experiments.env import AgentScope
+    from innovation.p1_dial.env import AgentScope
     scopes = {"a0": AgentScope(read=None, write={0})}  # read all, write only C0
     env = make_scoped_env(tmp_path, scopes, COMM)
     res = env.execute("a0", 0, Action("generate", {"text": "x", "cited_ids": ["A1", "B1"]}))
@@ -164,7 +164,7 @@ def test_scoped_write_constrains_generate_and_links(tmp_path):
 
 
 def test_semantic_radius_scope_read_and_write(tmp_path):
-    from innovation.experiments.env import AgentScope
+    from innovation.p1_dial.env import AgentScope
     emb = FakeEmbedder()
     # Anchor = exact text of A1's idea; tiny radius admits only that node.
     anchors = emb.encode(["alpha one"])
@@ -193,7 +193,7 @@ def test_semantic_radius_scope_read_and_write(tmp_path):
 
 def test_broad_reader_cites_anywhere(tmp_path):
     """Read-unrestricted, write-scoped agents may cite ANY paper."""
-    from innovation.experiments.env import AgentScope
+    from innovation.p1_dial.env import AgentScope
     emb = FakeEmbedder()
     anchors = emb.encode(["alpha one"])
     scopes = {"a0": AgentScope(write_anchors=anchors, write_radius=1e-6)}
@@ -205,7 +205,7 @@ def test_broad_reader_cites_anywhere(tmp_path):
 
 
 def test_semantic_write_scope_binds_generated_text(tmp_path):
-    from innovation.experiments.env import AgentScope
+    from innovation.p1_dial.env import AgentScope
     emb = FakeEmbedder()
     anchors = emb.encode(["alpha one"])
     scopes = {"a0": AgentScope(write_anchors=anchors, write_radius=1e-6)}
@@ -223,7 +223,7 @@ def test_semantic_write_scope_binds_generated_text(tmp_path):
 def test_per_anchor_radii_membership(tmp_path):
     """AgentScope radii may be per-anchor arrays (equal-mass regions)."""
     import numpy as np
-    from innovation.experiments.env import AgentScope
+    from innovation.p1_dial.env import AgentScope
     emb = FakeEmbedder()
     anchors = emb.encode(["alpha one", "totally different"])
     # anchor 0 tight (only exact match), anchor 1 radius 0 (nothing)

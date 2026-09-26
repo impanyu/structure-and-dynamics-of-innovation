@@ -14,8 +14,8 @@ from pathlib import Path
 
 import numpy as np
 
-from innovation.experiments.events import load_events
-from innovation.ideas.embed import load_embeddings
+from innovation.core.events import load_events
+from innovation.core.ideas.embed import load_embeddings
 
 
 def project_corpus_2d(data_dir, cache_name: str = "proj_tsne.npy",

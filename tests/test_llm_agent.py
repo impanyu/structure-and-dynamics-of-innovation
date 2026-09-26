@@ -1,7 +1,7 @@
 import json
 
-from innovation.agents.llm_agent import LLMAgentPolicy
-from innovation.llm import FakeLLM
+from innovation.p1_dial.agents.llm_agent import LLMAgentPolicy
+from innovation.core.llm import FakeLLM
 
 
 def test_parses_json_action_from_reply():

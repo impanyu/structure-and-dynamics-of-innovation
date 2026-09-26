@@ -1,6 +1,6 @@
-from innovation.ideas.summarize import (load_ideas, save_ideas,
+from innovation.core.ideas.summarize import (load_ideas, save_ideas,
                                         summarize_corpus, summarize_paper)
-from innovation.llm import FakeLLM
+from innovation.core.llm import FakeLLM
 import pandas as pd
 
 

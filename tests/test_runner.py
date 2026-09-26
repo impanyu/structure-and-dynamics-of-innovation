@@ -2,12 +2,12 @@ import json
 
 import pandas as pd
 
-from innovation.experiments.events import load_events
-from innovation.experiments.runner import RunConfig, run_simulation
-from innovation.ideas.embed import FakeEmbedder
-from innovation.llm import FakeLLM
-from innovation.network.graph import IdeaGraph
-from innovation.network.index import VectorIndex
+from innovation.core.events import load_events
+from innovation.p1_dial.runner import RunConfig, run_simulation
+from innovation.core.ideas.embed import FakeEmbedder
+from innovation.core.llm import FakeLLM
+from innovation.core.network.graph import IdeaGraph
+from innovation.core.network.index import VectorIndex
 
 
 def fixtures():
@@ -58,7 +58,7 @@ def test_mixed_policies_and_determinism(tmp_path):
 def test_build_policy_rejects_unknown_kind():
     import numpy as np
     import pytest
-    from innovation.experiments.runner import build_policy
+    from innovation.p1_dial.runner import build_policy
     with pytest.raises(ValueError):
         build_policy({"policy": "quantum"}, llm=None, model="m",
                      graph=None, rng=np.random.default_rng(0))
@@ -67,7 +67,7 @@ def test_build_policy_rejects_unknown_kind():
 def test_agent_scopes_flow_from_config(tmp_path):
     """Agent specs with read/write/jump constraints reach the Environment."""
     import json
-    from innovation.llm import FakeLLM
+    from innovation.core.llm import FakeLLM
 
     graph, index, emb = fixtures()
     gen_out = json.dumps({"action": "generate",
@@ -88,9 +88,9 @@ def test_topic_scope_flows_from_config(tmp_path):
     """read_topics in an agent spec becomes semantic anchors in the env."""
     import json
     import pytest
-    from innovation.experiments.runner import build_scope
-    from innovation.ideas.embed import FakeEmbedder
-    from innovation.llm import FakeLLM
+    from innovation.p1_dial.runner import build_scope
+    from innovation.core.ideas.embed import FakeEmbedder
+    from innovation.core.llm import FakeLLM
 
     emb = FakeEmbedder()
     scope = build_scope({"read_topics": ["idea 0"], "read_radius": 1e-6}, emb)
@@ -117,7 +117,7 @@ def test_random_topic_assignment_is_seeded_and_distinct(tmp_path):
     """read/write_topics: "random" resolves to one pool topic per specialist,
     distinct within a run, deterministic per seed, recorded in run_meta."""
     import json
-    from innovation.llm import FakeLLM
+    from innovation.core.llm import FakeLLM
 
     graph, index, emb = fixtures()
     pool = [f"topic {i}" for i in range(50)]
@@ -145,8 +145,8 @@ def test_equal_mass_scope_covers_exactly_k_corpus_papers():
     """read_mass: k derives a per-anchor radius = distance to the k-th nearest
     corpus paper, so every specialist region holds exactly k corpus papers."""
     import numpy as np
-    from innovation.experiments.runner import build_scope
-    from innovation.ideas.embed import FakeEmbedder
+    from innovation.p1_dial.runner import build_scope
+    from innovation.core.ideas.embed import FakeEmbedder
 
     emb = FakeEmbedder()
     corpus_vecs = emb.encode([f"paper {i}" for i in range(200)])
@@ -161,7 +161,7 @@ def test_equal_mass_scope_covers_exactly_k_corpus_papers():
 
 def test_obs_carries_live_budget_status(tmp_path):
     import json
-    from innovation.llm import FakeLLM
+    from innovation.core.llm import FakeLLM
 
     graph, index, emb = fixtures()
     gen = json.dumps({"action": "generate", "args": {"text": "t", "cited_ids": ["W0"]}})
@@ -178,9 +178,9 @@ def test_resume_continues_steps_memory_and_gen_counter(tmp_path):
     """resume_simulation continues a finished run: steps and gen ids carry on,
     agent memories are rebuilt from the event log, topic assignments reused."""
     import json
-    from innovation.experiments.events import load_events
-    from innovation.experiments.runner import resume_simulation
-    from innovation.llm import FakeLLM
+    from innovation.core.events import load_events
+    from innovation.p1_dial.runner import resume_simulation
+    from innovation.core.llm import FakeLLM
 
     graph, index, emb = fixtures()
     gen = json.dumps({"action": "generate", "args": {"text": "t", "cited_ids": ["W0"]}})

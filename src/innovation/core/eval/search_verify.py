@@ -10,7 +10,7 @@ from pathlib import Path
 
 import requests
 
-from innovation.llm import LLM
+from innovation.core.llm import LLM
 
 S2_BASE = "https://api.semanticscholar.org/graph/v1/paper/search"
 OPENALEX_BASE = "https://api.openalex.org/works"
@@ -97,7 +97,7 @@ _S2_BREAKER = {"fails": 0, "until": 0.0}
 
 
 def s2_search(query: str, *, cache_dir, http_get=None) -> list[dict]:
-    from innovation.data.s2 import s2_headers
+    from innovation.core.data.s2 import s2_headers
 
     if time.time() < _S2_BREAKER["until"]:
         return []
@@ -133,7 +133,7 @@ _OA_BREAKER = {"fails": 0, "until": 0.0}
 
 
 def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> list[dict]:
-    from innovation.data.openalex import reconstruct_abstract
+    from innovation.core.data.openalex import reconstruct_abstract
 
     if time.time() < _OA_BREAKER["until"]:
         return []

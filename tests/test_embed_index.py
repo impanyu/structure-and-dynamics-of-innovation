@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from innovation.ideas.embed import (FakeEmbedder, load_embeddings,
+from innovation.core.ideas.embed import (FakeEmbedder, load_embeddings,
                                     save_embeddings)
-from innovation.network.index import VectorIndex
+from innovation.core.network.index import VectorIndex
 
 
 def test_fake_embedder_is_deterministic_and_normalized():

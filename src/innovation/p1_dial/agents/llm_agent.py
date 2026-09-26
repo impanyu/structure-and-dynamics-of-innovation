@@ -2,9 +2,9 @@
 import json
 from collections import deque
 
-from innovation.agents.policy import Policy
-from innovation.experiments.env import Action
-from innovation.llm import LLM
+from innovation.core.policy import Policy
+from innovation.p1_dial.env import Action
+from innovation.core.llm import LLM
 
 VALID_ACTIONS = {"search", "browse", "sample_frontier", "generate",
                  "add_links", "remove_links"}

@@ -1,9 +1,9 @@
 import json
 
-from innovation.eval.search_verify import (Verdict, extract_queries,
+from innovation.core.eval.search_verify import (Verdict, extract_queries,
                                            judge_level, s2_search,
                                            verify_idea)
-from innovation.llm import FakeLLM
+from innovation.core.llm import FakeLLM
 
 
 class FakeResponse:
@@ -132,7 +132,7 @@ def test_verify_idea_keeps_first_of_multiple_post_cutoff_hits(tmp_path):
 
 
 def test_tier_of_classification():
-    from innovation.eval.search_verify import tier_of
+    from innovation.core.eval.search_verify import tier_of
     t1 = ["neural information processing", "iclr"]
     t2 = ["emnlp"]
     assert tier_of({"venue": "Advances in Neural Information Processing Systems",
@@ -192,7 +192,7 @@ def test_verify_idea_excludes_in_corpus_titles(tmp_path):
 
 
 def test_cached_get_retries_on_429(tmp_path):
-    from innovation.eval.search_verify import _cached_get
+    from innovation.core.eval.search_verify import _cached_get
 
     calls = []
 

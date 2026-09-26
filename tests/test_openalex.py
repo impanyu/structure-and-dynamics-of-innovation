@@ -1,4 +1,4 @@
-from innovation.data.openalex import (fetch_field_works, fetch_source_works,
+from innovation.core.data.openalex import (fetch_field_works, fetch_source_works,
                                       find_source_id, reconstruct_abstract)
 
 

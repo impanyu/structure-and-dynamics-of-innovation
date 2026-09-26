@@ -3,9 +3,9 @@ from collections import deque
 
 import numpy as np
 
-from innovation.experiments.env import Action
-from innovation.agents.policy import Policy
-from innovation.llm import LLM
+from innovation.p1_dial.env import Action
+from innovation.core.policy import Policy
+from innovation.core.llm import LLM
 
 NONAV_TEMPLATE = """Here are {k} ideas from the research literature:
 

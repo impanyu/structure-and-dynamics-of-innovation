@@ -7,23 +7,23 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from innovation.config import load_config, load_env
-from innovation.data.corpus import build_corpus, load_corpus, save_corpus
-from innovation.data.openalex import (fetch_field_works, fetch_source_works,
+from innovation.core.config import load_config, load_env
+from innovation.core.data.corpus import build_corpus, load_corpus, save_corpus
+from innovation.core.data.openalex import (fetch_field_works, fetch_source_works,
                                       find_source_id)
-from innovation.data.edge_augment import augment_edges
-from innovation.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
+from innovation.core.data.edge_augment import augment_edges
+from innovation.core.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
                                 s2_fetch_citations, s2_fetch_references)
-from innovation.eval.metrics import aggregate_run, past_dup_flag
-from innovation.eval.search_verify import verify_idea
-from innovation.experiments.events import load_events
-from innovation.experiments.runner import (RunConfig, resume_simulation,
+from innovation.core.eval.metrics import aggregate_run, past_dup_flag
+from innovation.core.eval.search_verify import verify_idea
+from innovation.core.events import load_events
+from innovation.p1_dial.runner import (RunConfig, resume_simulation,
                                             run_simulation)
-from innovation.ideas.embed import Embedder, load_embeddings, save_embeddings
-from innovation.ideas.summarize import load_ideas, save_ideas, summarize_corpus
-from innovation.llm import CachedLLM, RoutedLLM
-from innovation.network.graph import IdeaGraph
-from innovation.network.index import VectorIndex
+from innovation.core.ideas.embed import Embedder, load_embeddings, save_embeddings
+from innovation.core.ideas.summarize import load_ideas, save_ideas, summarize_corpus
+from innovation.core.llm import CachedLLM, RoutedLLM
+from innovation.core.network.graph import IdeaGraph
+from innovation.core.network.index import VectorIndex
 
 
 def _llm(cfg):
@@ -190,7 +190,7 @@ def cmd_evaluate(cfg):
 
 
 def cmd_visualize(cfg):
-    from innovation.analysis.viz import plot_run
+    from innovation.core.analysis.viz import plot_run
 
     emb = Embedder(cfg["embedding_model"])
     png, tj = plot_run(Path(cfg["out_dir"]) / cfg["run"]["run_id"],

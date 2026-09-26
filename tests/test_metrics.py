@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from innovation.eval.metrics import (aggregate_run, bridging, diversity,
+from innovation.core.eval.metrics import (aggregate_run, bridging, diversity,
                                      idea_levels, novelty, past_dup_flag)
-from innovation.eval.search_verify import Verdict
+from innovation.core.eval.search_verify import Verdict
 
 
 def make_verdict(idea_id, t1=0, t3=None):

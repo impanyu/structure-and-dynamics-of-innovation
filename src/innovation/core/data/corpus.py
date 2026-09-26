@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from innovation.data.openalex import reconstruct_abstract
+from innovation.core.data.openalex import reconstruct_abstract
 
 
 def _short_id(openalex_url: str) -> str:

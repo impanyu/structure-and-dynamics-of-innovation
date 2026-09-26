@@ -5,18 +5,18 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from innovation.config import load_config
+from innovation.core.config import load_config
 from innovation.cli import cmd_run, cmd_evaluate
-from innovation.data.corpus import save_corpus
-from innovation.ideas.embed import FakeEmbedder, save_embeddings
-from innovation.ideas.summarize import save_ideas
-from innovation.llm import FakeLLM
-from innovation.eval.search_verify import Verdict
+from innovation.core.data.corpus import save_corpus
+from innovation.core.ideas.embed import FakeEmbedder, save_embeddings
+from innovation.core.ideas.summarize import save_ideas
+from innovation.core.llm import FakeLLM
+from innovation.core.eval.search_verify import Verdict
 
 
 def test_load_config_reads_stage1_yaml():
     """Load stage1.yaml and verify key fields."""
-    cfg = load_config("configs/stage1.yaml")
+    cfg = load_config("configs/p1_dial/stage1.yaml")
     assert isinstance(cfg, dict)
     assert cfg["cutoff_date"] == "2024-09-30"
     assert cfg["models"]["summarizer"] == "openai:gpt-5-mini:minimal"
@@ -249,7 +249,7 @@ def test_load_config_extends_and_deep_merges(tmp_path):
 
 def test_cmd_run_no_edges_and_seed_override(tmp_path, monkeypatch):
     import innovation.cli as cli
-    from innovation.experiments.events import load_events
+    from innovation.core.events import load_events
 
     papers = pd.DataFrame([
         {"paper_id": f"W{i}", "title": f"T{i}", "abstract": f"A{i}",
@@ -280,12 +280,12 @@ def test_cmd_run_no_edges_and_seed_override(tmp_path, monkeypatch):
 
 
 def test_all_experiment_configs_load_and_scopes_build():
-    from innovation.experiments.runner import build_scope
-    from innovation.ideas.embed import FakeEmbedder
+    from innovation.p1_dial.runner import build_scope
+    from innovation.core.ideas.embed import FakeEmbedder
 
     emb = FakeEmbedder()
     corpus_vecs = emb.encode([f"paper {i}" for i in range(1000)])
-    exp_dir = Path("configs/experiments")
+    exp_dir = Path("configs/p1_dial/experiments")
     files = sorted(exp_dir.glob("*.yaml"))
     assert len(files) >= 10
     for f in files:
@@ -339,7 +339,7 @@ def test_cmd_fetch_s2_venues_mode(tmp_path, monkeypatch):
 
 
 def test_load_env_sets_missing_vars_only(tmp_path, monkeypatch):
-    from innovation.config import load_env
+    from innovation.core.config import load_env
     import os
 
     env_file = tmp_path / ".env"

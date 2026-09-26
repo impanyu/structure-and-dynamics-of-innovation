@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from innovation.agents.baselines import (NoNavLLMPolicy,
+from innovation.p1_dial.agents.baselines import (NoNavLLMPolicy,
                                          PreferentialAttachmentPolicy)
-from innovation.llm import FakeLLM
-from innovation.network.graph import IdeaGraph
+from innovation.core.llm import FakeLLM
+from innovation.core.network.graph import IdeaGraph
 
 
 def graph_with_hub():

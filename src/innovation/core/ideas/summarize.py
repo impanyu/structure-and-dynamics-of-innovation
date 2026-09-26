@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from innovation.llm import LLM
+from innovation.core.llm import LLM
 
 SUMMARY_SYSTEM = (
     "You summarize research papers into a single self-contained idea paragraph.")

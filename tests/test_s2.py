@@ -1,6 +1,6 @@
 """Tests for the Semantic Scholar venue-corpus module."""
 
-from innovation.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
+from innovation.core.data.s2 import (build_s2_corpus, s2_bulk_venue_search,
                                 s2_fetch_references)
 
 
@@ -100,7 +100,7 @@ def test_build_s2_corpus_before_date_boundary():
 
 
 def test_s2_headers_include_api_key_when_set(tmp_path, monkeypatch):
-    from innovation.data.s2 import s2_headers
+    from innovation.core.data.s2 import s2_headers
 
     monkeypatch.delenv("S2_API_KEY", raising=False)
     assert s2_headers() == {}
@@ -122,7 +122,7 @@ def test_bulk_search_passes_headers(tmp_path, monkeypatch):
 
 
 def test_fetch_citations_builds_reverse_edges(tmp_path):
-    from innovation.data.s2 import s2_fetch_citations
+    from innovation.core.data.s2 import s2_fetch_citations
 
     def fake_post(url, params=None, json=None, headers=None):
         assert params["fields"] == "citations.paperId"

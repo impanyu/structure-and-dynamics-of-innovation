@@ -1,7 +1,7 @@
 """Tests for OpenAlex edge augmentation."""
 import pandas as pd
 
-from innovation.data.edge_augment import augment_edges, s2_fetch_external_ids
+from innovation.core.data.edge_augment import augment_edges, s2_fetch_external_ids
 
 
 class FakeResponse:

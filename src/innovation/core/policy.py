@@ -1,7 +1,7 @@
 """Policy ABC: the LLM agent is one policy among several (spec §3.4)."""
 from abc import ABC, abstractmethod
 
-from innovation.experiments.env import Action
+from innovation.p1_dial.env import Action
 
 
 class Policy(ABC):

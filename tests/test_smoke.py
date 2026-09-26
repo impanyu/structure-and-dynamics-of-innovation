@@ -4,14 +4,14 @@ import json
 
 import pandas as pd
 
-from innovation.eval.metrics import aggregate_run, past_dup_flag
-from innovation.eval.search_verify import verify_idea
-from innovation.experiments.runner import RunConfig, run_simulation
-from innovation.ideas.embed import FakeEmbedder
-from innovation.ideas.summarize import summarize_corpus
-from innovation.llm import CachedLLM, FakeLLM
-from innovation.network.graph import IdeaGraph
-from innovation.network.index import VectorIndex
+from innovation.core.eval.metrics import aggregate_run, past_dup_flag
+from innovation.core.eval.search_verify import verify_idea
+from innovation.p1_dial.runner import RunConfig, run_simulation
+from innovation.core.ideas.embed import FakeEmbedder
+from innovation.core.ideas.summarize import summarize_corpus
+from innovation.core.llm import CachedLLM, FakeLLM
+from innovation.core.network.graph import IdeaGraph
+from innovation.core.network.index import VectorIndex
 
 
 class FakeResponse:

@@ -18,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from innovation.data.s2 import S2_BATCH, _cached_call, s2_headers
+from innovation.core.data.s2 import S2_BATCH, _cached_call, s2_headers
 
 OPENALEX_WORKS = "https://api.openalex.org/works"
 
