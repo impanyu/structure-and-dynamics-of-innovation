@@ -171,3 +171,34 @@ def test_a_misspelled_ablation_key_is_an_error_not_a_no_op():
         Navigation.from_config({"serach": False})
     with pytest.raises(ValueError, match="unknown navigation.board channel"):
         Navigation.from_config({"board": {"jumps": False}})
+
+
+# --- a bare bool on a per-store key must not be a silent no-op (finding 1) ---
+
+def test_a_false_store_shorthand_closes_every_channel_on_that_store():
+    nav = Navigation.from_config({"board": False})
+
+    assert nav.board_search is False
+    assert nav.board_edges is False
+    assert nav.board_jump is False
+    # the other store is untouched
+    assert nav.corpus_search is True
+    assert nav.corpus_edges is True
+    assert nav.corpus_jump is True
+
+
+def test_a_true_store_shorthand_opens_every_channel_on_that_store():
+    nav = Navigation.from_config({"board": True})
+
+    assert nav.board_search is True
+    assert nav.board_edges is True
+    assert nav.board_jump is True
+
+
+def test_a_malformed_store_value_is_rejected_not_ignored():
+    with pytest.raises(ValueError, match="navigation.board must be a mapping"):
+        Navigation.from_config({"board": "off"})
+    with pytest.raises(ValueError, match="navigation.corpus must be a mapping"):
+        Navigation.from_config({"corpus": ["jump"]})
+    with pytest.raises(ValueError, match="navigation.board must be a mapping"):
+        Navigation.from_config({"board": None})

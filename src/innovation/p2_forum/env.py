@@ -56,9 +56,25 @@ class Navigation:
               search: false            # both stores (shorthand)
               corpus: {jump: false}    # one store, overrides the shorthand
               board:  {edges: false}
+              board:  false            # per-store shorthand: close every
+                                        # channel on this store at once
+              board:  true             # per-store shorthand: open every
+                                        # channel on this store (explicit,
+                                        # matches the default)
 
-        Unknown keys raise rather than being ignored, so a typo in an ablation
-        config cannot quietly produce an unablated run."""
+        A per-store value must be a mapping OR a bare bool. The bool is not a
+        default-y falsy/truthy check: `false` means "close every channel on
+        this store", full stop — it is the whole-store analogue of Experiment
+        3's per-channel ablation, and it must never be mistaken for "no
+        overrides given" (a config that reads as an ablation but silently
+        runs unablated is the failure mode this guards against). Anything
+        else that isn't a mapping or a bool (a string, a list, `None`
+        written explicitly as `board: null`, ...) is rejected by name rather
+        than ignored.
+
+        Unknown keys raise rather than being ignored, so a typo in an
+        ablation config cannot quietly produce an unablated run."""
+        _unset = object()
         section = dict(section or {})
         shared = {}
         for channel in CHANNELS:
@@ -66,11 +82,19 @@ class Navigation:
                 shared[channel] = bool(section.pop(channel))
         per_store = {}
         for store in STORES:
-            block = section.pop(store, None) or {}
-            if not isinstance(block, dict):
+            block = section.pop(store, _unset)
+            if block is _unset:
+                block = {}
+            elif isinstance(block, bool):
+                # Per-store shorthand: set every channel on this store to the
+                # same value. `false` must disable the whole store, not be
+                # swallowed as "nothing to override".
+                block = {channel: block for channel in CHANNELS}
+            elif not isinstance(block, dict):
                 raise ValueError(
                     f"navigation.{store} must be a mapping of "
-                    f"{list(CHANNELS)} to booleans; got {block!r}")
+                    f"{list(CHANNELS)} to booleans, or a single bool to set "
+                    f"all of them at once; got {block!r}")
             unknown = sorted(set(block) - set(CHANNELS))
             if unknown:
                 raise ValueError(
