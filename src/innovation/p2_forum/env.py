@@ -5,19 +5,102 @@ The environment filters nothing. Every agent may read every node in either
 store; what an agent cares about is decided by the topics in its prompt, and a
 result it does not want is a result it ignores.
 """
+from dataclasses import dataclass
+
 from innovation.core.action import Action  # re-exported: this module's public name
+
+CHANNELS = ("search", "edges", "jump")
+STORES = ("corpus", "board")
+
+
+@dataclass(frozen=True)
+class Navigation:
+    """Which navigation channels are open, PER STORE (spec §4.1).
+
+    Paper 1's three navigation-channel ablations — no search, no edges, no
+    jumps — apply to each store independently here, from this one
+    implementation. That is the point of the action table's symmetry, and it is
+    what makes "ablate the board channel the paper is about while leaving the
+    literature intact" expressible.
+
+    The three channels, and what closing one means:
+
+    - `search` refuses `search` / `search_board` outright. The agent is told,
+      because a semantic index either answers or does not exist.
+    - `edges` leaves `browse` / `browse_board` readable but returns no
+      neighbours. This is the faithful analogue of paper 1's edge ablation
+      (`run.init_edges: none`), which leaves the nodes in place and removes the
+      links between them: the agent loses the channel, not the node's text.
+      `run.init_edges: none` still removes the corpus's edges from the DATA;
+      `navigation.corpus.edges: false` closes the channel over data that has
+      them.
+    - `jump` refuses `sample_frontier` / `sample_board`.
+
+    These are environmental, not dispositional (§4.3): one board is shared, so
+    a channel is open or closed for the whole run. They are therefore
+    configured at the top level, never per agent — see
+    ForumRunConfig.__post_init__.
+    """
+    corpus_search: bool = True
+    corpus_edges: bool = True
+    corpus_jump: bool = True
+    board_search: bool = True
+    board_edges: bool = True
+    board_jump: bool = True
+
+    @classmethod
+    def from_config(cls, section: dict | None) -> "Navigation":
+        """Build from a config's top-level `navigation:` section:
+
+            navigation:
+              search: false            # both stores (shorthand)
+              corpus: {jump: false}    # one store, overrides the shorthand
+              board:  {edges: false}
+
+        Unknown keys raise rather than being ignored, so a typo in an ablation
+        config cannot quietly produce an unablated run."""
+        section = dict(section or {})
+        shared = {}
+        for channel in CHANNELS:
+            if channel in section:
+                shared[channel] = bool(section.pop(channel))
+        per_store = {}
+        for store in STORES:
+            block = section.pop(store, None) or {}
+            if not isinstance(block, dict):
+                raise ValueError(
+                    f"navigation.{store} must be a mapping of "
+                    f"{list(CHANNELS)} to booleans; got {block!r}")
+            unknown = sorted(set(block) - set(CHANNELS))
+            if unknown:
+                raise ValueError(
+                    f"unknown navigation.{store} channel(s) {unknown}; "
+                    f"known channels are {list(CHANNELS)}")
+            per_store[store] = block
+        if section:
+            raise ValueError(
+                f"unknown navigation key(s) {sorted(section)}; expected "
+                f"{list(CHANNELS)} and/or {list(STORES)}")
+        kwargs = {}
+        for store in STORES:
+            for channel in CHANNELS:
+                kwargs[f"{store}_{channel}"] = bool(
+                    per_store[store].get(channel, shared.get(channel, True)))
+        return cls(**kwargs)
+
+    def is_open(self, store: str, channel: str) -> bool:
+        return bool(getattr(self, f"{store}_{channel}"))
 
 
 class ForumEnvironment:
     def __init__(self, *, run_id, workspace, event_log, rng,
-                 allow_jump: bool = True, allow_search: bool = True,
+                 navigation: Navigation | None = None,
                  generation_budget: int | None = None):
         self.run_id = run_id
         self.ws = workspace
         self.event_log = event_log
         self.rng = rng
-        self.allow_jump = allow_jump
-        self.allow_search = allow_search
+        self.nav = navigation or Navigation()
         self.generation_budget = generation_budget
 
     # --- entry point ---
@@ -54,39 +137,43 @@ class ForumEnvironment:
 
     # --- corpus navigation ---
     def _do_search(self, *, agent_id, step, query: str, k: int = 5) -> dict:
-        if not self.allow_search:
-            return {"error": "semantic search is not allowed for this agent"}
+        if not self.nav.corpus_search:
+            return {"error": "semantic search over the literature is closed"}
         vec = self.ws.embedder.encode([query])[0]
         return self._hits(self.ws.corpus_search(vec, k=k), "corpus")
 
     def _do_browse(self, *, agent_id, step, node_id: str) -> dict:
         if self.ws.store_of(node_id) != "corpus" or not self.ws.corpus.has_node(node_id):
             return {"error": f"{node_id} is not a corpus node"}
+        if not self.nav.corpus_edges:
+            return self._view(node_id, "corpus", [], [])
         out_ids, in_ids = self.ws.corpus_neighbors(node_id)
         return self._view(node_id, "corpus", out_ids, in_ids)
 
     def _do_sample_frontier(self, *, agent_id, step) -> dict:
-        if not self.allow_jump:
-            return {"error": "random jump is not allowed for this agent"}
+        if not self.nav.corpus_jump:
+            return {"error": "random jumps into the literature are closed"}
         nid = self.ws.corpus_sample(self.rng)
         return {"node_id": nid, "store": "corpus", "text": self.ws.node(nid).text}
 
     # --- board navigation ---
     def _do_search_board(self, *, agent_id, step, query: str, k: int = 5) -> dict:
-        if not self.allow_search:
-            return {"error": "semantic search is not allowed for this agent"}
+        if not self.nav.board_search:
+            return {"error": "semantic search over the board is closed"}
         vec = self.ws.embedder.encode([query])[0]
         return self._hits(self.ws.board_search(vec, k=k), "board")
 
     def _do_browse_board(self, *, agent_id, step, node_id: str) -> dict:
         if self.ws.store_of(node_id) != "board" or not self.ws.board.has_node(node_id):
             return {"error": f"{node_id} is not a board node"}
+        if not self.nav.board_edges:
+            return self._view(node_id, "board", [], [])
         out_ids, in_ids = self.ws.board_neighbors(node_id)
         return self._view(node_id, "board", out_ids, in_ids)
 
     def _do_sample_board(self, *, agent_id, step) -> dict:
-        if not self.allow_jump:
-            return {"error": "random jump is not allowed for this agent"}
+        if not self.nav.board_jump:
+            return {"error": "random jumps into the board are closed"}
         nid = self.ws.board_sample(self.rng)
         if nid is None:
             return {"error": "the board is empty"}

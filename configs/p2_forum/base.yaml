@@ -5,6 +5,15 @@ extends: ../p1_dial/stage1.yaml
 arch: p2_forum
 out_dir: runs/p2_forum
 topics_file: configs/p2_forum/topics-k128.yaml
+# Navigation-channel ablations (spec §4.1) apply to each store independently.
+# Channels are search / edges / jump; naming one at this level closes it on
+# both stores, and a per-store block overrides that. Omitted = everything open.
+# An unknown key is an error, not a silent no-op.
+#   navigation:
+#     board: {edges: false}     # the board-link channel this paper is about
+#     corpus: {search: false}   # paper 1's no-search ablation, corpus only
+# These are environmental, not per-agent: do NOT put allow_search/allow_jump
+# on an agent (run.agents), which is refused.
 run:
   run_id: forum-pilot
   seed: 0

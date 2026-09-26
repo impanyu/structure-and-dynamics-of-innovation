@@ -6,7 +6,7 @@ and recorded in run_meta.json. Agents may share topics — with N agents and a
 collaboration needs, not a defect.
 """
 import json
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +14,7 @@ import numpy as np
 from innovation.core.events import EventLog, load_events
 from innovation.core.network.index import VectorIndex
 from innovation.p2_forum.agent import ForumAgentPolicy
-from innovation.p2_forum.env import ForumEnvironment
+from innovation.p2_forum.env import ForumEnvironment, Navigation
 from innovation.p2_forum.workspace import Workspace
 
 
@@ -26,6 +26,22 @@ class ForumRunConfig:
     agents: list[dict] = field(default_factory=list)
     topic_pool: list[str] = field(default_factory=list)
     generation_budget: int | None = None
+    # Navigation ablations are environmental, not dispositional (spec §4.3):
+    # one board is shared, so a channel is open or closed for the whole run.
+    navigation: Navigation = field(default_factory=Navigation)
+
+    def __post_init__(self):
+        # Per-agent allow_jump/allow_search used to be collapsed with all(...)
+        # into one env-wide flag, so one agent opting out silently disabled the
+        # channel for every agent. Refuse the key rather than mean something
+        # else by it.
+        stray = sorted({key for a in self.agents for key in a
+                        if key in ("allow_jump", "allow_search")})
+        if stray:
+            raise ValueError(
+                f"{stray} is per-agent in run.agents, but navigation ablations "
+                "are environment-wide (spec §4.3); move them to the top-level "
+                "`navigation:` section, e.g. navigation: {board: {jump: false}}")
 
 
 def draw_topics(agents: list[dict], pool: list[str], rng) -> dict[str, list[str]]:
@@ -53,10 +69,7 @@ def _build_env(cfg: ForumRunConfig, *, run_dir, corpus, corpus_index, embedder,
                             event_log=EventLog(run_dir / "events.jsonl"),
                             rng=rng,
                             generation_budget=cfg.generation_budget,
-                            allow_jump=all(a.get("allow_jump", True)
-                                           for a in cfg.agents),
-                            allow_search=all(a.get("allow_search", True)
-                                             for a in cfg.agents))
+                            navigation=cfg.navigation)
 
 
 def _build_policies(cfg: ForumRunConfig, *, llm, model,
@@ -93,6 +106,7 @@ def run_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
     (run_dir / "run_meta.json").write_text(json.dumps(
         {"run_id": cfg.run_id, "seed": cfg.seed, "arch": "p2_forum",
          "total_steps": cfg.total_steps,
+         "navigation": asdict(cfg.navigation),
          "topic_assignments": assignments}, indent=1))
 
     env = _build_env(cfg, run_dir=run_dir, corpus=corpus,

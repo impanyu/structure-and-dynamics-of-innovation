@@ -58,3 +58,41 @@ def test_run_forum_writes_meta_before_driving_and_records_topics(
     assert set(meta["topic_assignments"]) == {"a0", "a1"}
     assert out["steps"] == 4
     assert (tmp_path / "r" / "events.jsonl").exists()
+
+
+def test_per_agent_navigation_flags_are_refused(make_workspace):
+    """They used to be collapsed with all(...), so one agent opting out of
+    search silently disabled search for the whole team (spec §4.3 makes these
+    environmental). The config must not be able to express that."""
+    import pytest
+
+    with pytest.raises(ValueError, match="navigation ablations are environment-wide"):
+        ForumRunConfig(run_id="r", seed=0, total_steps=2,
+                       agents=[{"agent_id": "a0", "k_topics": 1},
+                               {"agent_id": "a1", "k_topics": 1,
+                                "allow_search": False}],
+                       topic_pool=["alpha"])
+
+
+def test_run_forum_applies_and_records_the_navigation_ablation(
+        tmp_path, make_workspace, fake_embedder):
+    from innovation.p2_forum.env import Navigation
+
+    ws = make_workspace()
+    cfg = ForumRunConfig(run_id="abl", seed=0, total_steps=2,
+                         agents=[{"agent_id": "a0", "k_topics": 1}],
+                         topic_pool=["alpha"],
+                         navigation=Navigation.from_config(
+                             {"board": {"jump": False}}))
+
+    run_forum(cfg, corpus=ws.corpus, corpus_index=ws.corpus_index,
+              embedder=fake_embedder, llm=ScriptedLLM(), model="m",
+              out_dir=tmp_path)
+
+    meta = json.loads((tmp_path / "abl" / "run_meta.json").read_text())
+    assert meta["navigation"]["board_jump"] is False
+    assert meta["navigation"]["corpus_jump"] is True
+    events = [json.loads(line) for line
+              in (tmp_path / "abl" / "events.jsonl").read_text().splitlines()]
+    # the scripted agent only jumps the corpus, which is still open
+    assert all("error" not in e["result"] for e in events)

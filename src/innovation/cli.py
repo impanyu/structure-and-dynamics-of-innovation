@@ -182,13 +182,15 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
             f"run '{r['run_id']}' already has events at {events_path}; "
             "pass --resume (with a raised total_steps) to extend it, or use a new run_id")
     if cfg.get("arch", "p1_dial") == "p2_forum":
+        from innovation.p2_forum.env import Navigation
         from innovation.p2_forum.runner import (ForumRunConfig, resume_forum,
                                                 run_forum)
         corpus, index, emb = _load_forum_world(cfg)
         run_cfg = ForumRunConfig(
             run_id=r["run_id"], seed=r["seed"], total_steps=r["total_steps"],
             agents=r["agents"], topic_pool=_topic_pool(cfg),
-            generation_budget=r.get("generation_budget"))
+            generation_budget=r.get("generation_budget"),
+            navigation=Navigation.from_config(cfg.get("navigation")))
         # resume replays the log before continuing; running fresh over an
         # existing log would re-issue gen:<run_id>:<n> ids and make the log
         # unreplayable (the primary research artifact).

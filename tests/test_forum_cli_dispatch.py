@@ -210,3 +210,28 @@ def test_resume_refreshes_the_structural_metrics(forum_cfg, monkeypatch):
     doc = json.loads((Path(forum_cfg["out_dir"]) / "f1"
                       / "board_metrics.json").read_text())
     assert doc["n_rounds"] == 4 and doc["final"]["n_posts"] == 8
+
+
+def test_the_navigation_section_reaches_the_environment(forum_cfg, monkeypatch):
+    """Spec §4.1: the ablations are per store, read from the top level."""
+    _use_llm(monkeypatch, FakeLLM(default=JUMP))
+    forum_cfg["navigation"] = {"corpus": {"jump": False}}
+
+    cli.cmd_run(forum_cfg)
+
+    run_dir = Path(forum_cfg["out_dir"]) / "f1"
+    meta = json.loads((run_dir / "run_meta.json").read_text())
+    assert meta["navigation"] == {"corpus_search": True, "corpus_edges": True,
+                                  "corpus_jump": False, "board_search": True,
+                                  "board_edges": True, "board_jump": True}
+    events = load_events(run_dir / "events.jsonl")
+    assert all(e["result"]["error"].startswith("random jumps into the literature")
+               for e in events)
+
+
+def test_a_typo_in_the_navigation_section_fails_the_run(forum_cfg, monkeypatch):
+    _use_llm(monkeypatch, FakeLLM(default=JUMP))
+    forum_cfg["navigation"] = {"corpus": {"jmup": False}}
+
+    with pytest.raises(ValueError, match="unknown navigation.corpus channel"):
+        cli.cmd_run(forum_cfg)
