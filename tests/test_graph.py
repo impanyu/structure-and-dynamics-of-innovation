@@ -51,6 +51,30 @@ def test_network_at_slices_by_year():
     assert g2020.num_edges == 1
 
 
+def test_network_at_inherits_frozen_state():
+    """A slice of the frozen corpus shares its IdeaNode objects, so the slice
+    must be frozen too — otherwise it is a back door onto frozen payload."""
+    g = small_graph()
+    g.freeze()
+
+    sliced = g.network_at(2020)
+
+    assert sliced.frozen is True
+    with pytest.raises(FrozenGraphError):
+        sliced.add_idea("x", "x", [])
+    sliced.node("W1").meta["venue"] = "TAMPERED"
+    assert g.node("W1").meta.get("venue") != "TAMPERED"
+
+
+def test_network_at_of_an_unfrozen_graph_stays_writable():
+    g = small_graph()
+
+    sliced = g.network_at(2020)
+
+    assert sliced.frozen is False
+    sliced.add_idea("gen:x:0", "fine", ["W1"])
+
+
 def test_communities_cover_all_nodes():
     g = small_graph()
     comm = g.communities()

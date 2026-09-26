@@ -153,6 +153,12 @@ class IdeaGraph:
                 and self._g.nodes[n]["data"].year <= year]
         sub = IdeaGraph()
         sub._g = self._g.subgraph(keep).copy()
+        # networkx copies node attributes shallowly, so `sub` shares this
+        # graph's IdeaNode objects. A slice of the frozen corpus must therefore
+        # be frozen too, or node() would hand out a live handle on payload the
+        # corpus promises never changes.
+        if self._frozen:
+            sub.freeze()
         return sub
 
     def communities(self, seed: int = 0) -> dict[str, int]:
