@@ -134,7 +134,7 @@ def test_all_p2_forum_experiment_configs_load():
     files = sorted(Path("configs/p2_forum/experiments").glob("*.yaml"))
     pool = load_config("configs/p2_forum/base.yaml")["topics_file"]
     n_topics = len(cli._topic_pool({"topics_file": pool}))
-    assert len(files) == 7 and n_topics == 128
+    assert len(files) == 8 and n_topics == 128
 
     for f in files:
         cfg = load_config(f)
