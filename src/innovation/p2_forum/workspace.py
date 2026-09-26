@@ -85,8 +85,21 @@ class Workspace:
             raise KeyError(f"unknown node: {node_id}")
         self.board.add_idea(node_id, "", [], source=CORPUS_REF, year=None)
 
+    @staticmethod
+    def _id_seq(node_id: str) -> int:
+        """The <n> of a `gen:<run_id>:<n>` id, or -1 if it has no numeric tail."""
+        tail = str(node_id).rsplit(":", 1)[-1]
+        return int(tail) if tail.isdigit() else -1
+
     def post_idea(self, text: str, cited_ids: list[str], meta: dict,
                   node_id: str | None = None) -> str:
+        """Create a board post. `node_id` is for replay only (`restore`); a
+        live run always mints the next `gen:<run_id>:<n>`.
+
+        The counter is kept ahead of every id ever issued, including ones
+        supplied by replay — that is what makes resume safe: a resumed run
+        continues the numbering instead of restarting it and writing duplicate
+        ids into the same event log."""
         missing = [c for c in cited_ids if not self.has_node(c)]
         if missing:
             raise KeyError(f"cited ids not found: {missing}")
@@ -94,11 +107,14 @@ class Workspace:
             self._ensure_stub(c)
         if node_id is None:
             node_id = f"{BOARD_PREFIX}{self.run_id}:{self._counter}"
+        elif self.store_of(node_id) != "board":
+            raise ValueError(
+                f"a board post needs a '{BOARD_PREFIX}' id; got {node_id}")
         self.board.add_idea(node_id, text, cited_ids, source="generated",
                             meta=meta)
         self.board_index.add([node_id],
                              np.asarray(self.embedder.encode([text])))
-        self._counter += 1
+        self._counter = max(self._counter + 1, self._id_seq(node_id) + 1)
         return node_id
 
     def add_links(self, src_id: str, dst_ids: list[str], meta: dict) -> dict:

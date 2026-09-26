@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from innovation.core.config import load_config, load_env
 from innovation.core.data.corpus import build_corpus, load_corpus, save_corpus
@@ -28,6 +29,11 @@ from innovation.core.network.index import VectorIndex
 
 def _llm(cfg):
     return CachedLLM(RoutedLLM(), Path(cfg["data_dir"]) / "llm_cache")
+
+
+def _topic_pool(cfg) -> list[str]:
+    pool = yaml.safe_load(Path(cfg["topics_file"]).read_text())
+    return [t["topic"] for t in pool["topics"]]
 
 
 def cmd_fetch(cfg):
@@ -121,8 +127,6 @@ def _load_world(cfg):
 def _load_forum_world(cfg):
     """Paper 2's world: the corpus, frozen, plus its index. The board is
     created per run by the runner."""
-    from innovation.core.network.graph import IdeaGraph
-
     _, edges = load_corpus(cfg["data_dir"])
     ideas = load_ideas(cfg["data_dir"])
     if cfg.get("run", {}).get("init_edges", "citations") == "none":
@@ -148,25 +152,24 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
             f"run '{r['run_id']}' already has events at {events_path}; "
             "pass --resume (with a raised total_steps) to extend it, or use a new run_id")
     if cfg.get("arch", "p1_dial") == "p2_forum":
-        from innovation.p2_forum.runner import ForumRunConfig, run_forum
-        import yaml
+        from innovation.p2_forum.runner import (ForumRunConfig, resume_forum,
+                                                run_forum)
         corpus, index, emb = _load_forum_world(cfg)
-        pool_data = yaml.safe_load(Path(cfg["topics_file"]).read_text())
         run_cfg = ForumRunConfig(
             run_id=r["run_id"], seed=r["seed"], total_steps=r["total_steps"],
-            agents=r["agents"], topic_pool=[t["topic"] for t in pool_data["topics"]],
+            agents=r["agents"], topic_pool=_topic_pool(cfg),
             generation_budget=r.get("generation_budget"))
-        out = run_forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
-                        llm=_llm(cfg), model=cfg["models"]["agent"],
-                        out_dir=cfg["out_dir"])
+        # resume replays the log before continuing; running fresh over an
+        # existing log would re-issue gen:<run_id>:<n> ids and make the log
+        # unreplayable (the primary research artifact).
+        forum = resume_forum if resume else run_forum
+        out = forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
+                    llm=_llm(cfg), model=cfg["models"]["agent"],
+                    out_dir=cfg["out_dir"])
         print(json.dumps(out, indent=2))
         return
     graph, index, emb, _ = _load_world(cfg)
-    topic_pool = None
-    if cfg.get("topics_file"):
-        import yaml
-        pool_data = yaml.safe_load(Path(cfg["topics_file"]).read_text())
-        topic_pool = [t["topic"] for t in pool_data["topics"]]
+    topic_pool = _topic_pool(cfg) if cfg.get("topics_file") else None
     run_cfg = RunConfig(run_id=r["run_id"], seed=r["seed"],
                         total_steps=r["total_steps"],
                         generation_budget=r.get("generation_budget"),
