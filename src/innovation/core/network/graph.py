@@ -29,7 +29,12 @@ class IdeaGraph:
 
     def freeze(self) -> None:
         """Make this graph permanently read-only. There is no unfreeze: the
-        corpus is historical fact, and paper 2's claim rests on it."""
+        corpus is historical fact, and paper 2's claim rests on it.
+
+        Read-only covers the node set, the edge set AND node payloads: once
+        frozen, `node()` hands out a detached copy, so `g.node(i).text = ...`
+        or `g.node(i).meta[k] = ...` cannot reach the stored node. Paper 1
+        never freezes, so it keeps getting the live node as before."""
         self._frozen = True
 
     def _check_mutable(self) -> None:
@@ -49,7 +54,14 @@ class IdeaGraph:
 
     # --- reads ---
     def node(self, node_id: str) -> IdeaNode:
-        return self._g.nodes[node_id]["data"]
+        node = self._g.nodes[node_id]["data"]
+        if not self._frozen:
+            return node
+        # A frozen graph must not hand out a mutable handle on its payload:
+        # IdeaNode is a plain dataclass and its meta is a live dict, so the
+        # caller gets a detached copy instead (see freeze()).
+        return IdeaNode(node_id=node.node_id, text=node.text, year=node.year,
+                        source=node.source, meta=dict(node.meta))
 
     def has_node(self, node_id: str) -> bool:
         return self._g.has_node(node_id)

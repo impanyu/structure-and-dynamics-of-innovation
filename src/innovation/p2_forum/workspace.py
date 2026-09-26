@@ -18,6 +18,14 @@ class Workspace:
                  board_index: VectorIndex, embedder, run_id: str):
         if not corpus.frozen:
             raise ValueError("the corpus must be frozen before use")
+        if board_index.frozen:
+            raise ValueError("the board index must stay writable")
+        # §3.1: read-only is a property of the TYPE, not a convention. The
+        # graph's freeze() covers its nodes, edges and payloads; freezing the
+        # index covers the corpus embeddings, so no path in this package can
+        # rewrite a corpus vector or append a board vector to the corpus index.
+        # Idempotent, so replay and resume re-freeze harmlessly.
+        corpus_index.freeze()
         self.corpus = corpus
         self.board = IdeaGraph()
         self.corpus_index = corpus_index

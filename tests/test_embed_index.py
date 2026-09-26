@@ -49,3 +49,21 @@ def test_vector_index_lookup_by_id():
     idx.add(["x", "y"], vecs)
     np.testing.assert_allclose(idx.vec("x"), vecs[0])
     assert idx.vec("missing") is None
+
+
+def test_a_frozen_index_refuses_adds_and_in_place_writes():
+    """The corpus index is half of spec §3.1's read-only claim."""
+    from innovation.core.network.index import FrozenIndexError
+
+    idx = VectorIndex(2)
+    idx.add(["a"], np.array([[1.0, 0.0]], dtype=np.float32))
+    idx.freeze()
+
+    assert idx.frozen
+    with pytest.raises(FrozenIndexError):
+        idx.add(["b"], np.array([[0.0, 1.0]], dtype=np.float32))
+    with pytest.raises(ValueError):
+        idx.vecs[0][0] = 9.0
+    # reads still work, and freeze() is idempotent
+    idx.freeze()
+    assert idx.search(np.array([1.0, 0.0], dtype=np.float32), k=1)[0][0] == "a"

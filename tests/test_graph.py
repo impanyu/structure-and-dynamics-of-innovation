@@ -117,3 +117,25 @@ def test_freeze_leaves_reads_working():
     assert g.num_nodes == 2
     assert g.citations_out("b") == ["a"]
     assert g.node("a").text == "idea a"
+
+
+def test_an_unfrozen_graph_hands_out_the_live_node():
+    """Paper 1 never freezes, so node() must keep returning the stored node."""
+    g = IdeaGraph()
+    g.add_idea("a", "idea a", [], meta={"agent_id": "a0"})
+
+    assert g.node("a") is g.node("a")
+
+
+def test_freeze_detaches_node_payload_from_the_store():
+    g = IdeaGraph()
+    g.add_idea("a", "idea a", [], source="corpus", year=2020,
+               meta={"venue": "V"})
+    g.freeze()
+
+    g.node("a").text = "REWRITTEN"
+    g.node("a").meta["venue"] = "forged"
+    g.node("a").year = 1999
+
+    assert (g.node("a").text, g.node("a").year, g.node("a").meta) == (
+        "idea a", 2020, {"venue": "V"})
