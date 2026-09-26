@@ -158,13 +158,7 @@ cross-agent edge; depth of the longest citation chain among posts; in-degree
 distribution over posts. Paper 1 could report one scalar (1 cross-agent citation in
 10,300 actions); this paper reports the trajectory.
 
-**New observable: "saw it and ignored it."** Because nothing is filtered, the agent
-sees complete results, so a non-citation is no longer ambiguous between *never
-surfaced* and *surfaced and declined* — paper 1 could not separate these, because
-`_do_search` dropped out-of-scope hits before the agent saw them. If agents
-repeatedly retrieve teammates' posts and never cite them, the finding is "the
-channel is open and unused", which is a different claim from "the channel is
-closed".
+Because nothing is filtered, the event log already records what an agent retrieved but did not use. When reporting, keep two readings apart: "the channel is closed" and "the channel is open and unused".
 
 ## 6. Experiments
 
@@ -177,24 +171,7 @@ Cartesian product.
 Navigation-channel ablations carry over from paper 1 and can now be applied per
 store.
 
-## 7. Blocking Prerequisite: Re-score Paper 1
-
-**Anticipation scores depend on when the evaluation runs.** `realized_min_date` is
-fixed at 2025-06-01, but the number of realizing papers that exist and are
-retrievable grows over time. Paper 2's runs will be scored in late 2026 or later; a
-higher number could be pure literature fill-in rather than an effect of the
-architecture.
-
-Therefore, **before any paper-2 run is scored**, paper 1's 19 runs are re-scored
-against the same literature snapshot, using the shared `data/caches/`, and both the
-original and refreshed numbers are archived. Doing this at the end instead would
-put every cross-paper comparison in the paper at risk of a late rewrite.
-
-*(Listed as blocking on the author's behalf, not yet explicitly confirmed. Downgrade
-to a non-blocking step if the schedule requires it — but then paper 2 must not print
-paper 1's numbers alongside its own.)*
-
-## 8. Repository Layout
+## 7. Repository Layout
 
 Paths in this repo are config-driven (`data_dir`, `out_dir`); only
 `scripts/gen_topic_configs.py` and two test paths are hardcoded. The migration is
@@ -230,14 +207,13 @@ LLM client, the entire evaluation pipeline, and the visualization helpers are
 shared. Environment semantics and runners are not, because the two papers' state
 models differ fundamentally.
 
-`eval/` must be shared — that is what makes §7 meaningful. Both papers score through
-the same `search_verify.py` against the same `openalex_cache`, or the numbers are
-not comparable.
+`eval/` must be shared — both papers score through the same `search_verify.py`
+against the same `openalex_cache`.
 
 Paper 1's anonymous mirror is pinned at commit `35d7d923`, so reviewers see the
 pre-migration layout and are unaffected by this reorganization.
 
-## 9. Acceptance
+## 8. Acceptance
 
 - `uv run pytest` green after the migration — paper 1's suite is the safety net.
 - **Invariant test:** after a full paper-2 run, the corpus graph's node set, edge
@@ -247,7 +223,6 @@ pre-migration layout and are unaffected by this reorganization.
 - A `k=1, N=10` run completes end to end and produces both headline and structural
   metrics.
 
-## 10. Open Questions
+## 9. Open Questions
 
 - Stage-2 `N`-sweep shape — deliberately deferred until the `k` sweep is read.
-- Whether §7 is blocking (see the note there).
