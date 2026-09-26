@@ -52,6 +52,25 @@ def board_structure(ws: Workspace, events: list[dict]) -> dict:
     - `cross_agent_edges` counts every cross-agent post-post edge currently on
       the board, INCLUDING ones added later by `add_links` (not only the ones
       present at post time).
+
+    Two more keys need their definitions stated, because they go into figures:
+
+    - `longest_chain` is the longest simple chain of posts, measured on the
+      DAG CONDENSATION of the post->post subgraph: every strongly connected
+      component collapses to one node, so a chain's length counts the distinct
+      groups it passes through and a cycle contributes one link rather than an
+      unbounded walk. On an acyclic board — the normal case, since generate-time
+      citations can only point backwards — this is exactly the longest citation
+      path in edges. §4.2's wiki semantics let any agent `add_links` on any
+      post, so cycles ARE reachable (A cites B, then someone links B -> A);
+      `post_post_is_acyclic` says whether this board state had any, so a series
+      can be read without wondering. There is no sentinel value: the metric is
+      defined for every board state.
+    - `post_in_degree_distribution` (spec §5) is a histogram
+      {in-degree: number of posts} over posts only, counting post->post edges.
+      Corpus-ref stubs have no out-edges, so a post's in-degree is citations
+      received from other posts — the attention the board paid it. Keys are
+      strings so the dict survives a JSON round trip.
     """
     posts = set(ws.board_post_ids())
     author = {e["result"]["node_id"]: e["agent_id"] for e in events
@@ -85,12 +104,19 @@ def board_structure(ws: Workspace, events: list[dict]) -> dict:
                        for d in ws.board.citations_out(s) if d in posts)
     total = post_post + post_corpus
 
+    in_degrees = [d for _, d in sub.in_degree()]
+    histogram = {str(d): in_degrees.count(d) for d in sorted(set(in_degrees))}
+
     return {"n_posts": len(posts),
             "n_post_post_edges": post_post,
             "n_post_corpus_edges": post_corpus,
             "post_post_share": (post_post / total) if total else 0.0,
             "n_components": nx.number_weakly_connected_components(sub),
-            "longest_chain": nx.dag_longest_path_length(sub)
-            if nx.is_directed_acyclic_graph(sub) else -1,
+            "longest_chain": nx.dag_longest_path_length(nx.condensation(sub)),
+            "post_post_is_acyclic": nx.is_directed_acyclic_graph(sub),
+            "post_in_degree_distribution": histogram,
+            "max_post_in_degree": max(in_degrees, default=0),
+            "mean_post_in_degree": (sum(in_degrees) / len(in_degrees))
+            if in_degrees else 0.0,
             "first_cross_agent_citation_step": first_cross,
             "cross_agent_edges": cross}
