@@ -118,6 +118,24 @@ def _load_world(cfg):
     return graph, index, emb, dict(zip(ids, vecs))
 
 
+def _load_forum_world(cfg):
+    """Paper 2's world: the corpus, frozen, plus its index. The board is
+    created per run by the runner."""
+    from innovation.core.network.graph import IdeaGraph
+
+    _, edges = load_corpus(cfg["data_dir"])
+    ideas = load_ideas(cfg["data_dir"])
+    if cfg.get("run", {}).get("init_edges", "citations") == "none":
+        edges = edges.iloc[0:0]
+    corpus = IdeaGraph.from_tables(ideas, edges)
+    corpus.freeze()
+    ids, vecs = load_embeddings(cfg["data_dir"])
+    emb = Embedder(cfg["embedding_model"])
+    index = VectorIndex(emb.dim)
+    index.add(ids, vecs)
+    return corpus, index, emb
+
+
 def cmd_run(cfg, seed=None, run_id=None, resume=False):
     r = cfg["run"]
     if seed is not None:
@@ -129,6 +147,20 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
         raise SystemExit(
             f"run '{r['run_id']}' already has events at {events_path}; "
             "pass --resume (with a raised total_steps) to extend it, or use a new run_id")
+    if cfg.get("arch", "p1_dial") == "p2_forum":
+        from innovation.p2_forum.runner import ForumRunConfig, run_forum
+        import yaml
+        corpus, index, emb = _load_forum_world(cfg)
+        pool_data = yaml.safe_load(Path(cfg["topics_file"]).read_text())
+        run_cfg = ForumRunConfig(
+            run_id=r["run_id"], seed=r["seed"], total_steps=r["total_steps"],
+            agents=r["agents"], topic_pool=[t["topic"] for t in pool_data["topics"]],
+            generation_budget=r.get("generation_budget"))
+        out = run_forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
+                        llm=_llm(cfg), model=cfg["models"]["agent"],
+                        out_dir=cfg["out_dir"])
+        print(json.dumps(out, indent=2))
+        return
     graph, index, emb, _ = _load_world(cfg)
     topic_pool = None
     if cfg.get("topics_file"):

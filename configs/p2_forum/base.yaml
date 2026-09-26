@@ -1,0 +1,13 @@
+# Paper 2: frozen corpus + shared board. Inherits the corpus, recognition
+# lists, models and evaluation settings from paper 1 so the headline metric is
+# unchanged; overrides only what the architecture changes.
+extends: ../p1_dial/stage1.yaml
+arch: p2_forum
+out_dir: runs/p2_forum
+topics_file: configs/p2_forum/topics-k128.yaml
+run:
+  run_id: forum-pilot
+  seed: 0
+  total_steps: 800
+  agents:
+    - {agent_id: a0, k_topics: 1}
