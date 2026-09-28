@@ -1,7 +1,7 @@
 import json, collections, re
 ID = re.compile(r"gen:[^\"'\s,\]]+")
 rows = []
-for k in [1, 2, 4, 8, 16, 32, 64, 128]:
+for k in [1, 2, 4, 8, 16, 32, 48, 64, 80, 96, 112, 128]:
     rid = f"forum-k{k}"
     ev = [json.loads(l) for l in open(f"runs/p2_forum/{rid}/events.jsonl")]
     f = json.load(open(f"runs/p2_forum/{rid}/board_metrics.json"))["final"]
