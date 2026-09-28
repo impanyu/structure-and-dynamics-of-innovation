@@ -134,7 +134,7 @@ def test_all_p2_forum_experiment_configs_load():
     files = sorted(Path("configs/p2_forum/experiments").glob("*.yaml"))
     pool = load_config("configs/p2_forum/base.yaml")["topics_file"]
     n_topics = len(cli._topic_pool({"topics_file": pool}))
-    assert len(files) == 8 and n_topics == 128
+    assert len(files) == 12 and n_topics == 128
 
     for f in files:
         cfg = load_config(f)
@@ -143,7 +143,7 @@ def test_all_p2_forum_experiment_configs_load():
         assert cfg["out_dir"] == "runs/p2_forum"
         assert Path(cfg["topics_file"]).exists()
         assert run["run_id"] == f.stem.replace("k", "forum-k")
-        assert run["total_steps"] == 800
+        assert run["total_steps"] == 1000
         assert len(run["agents"]) == 10
         ks = {a["k_topics"] for a in run["agents"]}
         assert len(ks) == 1 and ks.pop() <= n_topics
@@ -157,7 +157,7 @@ def test_the_k_sweep_covers_the_spec_grid():
     for f in sorted(Path("configs/p2_forum/experiments").glob("*.yaml")):
         run = load_config(f)["run"]
         ks.append(run["agents"][0]["k_topics"])
-    assert sorted(ks) == [1, 2, 4, 8, 16, 32, 64, 128]
+    assert sorted(ks) == [1, 2, 4, 8, 16, 32, 48, 64, 80, 96, 112, 128]
 
 
 def test_a_completed_forum_run_writes_structural_metrics(forum_cfg, monkeypatch):

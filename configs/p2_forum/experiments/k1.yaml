@@ -7,7 +7,7 @@ extends: ../base.yaml
 run:
   run_id: forum-k1
   seed: 0
-  total_steps: 800
+  total_steps: 1000
   agents:
   - agent_id: a0
     k_topics: 1
