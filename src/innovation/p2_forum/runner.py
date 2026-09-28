@@ -18,6 +18,9 @@ from innovation.p2_forum.env import ForumEnvironment, Navigation
 from innovation.p2_forum.workspace import Workspace
 
 
+TOPIC_DRAWS = ("independent", "nested")
+
+
 @dataclass
 class ForumRunConfig:
     run_id: str
@@ -29,8 +32,17 @@ class ForumRunConfig:
     # Navigation ablations are environmental, not dispositional (spec §4.3):
     # one board is shared, so a channel is open or closed for the whole run.
     navigation: Navigation = field(default_factory=Navigation)
+    # "independent": each run draws each agent's k topics afresh (the original
+    # k sweep). "nested": each agent gets a seed-determined permutation of the
+    # pool and takes its first k, so for one seed the topic sets are strict
+    # prefixes of each other across k -- adjacent k differ ONLY by the added
+    # topics, not by a reshuffle.
+    topic_draw: str = "independent"
 
     def __post_init__(self):
+        if self.topic_draw not in TOPIC_DRAWS:
+            raise ValueError(f"topic_draw must be one of {TOPIC_DRAWS}, "
+                             f"got {self.topic_draw!r}")
         # Per-agent allow_jump/allow_search used to be collapsed with all(...)
         # into one env-wide flag, so one agent opting out silently disabled the
         # channel for every agent. Refuse the key rather than mean something
@@ -44,19 +56,43 @@ class ForumRunConfig:
                 "`navigation:` section, e.g. navigation: {board: {jump: false}}")
 
 
-def draw_topics(agents: list[dict], pool: list[str], rng) -> dict[str, list[str]]:
-    """k distinct topics per agent, drawn independently. Different agents may
-    draw the same topic; that overlap is what makes collaboration possible."""
+# Mixed into the nested scheme's seed so its per-agent streams never coincide
+# with the environment's rng, which is seeded from the bare run seed.
+_NESTED_SALT = 0x70C1C5
+
+
+def draw_topics(agents: list[dict], pool: list[str], rng, *,
+                scheme: str = "independent",
+                seed: int | None = None) -> dict[str, list[str]]:
+    """k distinct topics per agent. Different agents may share topics; that
+    overlap is what makes collaboration possible.
+
+    independent -- each agent's k topics are drawn from `rng` in turn, so the
+      draw for one k says nothing about the draw for another k.
+    nested      -- agent i gets a fixed permutation of the pool from its own
+      stream, seeded by (seed, i), and takes its first k. The permutation does
+      not depend on k, so for one seed topics(k) is a strict prefix of
+      topics(k') whenever k < k'. `rng` is not consumed.
+    """
     if not pool:
         raise ValueError("no topic_pool given")
+    if scheme not in TOPIC_DRAWS:
+        raise ValueError(f"unknown topic draw scheme {scheme!r}")
+    if scheme == "nested" and seed is None:
+        raise ValueError("the nested scheme needs the run seed")
     out: dict[str, list[str]] = {}
-    for a in agents:
+    for i, a in enumerate(agents):
         k = int(a.get("k_topics", 1))
         if k > len(pool):
             raise ValueError(
                 f"k_topics={k} exceeds the {len(pool)}-topic pool")
-        picks = rng.choice(len(pool), size=k, replace=False)
-        out[a["agent_id"]] = [pool[int(i)] for i in picks]
+        if scheme == "nested":
+            own = np.random.default_rng(
+                np.random.SeedSequence([int(seed), i, _NESTED_SALT]))
+            picks = own.permutation(len(pool))[:k]
+        else:
+            picks = rng.choice(len(pool), size=k, replace=False)
+        out[a["agent_id"]] = [pool[int(j)] for j in picks]
     return out
 
 
@@ -100,13 +136,15 @@ def run_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
     run_dir = Path(out_dir) / cfg.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    assignments = draw_topics(cfg.agents, cfg.topic_pool, rng)
+    assignments = draw_topics(cfg.agents, cfg.topic_pool, rng,
+                              scheme=cfg.topic_draw, seed=cfg.seed)
     # run_meta is written BEFORE driving: an interrupted run must stay
     # reproducible from its recorded draws rather than re-sampling them.
     (run_dir / "run_meta.json").write_text(json.dumps(
         {"run_id": cfg.run_id, "seed": cfg.seed, "arch": "p2_forum",
          "total_steps": cfg.total_steps,
          "navigation": asdict(cfg.navigation),
+         "topic_draw": cfg.topic_draw,
          "topic_assignments": assignments}, indent=1))
 
     env = _build_env(cfg, run_dir=run_dir, corpus=corpus,

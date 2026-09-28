@@ -235,3 +235,32 @@ def test_a_typo_in_the_navigation_section_fails_the_run(forum_cfg, monkeypatch):
 
     with pytest.raises(ValueError, match="unknown navigation.corpus channel"):
         cli.cmd_run(forum_cfg)
+
+
+def test_the_nested_sweep_configs_load_and_nest_on_the_real_pool():
+    import numpy as np
+
+    from innovation.p2_forum.runner import draw_topics
+
+    files = sorted(Path("configs/p2_forum/experiments/nested").glob("*.yaml"))
+    assert len(files) == 27
+    runs = [load_config(f)["run"] for f in files]
+    cfg = load_config(files[0])
+    assert cfg["arch"] == "p2_forum"                     # base.yaml reached
+    assert cfg["eval"]["realized_min_date"] == "2025-06-01"  # paper 1 reached
+    assert all(r["topic_draw"] == "nested" and r["total_steps"] == 400 for r in runs)
+    assert len({r["run_id"] for r in runs}) == 27
+    grid = sorted({(r["agents"][0]["k_topics"], r["seed"]) for r in runs})
+    assert grid == [(k, s) for k in [1, 16, 32, 48, 64, 80, 96, 112, 128] for s in (0, 1, 2)]
+
+    pool = cli._topic_pool(cfg)
+    by = {(r["agents"][0]["k_topics"], r["seed"]): r for r in runs}
+    for s in (0, 1, 2):
+        prev = None
+        for k in [1, 16, 32, 48, 64, 80, 96, 112, 128]:
+            r = by[(k, s)]
+            t = draw_topics(r["agents"], pool, np.random.default_rng(s),
+                            scheme="nested", seed=s)
+            if prev is not None:
+                assert all(set(prev[a]) < set(t[a]) for a in t)
+            prev = t

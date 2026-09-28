@@ -164,6 +164,8 @@ Because nothing is filtered, the event log already records what an agent retriev
 
 **Stage 1 — the `k` sweep.** `k` in {1, 2, 4, 8, 16, 32} and then every 16 up to the whole pool: {48, 64, 80, 96, 112, 128}, at `N = 10`, 100 rounds (1000 steps). Twelve runs. `k=128` is the whole pool — every agent interested in everything, the generalist endpoint and the analogue of paper 1's `m=infinity` condition. The dense upper grid was added after the first eight runs showed teammate uptake still moving between 32 and 128.
 
+**Stage 1b — the nested sweep.** The first sweep drew each k's topics independently, so adjacent k differed by a reshuffle as well as by breadth (k=80 and k=96 shared only ~60 of 80 topics per agent), and single-seed runs varied several-fold between neighbours. The nested sweep gives each agent a seed-determined permutation of the pool and takes its first k (`run.topic_draw: nested`), so for one seed topics(k) is a strict prefix of topics(k'). k in {1, 16, 32, ..., 128} (every 16), seeds {0, 1, 2}, 40 rounds each; every (k, seed) has its own run_id so runs are extended with `--resume --steps`. Remaining run-to-run variance is LLM sampling, which only more seeds average out.
+
 **Stage 2 — the `N` sweep.** Shape decided after stage 1 results, from where
 cross-agent edges do and do not appear. `k` and `N` are swept separately; no
 Cartesian product.

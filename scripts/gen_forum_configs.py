@@ -33,3 +33,30 @@ for k in KS:
         f.write(HEADER + f"# k={k}: {N} agents, each interested in {k} topics\n")
         yaml.safe_dump(cfg, f, allow_unicode=True, sort_keys=False, width=100)
 print(f"{len(KS)} configs regenerated in {out_dir}")
+
+# ---- nested sweep ------------------------------------------------------------
+# Topics are nested across k (each agent takes the first k topics of its own
+# seed-determined permutation), so adjacent k differ only by the added topics.
+# One config per (k, seed) with its own run_id, so a run is extended later by
+# re-running the SAME config with --resume --steps <new total>.
+NESTED_KS = [1, 16, 32, 48, 64, 80, 96, 112, 128]
+NESTED_SEEDS = [0, 1, 2]
+NESTED_ROUNDS = 40
+
+nested_dir = out_dir / "nested"
+nested_dir.mkdir(parents=True, exist_ok=True)
+for k in NESTED_KS:
+    for s in NESTED_SEEDS:
+        cfg = {"extends": "../../base.yaml",
+               "run": {"run_id": f"forum-nested-k{k}-s{s}", "seed": s,
+                       "total_steps": NESTED_ROUNDS * N,
+                       "topic_draw": "nested",
+                       "agents": [{"agent_id": f"a{i}", "k_topics": k}
+                                  for i in range(N)]}}
+        with (nested_dir / f"k{k}-s{s}.yaml").open("w") as f:
+            f.write(HEADER.replace("draws k distinct topics",
+                                   "takes the first k topics of its own seeded permutation")
+                    + f"# nested k={k}, seed {s}: {N} agents, {NESTED_ROUNDS} rounds; "
+                      f"extend with --resume --steps <total>\n")
+            yaml.safe_dump(cfg, f, allow_unicode=True, sort_keys=False, width=100)
+print(f"{len(NESTED_KS) * len(NESTED_SEEDS)} nested configs regenerated in {nested_dir}")

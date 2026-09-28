@@ -190,7 +190,8 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
             run_id=r["run_id"], seed=r["seed"], total_steps=r["total_steps"],
             agents=r["agents"], topic_pool=_topic_pool(cfg),
             generation_budget=r.get("generation_budget"),
-            navigation=Navigation.from_config(cfg.get("navigation")))
+            navigation=Navigation.from_config(cfg.get("navigation")),
+            topic_draw=r.get("topic_draw", "independent"))
         # resume replays the log before continuing; running fresh over an
         # existing log would re-issue gen:<run_id>:<n> ids and make the log
         # unreplayable (the primary research artifact).
