@@ -1,6 +1,7 @@
 """LLM clients: a Protocol, a test fake, a disk cache, and the real Anthropic client."""
 import hashlib
 import json
+import time
 from pathlib import Path
 from typing import Protocol
 
@@ -70,10 +71,22 @@ def parse_openai_model(model: str) -> tuple[str, str | None]:
 class OpenAILLM:
     """Real OpenAI client. Needs OPENAI_API_KEY in the environment."""
 
-    def __init__(self):
+    # Server-side failures (5xx, 429, dropped connections) are retried with
+    # capped exponential backoff for up to ~30 minutes, so a provider outage
+    # stalls a long run instead of killing it. Client errors (4xx) still raise.
+    RETRY_DELAYS = [5, 10, 20, 40, 60, 120, 180, 300, 300, 300, 300]
+
+    def __init__(self, client=None, sleep=time.sleep):
         import openai
 
-        self.client = openai.OpenAI()
+        self._openai = openai
+        self.client = client or openai.OpenAI()
+        self._sleep = sleep
+
+    def _transient(self, e: Exception) -> bool:
+        o = self._openai
+        return isinstance(e, (o.InternalServerError, o.RateLimitError,
+                              o.APIConnectionError, o.APITimeoutError))
 
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
         name, effort = parse_openai_model(model)
@@ -82,10 +95,17 @@ class OpenAILLM:
             kwargs["reasoning"] = {"effort": effort}
         # Headroom so reasoning tokens cannot starve the visible answer.
         headroom = 200 if effort == "minimal" else 2000
-        resp = self.client.responses.create(
-            model=name, instructions=system, input=user,
-            max_output_tokens=max_tokens + headroom, **kwargs)
-        return resp.output_text
+        for delay in [*self.RETRY_DELAYS, None]:
+            try:
+                resp = self.client.responses.create(
+                    model=name, instructions=system, input=user,
+                    max_output_tokens=max_tokens + headroom, **kwargs)
+                return resp.output_text
+            except Exception as e:
+                if delay is None or not self._transient(e):
+                    raise
+                print(f"[openai] {type(e).__name__}; retrying in {delay}s", flush=True)
+                self._sleep(delay)
 
 
 class RoutedLLM:

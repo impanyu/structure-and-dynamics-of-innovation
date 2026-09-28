@@ -1,8 +1,18 @@
-import json, collections, re
+"""Per-run k-sweep summary.
+
+  python scripts/p2_forum/ksweep_summary.py            # independent draws, forum-k{k}  -> ksweep_summary.json
+  python scripts/p2_forum/ksweep_summary.py --nested   # nested draws, forum-nested-k{k}-s{s} -> nested_summary.json
+"""
+import json, collections, re, os, sys
+NESTED = "--nested" in sys.argv
 ID = re.compile(r"gen:[^\"'\s,\]]+")
 rows = []
-for k in [1, 2, 4, 8, 16, 32, 48, 64, 80, 96, 112, 128]:
-    rid = f"forum-k{k}"
+if NESTED:
+    RUNS = [(k, s, f"forum-nested-k{k}-s{s}") for s in (0, 1, 2) for k in [1, 16, 32, 48, 64, 80, 96, 112, 128]]
+    RUNS = [r for r in RUNS if os.path.exists(f"runs/p2_forum/{r[2]}/board_metrics.json")]
+else:
+    RUNS = [(k, 0, f"forum-k{k}") for k in [1, 2, 4, 8, 16, 32, 48, 64, 80, 96, 112, 128]]
+for k, seed, rid in RUNS:
     ev = [json.loads(l) for l in open(f"runs/p2_forum/{rid}/events.jsonl")]
     f = json.load(open(f"runs/p2_forum/{rid}/board_metrics.json"))["final"]
     meta = json.load(open(f"runs/p2_forum/{rid}/run_meta.json"))
@@ -31,13 +41,13 @@ for k in [1, 2, 4, 8, 16, 32, 48, 64, 80, 96, 112, 128]:
                 if c in vo: oc += 1
                 elif c in vm: mc += 1
     acts = collections.Counter(e["action"] for e in ev)
-    rows.append(dict(k=k, steps=len(ev), posts=f["n_posts"], overlap=sum(jac)/len(jac),
+    rows.append(dict(k=k, seed=seed, steps=len(ev), posts=f["n_posts"], overlap=sum(jac)/len(jac),
         reads=sum(acts[x] for x in ("search_board", "browse_board", "sample_board")),
         pp=f["n_post_post_edges"], cross=f["cross_agent_edges"], comps=f["n_components"],
         first=f["first_cross_agent_citation_step"], mate_vis=mv, mate_cit=mc,
         p_mate=mc / mv if mv else 0.0, p_own=oc / ov if ov else 0.0,
         errors=sum(1 for e in ev if "error" in e["result"])))
-json.dump(rows, open("runs/p2_forum/ksweep_summary.json", "w"), indent=1)
-print(f"{'k':>4} {'steps':>5} {'posts':>5} {'overlap':>7} {'reads':>5} {'pp':>4} {'cross':>5} {'comps':>5} {'first':>5} {'mateVis':>7} {'P(mate)':>7} {'P(own)':>6} {'err':>3}")
+json.dump(rows, open("runs/p2_forum/" + ("nested_summary.json" if NESTED else "ksweep_summary.json"), "w"), indent=1)
+print(f"{'k':>4} {'s':>1} {'steps':>5} {'posts':>5} {'overlap':>7} {'reads':>5} {'pp':>4} {'cross':>5} {'comps':>5} {'first':>5} {'mateVis':>7} {'P(mate)':>7} {'P(own)':>6} {'err':>3}")
 for r in rows:
-    print(f"{r['k']:>4} {r['steps']:>5} {r['posts']:>5} {r['overlap']:>7.3f} {r['reads']:>5} {r['pp']:>4} {r['cross']:>5} {r['comps']:>5} {str(r['first']):>5} {r['mate_vis']:>7} {r['p_mate']:>7.3f} {r['p_own']:>6.3f} {r['errors']:>3}")
+    print(f"{r['k']:>4} {r['seed']:>1} {r['steps']:>5} {r['posts']:>5} {r['overlap']:>7.3f} {r['reads']:>5} {r['pp']:>4} {r['cross']:>5} {r['comps']:>5} {str(r['first']):>5} {r['mate_vis']:>7} {r['p_mate']:>7.3f} {r['p_own']:>6.3f} {r['errors']:>3}")
