@@ -25,8 +25,8 @@ environment. Every action is gated by the agent's topics.
 1. Cluster the 16,208 corpus idea embeddings (BAAI/bge-small-en-v1.5, the
    environment's embedder) into ~300 candidate clusters with k-means (seed 0).
    Candidates only; not topics.
-2. Name each candidate with gpt-5-mini from 8 sample ideas.
-3. One consolidation call (gpt-5) reads all candidate names with one-line
+2. Name each candidate with the tagger model (§3) from 8 sample ideas.
+3. One consolidation call (same model) reads all candidate names with one-line
    samples and returns **exactly 128 topics**, each a name plus a one-sentence
    definition: merge duplicates and near-synonyms, split over-broad
    candidates, even out granularity.
@@ -42,7 +42,13 @@ relevance (first = primary).
 **Tagger.** One LLM call per item: the frozen list (names + definitions) as a
 fixed, cacheable prefix, then the item's idea text. The model returns a JSON
 list of 1-5 topic ids, instructed to pick only topics that genuinely apply and
-never to pad to five. Model: gpt-5-mini (effort low). Replies that do not parse
+never to pad to five.
+
+The tagger is an **independent LLM**: Claude Sonnet 5 (`claude-sonnet-5`),
+a different model family from the agents (gpt-5) and the quality judge
+(gpt-5-mini). Agents never tag their own work, and the gate's judge shares
+no model with the actors or the evaluator. The same tagger, prompt and list
+label both the corpus and the posts. Replies that do not parse
 to 1-5 valid distinct ids are retried; after 3 failures the item is an error
 (the corpus build stops; a post is rejected with an error, see §4).
 
