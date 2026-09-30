@@ -54,7 +54,7 @@ to 1-5 valid distinct ids are retried; after 3 failures the item is an error
 
 **Corpus.** Tagged once, offline, into `data/stage1/topic_labels_v2.json`
 (`{paper_id: [topic ids]}`), through the existing disk LLM cache. About 25M
-input tokens, a few dollars.
+input tokens, mostly the cached list prefix; a few tens of dollars.
 
 **Posts.** Tagged synchronously inside `generate`, with the same tagger, before
 the post exists. The labels are written into the event's result, and
@@ -108,7 +108,7 @@ publish within its topics.
 - `topics_file: configs/p2_forum/topics-v2.yaml`
 - `topic_labels: data/stage1/topic_labels_v2.json`
 - `gating: topics` (new; default `none` keeps old configs reproducible)
-- `models.tagger: openai:gpt-5-mini:low`
+- `models.tagger: claude-sonnet-5`
 
 ## 7. Experiment
 
