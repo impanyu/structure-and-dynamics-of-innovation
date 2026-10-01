@@ -177,8 +177,9 @@ abstracts.
 
 ## 9. Experiment
 
-- Rerun the nested sweep: k ∈ {1, 16, 32, 48, 64, 80, 96, 112, 128} × seeds
-  {0, 1, 2}, N = 10 agents, 40 rounds (400 steps), resumable for extension.
+- Rerun the nested sweep: k ∈ {1, 16, 32, 48, 64, 80, 96, 112, 128}, **one
+  seed (seed 0) per k**, N = 10 agents, 40 rounds (400 steps), resumable for
+  extension. More seeds can be added later as new configs.
 - **Paper 2 is a standalone study.** Its evaluation is reported on its own
   terms, with no comparison line to paper 1 and no shared judge.
 - **Judge: Claude Opus 5.5** (`claude-opus-5-5`), independent of the agents
