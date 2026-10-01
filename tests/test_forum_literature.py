@@ -96,3 +96,46 @@ def test_get_and_neighbors_are_scope_filtered(tmp_path):
 def test_text_uses_title_when_abstract_missing(tmp_path):
     L, _ = lit(tmp_path, {"a": raw("a", abstract=None)})
     assert L.get("a").text() == "Ta"
+
+
+def test_corrupt_lines_skipped_at_load(tmp_path):
+    (tmp_path / "labels.jsonl").write_text(
+        '{"paper_id": "a", "labels": [7]}\n{"paper_id": "b", "lab\n{"x": 1}\nnot json\n')
+    L, tagger = lit(tmp_path, {"a": raw("a")})
+    L.search("q")
+    assert L.labels(["a"]) == {"a": [7]} and tagger.calls == 0
+
+
+def test_second_instance_picks_up_later_appends(tmp_path):
+    papers = {"a": raw("a"), "b": raw("b")}
+    L1, t1 = lit(tmp_path, papers)
+    L2, t2 = lit(tmp_path, papers)
+    L1.search("q"); L2.search("q")
+    L1.labels(["a", "b"])
+    assert L2.labels(["a", "b"]) == {"a": [0], "b": [1]} and t2.calls == 0
+
+
+def test_first_write_wins(tmp_path):
+    (tmp_path / "labels.jsonl").write_text(
+        '{"paper_id": "a", "labels": [1]}\n{"paper_id": "a", "labels": [2]}\n')
+    L, _ = lit(tmp_path, {"a": raw("a")})
+    L.search("q")
+    assert L.labels(["a"]) == {"a": [1]}
+
+
+def test_none_label_not_persisted(tmp_path):
+    papers = {"a": raw("a")}
+    L, _ = lit(tmp_path, papers)
+    L.search("q")
+    L.tagger.table = {}
+    assert L.labels(["a"]) == {"a": None}
+    assert L.labels(["a"]) == {"a": None} and L.tagger.calls == 1   # no retry in-process
+    L2, t2 = lit(tmp_path, papers)
+    L2.search("q")
+    assert L2.labels(["a"]) == {"a": [0]} and t2.calls == 1
+
+
+def test_null_paper_id_skipped(tmp_path):
+    bad = raw("z"); bad["paperId"] = None
+    L, _ = lit(tmp_path, {"a": raw("a")}, refs={"a": [bad, raw("r")]})
+    assert [p.paper_id for p in L.references("a")] == ["r"]

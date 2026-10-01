@@ -2,6 +2,7 @@
 rule, plus a persistent label store. Scope = (one of the seven venues OR
 >= min_citations) AND published on/before max_date. Topic gating is NOT done
 here; the environment applies it per agent."""
+import fcntl
 import json
 import threading
 from dataclasses import dataclass
@@ -62,14 +63,31 @@ class OnlineLiterature:
         Path(cache_dir).mkdir(parents=True, exist_ok=True)
         self._store = Path(cache_dir) / "labels.jsonl"
         self._labels: dict[str, list[int] | None] = {}
+        self._failed: set[str] = set()
         if self._store.exists():
-            for line in self._store.read_text().splitlines():
+            self._merge(self._store.read_text())
+
+    def _merge(self, text: str) -> None:
+        """Fold store lines into memory: skip malformed lines, first write wins
+        (a None kept in memory only is replaced by a stored label)."""
+        seen = set()
+        for line in text.splitlines():
+            try:
                 rec = json.loads(line)
-                self._labels[rec["paper_id"]] = rec["labels"]
+                pid, lab = rec["paper_id"], rec["labels"]
+            except (ValueError, KeyError, TypeError):
+                continue
+            if not pid or not isinstance(lab, list) or pid in seen:
+                continue
+            seen.add(pid)
+            if self._labels.get(pid) is None:
+                self._labels[pid] = lab
 
     def _admit(self, raws) -> list[Paper]:
         out = []
         for r in raws:
+            if not r.get("paperId"):
+                continue
             branch = self.scope.admit(r)
             if branch is None:
                 continue
@@ -106,12 +124,25 @@ class OnlineLiterature:
         return list(self._papers.values())
 
     def labels(self, pids: list[str]) -> dict[str, list[int] | None]:
-        todo = [p for p in dict.fromkeys(pids) if p not in self._labels and p in self._papers]
-        if todo:
-            got = self.tagger.label_many([self._papers[p].text() for p in todo])
-            with self._lock:
-                with self._store.open("a") as f:
-                    for pid, lab in zip(todo, got):
-                        self._labels[pid] = lab
-                        f.write(json.dumps({"paper_id": pid, "labels": lab}) + "\n")
-        return {p: self._labels.get(p) for p in pids}
+        with self._lock:
+            wanted = [p for p in dict.fromkeys(pids) if p in self._papers]
+            if any(self._labels.get(p) is None and p not in self._failed for p in wanted):
+                with self._store.open("a+") as f:
+                    fcntl.flock(f, fcntl.LOCK_EX)
+                    try:
+                        f.seek(0)
+                        self._merge(f.read())
+                        todo = [p for p in wanted
+                                if self._labels.get(p) is None and p not in self._failed]
+                        if todo:
+                            got = self.tagger.label_many([self._papers[p].text() for p in todo])
+                            for pid, lab in zip(todo, got):
+                                self._labels[pid] = lab
+                                if lab is None:
+                                    self._failed.add(pid)   # this process only; others retry
+                                else:
+                                    f.write(json.dumps({"paper_id": pid, "labels": lab}) + "\n")
+                            f.flush()
+                    finally:
+                        fcntl.flock(f, fcntl.LOCK_UN)
+            return {p: self._labels.get(p) for p in pids}
