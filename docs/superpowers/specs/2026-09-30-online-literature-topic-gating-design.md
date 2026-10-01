@@ -171,10 +171,20 @@ ungated control.
 
 - Rerun the nested sweep: k ∈ {1, 16, 32, 48, 64, 80, 96, 112, 128} × seeds
   {0, 1, 2}, N = 10 agents, 40 rounds (400 steps), resumable for extension.
-- Evaluate quality with acc@≥2. Paper 1's tier-1 list already covers these
-  venues; no change is needed. Every paper an agent can read predates
-  2024-09-30, and realizations count only from 2025-06-01, so the two never
-  overlap.
+- Evaluate quality with **paper 1's evaluation, unchanged**: the same judge
+  (gpt-5-mini, medium), 3 queries × (Semantic Scholar + OpenAlex) top 5,
+  levels 0-5, the same three cumulative tiers (tier 1 = CCF-A venue OR ≥ 50
+  citations; tier 2 = CCF-A/B OR ≥ 10; tier 3 = any published), candidates
+  dated ≤ 2024-09-30 excluded, headline **tier-1 acc@≥2** counting only
+  realizations dated ≥ 2025-06-01, and near-duplicate flooring at cosine ≥
+  0.95.
+- The one adaptation is the contamination guard. Paper 1 excluded
+  candidates whose title was in its frozen corpus. Paper 2 has no frozen
+  corpus, so it excludes candidates whose title is in the online cache (every
+  paper any agent was shown). The guard is redundant in practice, because
+  cached papers all predate 2024-09-30 and the date gate already removes
+  them, but it keeps paper 1's rule intact. The near-duplicate check runs
+  against the cached papers' embeddings.
 - The 27 soft runs on the frozen corpus are kept as the soft-specialization
   condition.
 
