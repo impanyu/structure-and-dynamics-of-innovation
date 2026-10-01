@@ -85,11 +85,24 @@ shared cache.
 **Scope filter, applied everywhere** (search hits, browse targets,
 reference and citation lists, random jumps):
 
-- the venue is one of the seven (matched on Semantic Scholar's venue
-  records);
-- the publication date is **on or before 2024-09-30**, the cutoff of
+- the paper is **published at one of the seven venues OR has ≥ 50
+  citations** (any venue, including journals, other conferences and arXiv).
+  This is the same rule as paper 1's tier-1 recognition (venue alias OR
+  `recognized_min_citations: 50`). Venues are matched on Semantic Scholar's
+  venue records;
+- **and** the publication date is **on or before 2024-09-30**, the cutoff of
   paper 1 and the agent model's official knowledge cutoff;
-- there is no lower year bound and no citation-count filter.
+- there is no lower year bound.
+
+The citation count is Semantic Scholar's current count, not the count as of
+the cutoff, so the ≥ 50 branch admits papers partly by impact accrued after
+2024-09-30. The venue branch has no such leak. Each admitted paper records
+which branch admitted it, so the analysis can report the split.
+
+Search is therefore not venue-restricted at the source. Semantic Scholar
+returns any paper, and the scope filter then applies the rule. Non-AI papers
+that pass the citation branch are removed by the topic gate, since every
+topic is an AI topic.
 
 **Topic gate, two layers:**
 
@@ -147,7 +160,8 @@ ungated control.
 
 - `literature: online` (new; `corpus` keeps the frozen-corpus mode for the old
   runs)
-- `online.venues`: the seven venues; `online.max_pub_date: "2024-09-30"`
+- `online.venues`: the seven venues; `online.min_citations_any_venue: 50`;
+  `online.max_pub_date: "2024-09-30"`
 - `online.cache_dir: data/online_cache`
 - `topics_file: configs/p2_forum/topics-v2.yaml`
 - `gating: topics` (default `none`)
