@@ -55,3 +55,15 @@ def test_unknown_action_name_falls_back_to_a_corpus_jump():
     pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"])
 
     assert pol.act({"step": 0, "last_result": {}}).name == "sample_frontier"
+
+
+def test_gated_prompt_states_the_hard_rule_and_uses_given_order():
+    from innovation.core.llm import FakeLLM
+    from innovation.p2_forum.agent import GATED_ACTIONS_DOC, GATED_SYSTEM, ForumAgentPolicy
+    pol = ForumAgentPolicy(llm=FakeLLM(default='{"action":"search","args":{"query":"x"}}'),
+                           model="m", topics=["B — def b", "A — def a"],
+                           system_template=GATED_SYSTEM, actions_doc=GATED_ACTIONS_DOC)
+    assert pol.system.index("B — def b") < pol.system.index("A — def a")
+    assert "will not be published" in pol.system
+    pol.act({"step": 0, "last_result": {}})
+    assert GATED_ACTIONS_DOC.splitlines()[1] in pol.llm.calls[0]["user"]
