@@ -8,14 +8,17 @@ from pathlib import Path
 import yaml
 
 from innovation.core.config import load_env
-from innovation.core.llm import CachedLLM, RoutedLLM
+from innovation.core.llm import AnthropicLLM, CachedLLM, RoutedLLM
 from innovation.p2_forum.topics import consolidation_prompt, parse_topic_list
 
 N, MODEL = 128, "claude-sonnet-5"
 load_env()
 venues = yaml.safe_load(open("configs/p2_forum/venue_areas.yaml"))["venues"]
 names = {v["venue"] for v in venues}
-llm = CachedLLM(RoutedLLM(), Path("data/online_cache/llm"))
+# Thinking is off here: on this long synthesis it exhausted 44k tokens
+# without emitting any text.
+llm = CachedLLM(RoutedLLM(anthropic_factory=lambda: AnthropicLLM(thinking={"type": "disabled"})),
+                Path("data/online_cache/llm"))
 prompt, feedback = consolidation_prompt(venues, N), ""
 for attempt in range(3):
     reply = llm.complete(model=MODEL, system="You design research taxonomies.",

@@ -56,9 +56,13 @@ class AnthropicLLM:
     RETRY_DELAYS = [5, 10, 20, 40, 60, 120, 180, 300, 300, 300, 300]
     HEADROOM = 4000
 
-    def __init__(self, client=None, sleep=time.sleep):
+    def __init__(self, client=None, sleep=time.sleep, thinking=None):
         import anthropic
 
+        # thinking=None keeps the model default (adaptive thinking on Claude 5);
+        # pass {"type": "disabled"} for long one-shot generations where
+        # thinking would exhaust max_tokens before any text is written.
+        self._extra = {"thinking": thinking} if thinking else {}
         self._anthropic = anthropic
         self.client = client or anthropic.Anthropic()
         self._sleep = sleep
@@ -71,9 +75,12 @@ class AnthropicLLM:
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
         for delay in [*self.RETRY_DELAYS, None]:
             try:
-                msg = self.client.messages.create(
-                    model=model, system=system, max_tokens=max_tokens + self.HEADROOM,
-                    messages=[{"role": "user", "content": user}])
+                # Streaming: the SDK refuses non-streaming calls with large max_tokens.
+                with self.client.messages.stream(
+                        model=model, system=system, max_tokens=max_tokens + self.HEADROOM,
+                        messages=[{"role": "user", "content": user}],
+                        **self._extra) as stream:
+                    msg = stream.get_final_message()
                 break
             except Exception as e:
                 if delay is None or not self._transient(e):
@@ -82,7 +89,7 @@ class AnthropicLLM:
                 self._sleep(delay)
         text = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
         if not text:
-            raise ValueError("no text in reply")
+            raise ValueError(f"no text in reply (stop_reason={msg.stop_reason})")
         return text
 
 

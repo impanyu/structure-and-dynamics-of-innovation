@@ -16,7 +16,21 @@ THINK = NS(type="thinking", thinking="hmm")
 
 
 def _reply(*blocks):
-    return NS(content=list(blocks))
+    return NS(content=list(blocks), stop_reason="end_turn")
+
+
+class _Stream:
+    def __init__(self, reply):
+        self.reply = reply
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get_final_message(self):
+        return self.reply
 
 
 class _Client:
@@ -26,11 +40,11 @@ class _Client:
         self.calls = []
         self.messages = self
 
-    def create(self, **kw):
+    def stream(self, **kw):
         self.calls.append(kw)
         if self.failures:
             raise self.failures.pop(0)
-        return self.replies.pop(0)
+        return _Stream(self.replies.pop(0))
 
 
 def _llm(c, slept=None):
@@ -63,3 +77,11 @@ def test_client_errors_raise_immediately():
     with pytest.raises(anthropic.BadRequestError):
         _llm(c).complete(model="m", system="s", user="u")
     assert len(c.calls) == 1
+
+
+def test_thinking_param_is_forwarded_only_when_set():
+    c = _Client([_reply(NS(type="text", text="x")), _reply(NS(type="text", text="y"))])
+    AnthropicLLM(client=c, sleep=lambda s: None).complete(model="m", system="s", user="u")
+    AnthropicLLM(client=c, sleep=lambda s: None, thinking={"type": "disabled"}).complete(
+        model="m", system="s", user="u")
+    assert "thinking" not in c.calls[0] and c.calls[1]["thinking"] == {"type": "disabled"}
