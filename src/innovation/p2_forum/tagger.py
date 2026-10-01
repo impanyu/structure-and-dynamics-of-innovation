@@ -22,6 +22,10 @@ def parse_labels(reply: str, n_topics: int, max_labels: int = 5) -> list[int] | 
         return None
     out: list[int] = []
     for x in raw:
+        if type(x) is bool:
+            return None
+        if isinstance(x, str) and x.isdecimal():
+            x = int(x)
         if not isinstance(x, int) or not 0 <= x < n_topics:
             return None
         if x not in out:

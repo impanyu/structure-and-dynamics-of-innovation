@@ -46,18 +46,44 @@ class CachedLLM:
 
 
 class AnthropicLLM:
-    """Real client. Needs ANTHROPIC_API_KEY in the environment."""
+    """Real client. Needs ANTHROPIC_API_KEY in the environment.
 
-    def __init__(self):
+    Claude 5 models think by default: replies start with a thinking block and
+    thinking tokens count against max_tokens, so we add headroom and return
+    only the text blocks."""
+
+    # Same capped backoff as OpenAILLM (~30 minutes of outage tolerance).
+    RETRY_DELAYS = [5, 10, 20, 40, 60, 120, 180, 300, 300, 300, 300]
+    HEADROOM = 4000
+
+    def __init__(self, client=None, sleep=time.sleep):
         import anthropic
 
-        self.client = anthropic.Anthropic()
+        self._anthropic = anthropic
+        self.client = client or anthropic.Anthropic()
+        self._sleep = sleep
+
+    def _transient(self, e: Exception) -> bool:
+        a = self._anthropic
+        return isinstance(e, (a.RateLimitError, a.InternalServerError,
+                              a.APIConnectionError, a.APITimeoutError))
 
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
-        msg = self.client.messages.create(
-            model=model, system=system, max_tokens=max_tokens,
-            messages=[{"role": "user", "content": user}])
-        return msg.content[0].text
+        for delay in [*self.RETRY_DELAYS, None]:
+            try:
+                msg = self.client.messages.create(
+                    model=model, system=system, max_tokens=max_tokens + self.HEADROOM,
+                    messages=[{"role": "user", "content": user}])
+                break
+            except Exception as e:
+                if delay is None or not self._transient(e):
+                    raise
+                print(f"[anthropic] {type(e).__name__}; retrying in {delay}s", flush=True)
+                self._sleep(delay)
+        text = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+        if not text:
+            raise ValueError("no text in reply")
+        return text
 
 
 def parse_openai_model(model: str) -> tuple[str, str | None]:

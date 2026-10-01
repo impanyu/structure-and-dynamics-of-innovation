@@ -15,6 +15,8 @@ TOPICS = [Topic(i, f"T{i}", f"def {i}") for i in range(10)]
     ("[1,2,3,4,5,6]", None),         # at most five
     ("[10]", None),                  # out of range
     ("no list", None),
+    ('["0", "3"]', [0, 3]),          # ids given as digit strings
+    ("[true]", None),                # booleans are not ids
 ])
 def test_parse_labels(reply, want):
     assert parse_labels(reply, n_topics=10) == want
