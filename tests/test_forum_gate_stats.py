@@ -27,3 +27,40 @@ def test_tag_quality_helpers_import_clean():
     assert m.jaccard([1, 2], [2, 3]) == 1 / 3
     h = m.histogram({"a": [1], "b": [1, 2, 3, 4, 5]})
     assert h["hist"] == {1: 1, 5: 1} and h["share_5"] == 0.5
+
+
+def test_tag_quality_reconstructs_paper_text(tmp_path):
+    from innovation.p2_forum.literature import Paper
+    m = load("tag_quality")
+
+    class Client:
+        raws = {"a": {"paperId": "a", "title": "T", "abstract": "A long abstract."},
+                "b": {"paperId": "b", "title": "Only title", "abstract": None}}
+
+        def paper(self, pid):
+            return self.raws.get(pid)
+
+    def expect(r):
+        return Paper(paper_id=r["paperId"], title=r["title"], abstract=r["abstract"] or "",
+                     year=None, venue="", pub_date="", citations=0, branch="").text()
+
+    out = m.sample_texts(Client(), ["a", "b", "gone"], 10)
+    assert out == {"a": expect(Client.raws["a"]), "b": "Only title"}
+    assert out["a"] == "T\n\nA long abstract."
+
+
+def test_read_labels_first_wins(tmp_path):
+    m = load("tag_quality")
+    p = tmp_path / "l.jsonl"
+    p.write_text('{"paper_id":"a","labels":[1]}\n{"paper_id":"a","labels":[2]}\n')
+    assert m.read_labels(p) == {"a": [1]}
+
+
+def test_gate_stats_main_skips_missing_events_and_no_json_for_explicit(tmp_path, monkeypatch):
+    m = load()
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "r1").mkdir()
+    (tmp_path / "r2").mkdir()
+    (tmp_path / "r2" / "events.jsonl").write_text('{"action":"search","result":{}}\n')
+    m.main(["r1", "r2"])
+    assert not (tmp_path / "runs/p2_forum/gate_stats.json").exists()

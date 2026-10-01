@@ -1,18 +1,21 @@
 """Tagging quality (spec §10): labels-per-item histogram, share labeled 5, and
 re-label agreement on a random sample, using fresh calls through an uncached
-RoutedLLM. Paper text comes from titles/abstracts logged in run event logs.
-Run: uv run python scripts/p2_forum/tag_quality.py [run_dir ...]"""
+RoutedLLM. Paper text is rebuilt from the (disk-cached) Semantic Scholar record exactly as
+the original labeling saw it (Paper.text()).
+Run: uv run python scripts/p2_forum/tag_quality.py"""
 import collections
 import json
 import random
-import sys
 from pathlib import Path
 
 from innovation.core.llm import RoutedLLM
+from innovation.p2_forum.literature import Paper
+from innovation.p2_forum.s2_online import S2Online
 from innovation.p2_forum.tagger import TopicTagger
 from innovation.p2_forum.topics import load_topics
 
-LABELS = Path("data/online_cache/labels.jsonl")
+CACHE = "data/online_cache"
+LABELS = Path(CACHE) / "labels.jsonl"
 TOPICS = Path("configs/p2_forum/topics-v2.yaml")
 DRAFT = Path("configs/p2_forum/topics-v2.draft.yaml")
 MODEL = "claude-sonnet-5"
@@ -34,7 +37,7 @@ def read_labels(path=LABELS) -> dict[str, list[int]]:
     for line in Path(path).read_text().splitlines():
         if line.strip():
             r = json.loads(line)
-            if r.get("labels"):
+            if r.get("labels") and r["paper_id"] not in out:   # first write wins
                 out[r["paper_id"]] = r["labels"]
     return out
 
@@ -51,39 +54,34 @@ def jaccard(a, b) -> float:
     return len(a & b) / len(a | b) if a | b else 1.0
 
 
-def logged_texts(run_dirs) -> dict[str, str]:
-    """paper_id -> 'title. text' from search hits and browse results in event logs."""
-    texts = {}
-    for d in run_dirs:
-        p = Path(d) / "events.jsonl"
-        if not p.exists():
-            continue
-        for line in p.read_text().splitlines():
-            if not line.strip():
-                continue
-            e = json.loads(line)
-            r = e.get("result", {})
-            items = list(r.get("hits", []))
-            if e.get("action") == "browse" and "text" in r:
-                items.append({**r, "node_id": e.get("args", {}).get("node_id")})
-            for h in items:
-                if h.get("node_id") and h.get("text"):
-                    texts.setdefault(h["node_id"], f"{h.get('title', '')}\n{h['text']}".strip())
-    return texts
+def paper_text(raw: dict) -> str:
+    """The labeler's original input, via the same Paper.text() the store used."""
+    return Paper(paper_id=raw["paperId"], title=raw.get("title") or "",
+                 abstract=raw.get("abstract") or "", year=None, venue="",
+                 pub_date="", citations=0, branch="").text()
 
 
-def main(argv=None) -> None:
-    args = sys.argv[1:] if argv is None else argv
+def sample_texts(client, ids, n: int, seed: int = 0) -> dict[str, str]:
+    """Draw n ids from the label store; keep those the client can still fetch."""
+    ids = sorted(ids)
+    picked = random.Random(seed).sample(ids, min(n, len(ids)))
+    out = {}
+    for pid in picked:
+        raw = client.paper(pid)
+        if raw:
+            out[pid] = paper_text(raw)
+    return out
+
+
+def main() -> None:
     labels = read_labels()
     s = histogram(labels)
     print(f"items: {s['n']}  labels-per-item histogram: {s['hist']}  share labeled 5: {s['share_5']:.3f}")
-    dirs = args or sorted(str(d) for d in Path("runs/p2_forum").glob("forum-online-k*-s*"))
-    texts = logged_texts(dirs)
-    ids = sorted(i for i in labels if i in texts)
-    if not ids:
-        print("no sampled paper has logged text; skipping re-label agreement")
+    texts = sample_texts(S2Online(CACHE), labels, SAMPLE)
+    if not texts:
+        print("no sampled paper could be fetched; skipping re-label agreement")
         return
-    ids = random.Random(0).sample(ids, min(SAMPLE, len(ids)))
+    ids = list(texts)
     path = TOPICS
     if not path.exists():
         print(f"WARNING: {TOPICS} absent; using draft {DRAFT}")

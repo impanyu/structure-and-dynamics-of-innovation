@@ -28,13 +28,17 @@ def gate_counts(events) -> dict:
 
 def main(argv=None) -> None:
     args = sys.argv[1:] if argv is None else argv
+    explicit = bool(args)
     dirs = [Path(a) for a in args] or sorted(Path("runs/p2_forum").glob("forum-online-k*-s*"))
     rows = []
     for d in dirs:
+        if not (d / "events.jsonl").exists():
+            continue
         ev = [json.loads(l) for l in open(d / "events.jsonl") if l.strip()]
         rows.append({"run": d.name, **gate_counts(ev)})
-    Path("runs/p2_forum").mkdir(parents=True, exist_ok=True)
-    json.dump(rows, open("runs/p2_forum/gate_stats.json", "w"), indent=1)
+    if not explicit:
+        Path("runs/p2_forum").mkdir(parents=True, exist_ok=True)
+        json.dump(rows, open("runs/p2_forum/gate_stats.json", "w"), indent=1)
     for r in rows:
         print(r)
 
