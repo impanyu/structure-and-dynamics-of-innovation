@@ -71,7 +71,7 @@ Your topics:
 {topics}"""
 
 GATED_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
-{"action": "search", "args": {"query": "<text>", "k": 5}} -- search the literature online
+{"action": "search", "args": {"query": "<short keyword query, 2-6 words>", "k": 5}} -- search the literature online (short queries work best)
 {"action": "browse", "args": {"node_id": "<paper id>"}} -- read a paper's abstract, references and citations
 {"action": "sample_frontier", "args": {}} -- jump to a random paper in one of your topics
 {"action": "search_board", "args": {"query": "<text>", "k": 5}} -- semantic search over the board

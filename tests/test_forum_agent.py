@@ -67,3 +67,9 @@ def test_gated_prompt_states_the_hard_rule_and_uses_given_order():
     assert "will not be published" in pol.system
     pol.act({"step": 0, "last_result": {}})
     assert GATED_ACTIONS_DOC.splitlines()[1] in pol.llm.calls[0]["user"]
+
+
+def test_gated_doc_asks_for_short_search_queries():
+    from innovation.p2_forum.agent import GATED_ACTIONS_DOC
+    assert "<short keyword query, 2-6 words>" in GATED_ACTIONS_DOC
+    assert "short queries work best" in GATED_ACTIONS_DOC
