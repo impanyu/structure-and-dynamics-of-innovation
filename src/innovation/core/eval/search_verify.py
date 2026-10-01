@@ -137,14 +137,16 @@ def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> lis
 
     if time.time() < _OA_BREAKER["until"]:
         return []
-    # 30s timeout + fail fast (3 attempts, sleeps capped at 5s): the caller
-    # degrades per-query to S2-only rather than stalling on a dead channel.
+    # 30s timeout; up to 6 attempts with sleeps capped at 60s. OpenAlex's
+    # load-shedding 429 asks for ~30-60s (Retry-After), which a 5s cap could
+    # never honor; a truly dead channel still trips the breaker below and the
+    # caller degrades per-query to S2-only.
     http_get = http_get or functools.partial(requests.get, timeout=30)
     try:
         payload = _cached_get(OPENALEX_BASE,
                               {"search": query, "per-page": 10, "mailto": mailto},
-                              Path(cache_dir), http_get, attempts=3, delay=1.0,
-                              max_sleep=5.0)
+                              Path(cache_dir), http_get, attempts=6, delay=1.0,
+                              max_sleep=60.0)
     except requests.RequestException:
         _OA_BREAKER["fails"] += 1
         if _OA_BREAKER["fails"] >= 5:
