@@ -71,3 +71,26 @@ def test_corpus_stays_frozen_through_the_facade(make_workspace):
     ws = make_workspace()
     with pytest.raises(FrozenGraphError):
         ws.corpus.add_idea("x", "x", [])
+
+
+def test_external_papers_back_corpus_ids_for_stubs():
+    import numpy as np
+    from innovation.core.network.graph import IdeaGraph
+    from innovation.core.network.index import VectorIndex
+    from innovation.p2_forum.workspace import Workspace
+    from conftest import FakeEmbedder
+
+    class Known:
+        def has(self, pid):
+            return pid == "s2:abc"
+
+    empty = IdeaGraph()
+    empty.freeze()
+    ws = Workspace(corpus=empty, corpus_index=VectorIndex(4), board_index=VectorIndex(4),
+                   embedder=FakeEmbedder(), run_id="t", external_papers=Known())
+    nid = ws.post_idea("idea", ["s2:abc"], meta={})
+    assert ws.has_node("s2:abc")
+    assert ws.board.has_node("s2:abc")          # stub created
+    assert ws.board.citations_out(nid) == ["s2:abc"]
+    with pytest.raises(KeyError):
+        ws.post_idea("idea2", ["unknown"], meta={})

@@ -15,7 +15,7 @@ CORPUS_REF = "corpus_ref"
 
 class Workspace:
     def __init__(self, *, corpus: IdeaGraph, corpus_index: VectorIndex,
-                 board_index: VectorIndex, embedder, run_id: str):
+                 board_index: VectorIndex, embedder, run_id: str, external_papers=None):
         if not corpus.frozen:
             raise ValueError("the corpus must be frozen before use")
         if board_index.frozen:
@@ -32,6 +32,7 @@ class Workspace:
         self.board_index = board_index
         self.embedder = embedder
         self.run_id = run_id
+        self.external = external_papers
         self._counter = 0
 
     # --- routing ---
@@ -41,6 +42,8 @@ class Workspace:
     def has_node(self, node_id: str) -> bool:
         if self.store_of(node_id) == "board":
             return self.board.has_node(node_id)
+        if self.external is not None:
+            return self.external.has(node_id)
         return self.corpus.has_node(node_id)
 
     def node(self, node_id: str) -> IdeaNode:
@@ -89,7 +92,7 @@ class Workspace:
         special cases."""
         if self.board.has_node(node_id):
             return
-        if not self.corpus.has_node(node_id):
+        if not self.has_node(node_id):
             raise KeyError(f"unknown node: {node_id}")
         self.board.add_idea(node_id, "", [], source=CORPUS_REF, year=None)
 
