@@ -3,6 +3,7 @@ rule, plus a persistent label store. Scope = (one of the seven venues OR
 >= min_citations) AND published on/before max_date. Topic gating is NOT done
 here; the environment applies it per agent."""
 import fcntl
+import hashlib
 import json
 import threading
 from dataclasses import dataclass
@@ -54,6 +55,16 @@ class Scope:
         return None
 
 
+def label_store_path(cache_dir, tagger) -> Path:
+    """Labels depend on the topic list, so the store is keyed by a hash of the
+    tagger's system prompt (which embeds the list). Taggers without one
+    (fakes) share labels.jsonl."""
+    system = getattr(tagger, "system", None)
+    if not isinstance(system, str):
+        return Path(cache_dir) / "labels.jsonl"
+    return Path(cache_dir) / f"labels-{hashlib.sha256(system.encode()).hexdigest()[:12]}.jsonl"
+
+
 class OnlineLiterature:
     def __init__(self, *, client, scope: Scope, tagger, cache_dir, search_pool: int = 50):
         self.client, self.scope, self.tagger = client, scope, tagger
@@ -63,7 +74,7 @@ class OnlineLiterature:
         self._known_ids: set[str] = set()
         self._lock = threading.Lock()
         Path(cache_dir).mkdir(parents=True, exist_ok=True)
-        self._store = Path(cache_dir) / "labels.jsonl"
+        self._store = label_store_path(cache_dir, tagger)
         self._labels: dict[str, list[int] | None] = {}
         self._failed: set[str] = set()
         if self._store.exists():

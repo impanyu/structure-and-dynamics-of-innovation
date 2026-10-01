@@ -168,3 +168,21 @@ def test_last_scope_dropped_counts_per_call(tmp_path):
     assert L.last_scope_dropped == 1
     L.citations("a")
     assert L.last_scope_dropped == 0
+
+
+def test_label_store_is_keyed_by_tagger_system(tmp_path):
+    from innovation.p2_forum.literature import label_store_path
+
+    def mk(system):
+        t = FakeTagger({})
+        if system is not None:
+            t.system = system
+        return OnlineLiterature(client=FakeClient({}), scope=SCOPE, tagger=t, cache_dir=tmp_path)
+
+    a, a2, b, plain = mk("list A"), mk("list A"), mk("list B"), mk(None)
+    assert a._store == a2._store != b._store
+    assert a._store.name.startswith("labels-") and a._store.suffix == ".jsonl"
+    assert plain._store == tmp_path / "labels.jsonl"
+    t = FakeTagger({})
+    t.system = "list A"
+    assert label_store_path(tmp_path, t) == a._store

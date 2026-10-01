@@ -9,13 +9,12 @@ import random
 from pathlib import Path
 
 from innovation.core.llm import RoutedLLM
-from innovation.p2_forum.literature import Paper
+from innovation.p2_forum.literature import Paper, label_store_path
 from innovation.p2_forum.s2_online import S2Online
 from innovation.p2_forum.tagger import TopicTagger
 from innovation.p2_forum.topics import load_topics
 
 CACHE = "data/online_cache"
-LABELS = Path(CACHE) / "labels.jsonl"
 TOPICS = Path("configs/p2_forum/topics-v2.yaml")
 DRAFT = Path("configs/p2_forum/topics-v2.draft.yaml")
 MODEL = "claude-sonnet-5"
@@ -32,7 +31,7 @@ class _StabilityLLM:
                                  user=user + "\n\n(stability)", max_tokens=max_tokens)
 
 
-def read_labels(path=LABELS) -> dict[str, list[int]]:
+def read_labels(path) -> dict[str, list[int]]:
     out = {}
     for line in Path(path).read_text().splitlines():
         if line.strip():
@@ -74,7 +73,16 @@ def sample_texts(client, ids, n: int, seed: int = 0) -> dict[str, str]:
 
 
 def main() -> None:
-    labels = read_labels()
+    path = TOPICS
+    if not path.exists():
+        print(f"WARNING: {TOPICS} absent; using draft {DRAFT}")
+        path = DRAFT
+    tagger = TopicTagger(llm=_StabilityLLM(RoutedLLM()), model=MODEL, topics=load_topics(path))
+    store = label_store_path(CACHE, tagger)
+    if not store.exists():
+        print(f"no label store for this topic list: {store}")
+        return
+    labels = read_labels(store)
     s = histogram(labels)
     print(f"items: {s['n']}  labels-per-item histogram: {s['hist']}  share labeled 5: {s['share_5']:.3f}")
     texts = sample_texts(S2Online(CACHE), labels, SAMPLE)
@@ -82,11 +90,6 @@ def main() -> None:
         print("no sampled paper could be fetched; skipping re-label agreement")
         return
     ids = list(texts)
-    path = TOPICS
-    if not path.exists():
-        print(f"WARNING: {TOPICS} absent; using draft {DRAFT}")
-        path = DRAFT
-    tagger = TopicTagger(llm=_StabilityLLM(RoutedLLM()), model=MODEL, topics=load_topics(path))
     new = tagger.label_many([texts[i] for i in ids])
     pairs = [(labels[i], n) for i, n in zip(ids, new) if n]
     if not pairs:
