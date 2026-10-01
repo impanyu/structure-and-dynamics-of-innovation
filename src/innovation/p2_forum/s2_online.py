@@ -35,22 +35,27 @@ class S2Online:
             raise
 
     @staticmethod
+    def _data(out) -> list[dict]:
+        """The `data` list of a response; S2 sometimes sends {"data": null} or null entries."""
+        return [d for d in ((out or {}).get("data") or []) if isinstance(d, dict)]
+
+    @staticmethod
     def _clean(items) -> list[dict]:
-        return [p for p in items if p and p.get("paperId")]
+        return [p for p in items if isinstance(p, dict) and p.get("paperId")]
 
     def search(self, query: str, *, limit: int, max_date: str) -> list[dict]:
         out = self._call(f"{BASE}/paper/search",
                          {"query": query, "limit": limit, "fields": FIELDS,
                           "publicationDateOrYear": f":{max_date}"})
-        return self._clean((out or {}).get("data", []))
+        return self._clean(self._data(out))
 
     def paper(self, pid: str) -> dict | None:
         return self._call(f"{BASE}/paper/{pid}", {"fields": FIELDS})
 
     def references(self, pid: str) -> list[dict]:
         out = self._call(f"{BASE}/paper/{pid}/references", {"fields": FIELDS, "limit": 1000})
-        return self._clean(d.get("citedPaper") for d in (out or {}).get("data", []))
+        return self._clean(d.get("citedPaper") for d in self._data(out))
 
     def citations(self, pid: str) -> list[dict]:
         out = self._call(f"{BASE}/paper/{pid}/citations", {"fields": FIELDS, "limit": 1000})
-        return self._clean(d.get("citingPaper") for d in (out or {}).get("data", []))
+        return self._clean(d.get("citingPaper") for d in self._data(out))

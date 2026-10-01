@@ -59,3 +59,13 @@ def test_missing_paper_is_none(tmp_path):
 def test_null_entries_are_dropped(tmp_path):
     get = fake_get({"/references": Resp(200, {"data": [{"citedPaper": {"paperId": None}}, {"citedPaper": P}]})})
     assert S2Online(tmp_path, http_get=get, delay=0).references("z") == [P]
+
+
+def test_null_data_and_null_entries_are_tolerated(tmp_path):
+    get = fake_get({"/search": Resp(200, {"data": None}),
+                    "/references": Resp(200, {"data": [None, {"citedPaper": None}, {"citedPaper": P}]}),
+                    "/citations": Resp(200, {"data": None})})
+    c = S2Online(tmp_path, http_get=get, delay=0)
+    assert c.search("q", limit=5, max_date="2024-09-30") == []
+    assert c.references("z") == [P]
+    assert c.citations("z") == []
