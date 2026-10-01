@@ -52,6 +52,8 @@ class GatedForumEnvironment(ForumEnvironment):
 
     # --- literature ---
     def _do_search(self, *, agent_id, step, query: str, k: int = 5) -> dict:
+        if not self.nav.corpus_search:
+            return {"error": "semantic search over the literature is closed"}
         refused = self._query_gate(agent_id, query)
         if refused:
             return refused
@@ -61,7 +63,7 @@ class GatedForumEnvironment(ForumEnvironment):
     def _do_browse(self, *, agent_id, step, node_id: str) -> dict:
         p = self.lit.get(node_id)
         if p is None:
-            return {"error": f"{node_id} is not an available paper", "gate": "result"}
+            return {"error": f"{node_id} is not an available paper", "gate": "scope"}
         labels = self.lit.labels([node_id])[node_id]
         if not self._ok(agent_id, labels):
             return {"error": f"{node_id} is outside your topics", "gate": "result"}
@@ -168,6 +170,7 @@ class GatedForumEnvironment(ForumEnvironment):
     def restore(self, events: list[dict]) -> None:
         """Replay the board; post labels come from the log, so a resumed run
         makes no tagger calls for replayed steps."""
+        self._remember_paper_ids(events)
         for e in events:
             r = e.get("result", {})
             if e["action"] == "generate" and "node_id" in r:
@@ -180,3 +183,33 @@ class GatedForumEnvironment(ForumEnvironment):
                     self.generation_budget -= 1
             else:
                 super().restore([e])
+
+    def _remember_paper_ids(self, events: list[dict]) -> None:
+        """Paper ids the agents saw or used in a previous process: the online
+        literature's in-memory cache is empty after a resume, so tell it these
+        ids exist before replay resolves cites and links against it."""
+        ids: set[str] = set()
+
+        def add(x):
+            if isinstance(x, str):
+                ids.add(x)
+
+        for e in events:
+            r, a = e.get("result", {}), e.get("args", {})
+            if not isinstance(r, dict) or "error" in r:
+                continue
+            for h in r.get("hits", []):
+                add(h.get("node_id"))
+            if e["action"] in ("browse", "sample_frontier"):
+                add(r.get("node_id"))
+            for key in ("cites", "cited_by"):
+                for v in r.get(key, []):
+                    add(v.get("node_id"))
+            if e["action"] == "generate" and "node_id" in r:
+                for c in a.get("cited_ids", []):
+                    if c not in r.get("dropped_cites", []):
+                        add(c)
+            elif e["action"] in ("add_links", "remove_links"):
+                for d in a.get("dst_ids", []):
+                    add(d)
+        self.lit.remember_ids(i for i in ids if not i.startswith("gen:"))

@@ -59,6 +59,7 @@ class OnlineLiterature:
         self.client, self.scope, self.tagger = client, scope, tagger
         self.search_pool = search_pool
         self._papers: dict[str, Paper] = {}
+        self._known_ids: set[str] = set()
         self._lock = threading.Lock()
         Path(cache_dir).mkdir(parents=True, exist_ok=True)
         self._store = Path(cache_dir) / "labels.jsonl"
@@ -118,8 +119,13 @@ class OnlineLiterature:
     def citations(self, pid: str) -> list[Paper]:
         return self._admit(self.client.citations(pid))
 
+    def remember_ids(self, ids) -> None:
+        """Mark ids as known in-scope papers (seen in an earlier process,
+        e.g. from a replayed event log) without fetching them."""
+        self._known_ids.update(ids)
+
     def has(self, pid: str) -> bool:
-        return pid in self._papers
+        return pid in self._papers or pid in self._known_ids
 
     def known(self) -> list[Paper]:
         return list(self._papers.values())

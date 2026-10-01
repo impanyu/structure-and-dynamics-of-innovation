@@ -41,6 +41,9 @@ class FakeLit:
     def has(self, pid):
         return pid in P
 
+    def remember_ids(self, ids):
+        pass
+
 
 class FakeTagger:
     """Labels by keyword: text containing 'Tn' gets [n]; 'junk' fails."""
@@ -143,3 +146,60 @@ def test_all_topics_means_no_gating(tmp_path):
     env = make(tmp_path, topics={"a": {0, 1, 2, 3}})
     out = env.execute("a", 0, Action("search", {"query": "about T1", "k": 9}))
     assert len(out["hits"]) == 4
+
+
+class ColdLit(FakeLit):
+    """has() knows only ids seen via search in this process or remembered."""
+    def __init__(self):
+        super().__init__()
+        self.seen: set[str] = set()
+
+    def search(self, q):
+        self.seen.update(P)
+        return super().search(q)
+
+    def remember_ids(self, ids):
+        self.seen.update(ids)
+
+    def has(self, pid):
+        return pid in self.seen
+
+
+def make_cold(tmp_path):
+    lit = ColdLit()
+    empty = IdeaGraph()
+    empty.freeze()
+    ws = Workspace(corpus=empty, corpus_index=VectorIndex(4), board_index=VectorIndex(4),
+                   embedder=FakeEmbedder(), run_id="t", external_papers=lit)
+    return GatedForumEnvironment(
+        run_id="t", workspace=ws, event_log=EventLog(tmp_path / "e.jsonl"),
+        rng=np.random.default_rng(0), literature=lit, tagger=FakeTagger(),
+        agent_topics={"a": {0}, "b": {1}}, topic_names=NAMES)
+
+
+def test_restore_with_cold_literature_cache_keeps_cites_and_links(tmp_path):
+    env = make_cold(tmp_path)
+    env.execute("a", 0, Action("search", {"query": "about T0", "k": 5}))
+    pid = env.execute("a", 1, Action("generate", {"text": "idea T0", "cited_ids": ["p0"]}))["node_id"]
+    assert env.execute("a", 2, Action("add_links", {"src_id": pid, "dst_ids": ["p2"]}))["added"]
+    events = env.event_log.read_all()
+    fresh = make_cold(tmp_path / "x")
+    fresh.tagger = None
+    fresh.restore(events)
+    assert fresh.ws.board.has_node("p0") and "p2" in fresh.ws.board_neighbors(pid)[0]
+    fresh.tagger = FakeTagger()
+    out = fresh.execute("a", 3, Action("generate", {"text": "idea T0", "cited_ids": ["p0"]}))
+    assert "dropped_cites" not in out
+
+
+def test_closed_corpus_search_is_refused(tmp_path):
+    from innovation.p2_forum.env import Navigation
+    env = make(tmp_path)
+    env.nav = Navigation(corpus_search=False)
+    out = env.execute("a", 0, Action("search", {"query": "about T0", "k": 5}))
+    assert "closed" in out["error"] and "hits" not in out
+
+
+def test_browse_out_of_scope_paper_reports_scope_gate(tmp_path):
+    env = make(tmp_path)
+    assert env.execute("a", 0, Action("browse", {"node_id": "zzz"}))["gate"] == "scope"
