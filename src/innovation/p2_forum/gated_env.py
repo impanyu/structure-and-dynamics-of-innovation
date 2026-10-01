@@ -3,7 +3,7 @@
 agent's topics. Filtering what is RETURNED is the primary mechanism; the
 checks on citations and links are a safety net. Every refusal carries a
 "gate" field so gate activity can be counted from the event log."""
-from innovation.p2_forum.env import ForumEnvironment
+from innovation.p2_forum.env import ForumEnvironment, _kept_cites
 from innovation.p2_forum.tagger import UnlabeledError
 
 
@@ -175,8 +175,7 @@ class GatedForumEnvironment(ForumEnvironment):
             r = e.get("result", {})
             if e["action"] == "generate" and "node_id" in r:
                 self.post_labels[r["node_id"]] = r["topics"]
-                kept = [c for c in e["args"]["cited_ids"] if c not in r.get("dropped_cites", [])]
-                self.ws.post_idea(e["args"]["text"], kept,
+                self.ws.post_idea(e["args"]["text"], _kept_cites(e),
                                   meta={"run_id": e["run_id"], "agent_id": e["agent_id"],
                                         "step": e["step"]}, node_id=r["node_id"])
                 if self.generation_budget is not None:
@@ -206,9 +205,8 @@ class GatedForumEnvironment(ForumEnvironment):
                 for v in r.get(key, []):
                     add(v.get("node_id"))
             if e["action"] == "generate" and "node_id" in r:
-                for c in a.get("cited_ids", []):
-                    if c not in r.get("dropped_cites", []):
-                        add(c)
+                for c in _kept_cites(e):
+                    add(c)
             elif e["action"] in ("add_links", "remove_links"):
                 for d in a.get("dst_ids", []):
                     add(d)

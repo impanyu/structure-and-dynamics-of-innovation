@@ -264,3 +264,56 @@ def test_the_nested_sweep_configs_load_and_nest_on_the_real_pool():
             if prev is not None:
                 assert all(set(prev[a]) < set(t[a]) for a in t)
             prev = t
+
+
+def test_online_configs_load_and_are_nested():
+    from innovation.core.config import load_config
+    files = sorted(Path("configs/p2_forum/experiments/online").glob("*.yaml"))
+    assert len(files) == 9
+    cfg = load_config(files[0])
+    assert cfg["literature"] == "online" and cfg["gating"] == "topics"
+    assert cfg["run"]["topic_draw"] == "nested" and cfg["run"]["total_steps"] == 400
+    assert cfg["models"]["tagger"] == "claude-sonnet-5"
+    assert cfg["models"]["judge"] == "claude-opus-5-5"
+    assert cfg["online"]["max_pub_date"] == "2024-09-30"
+    assert cfg["models"]["agent"] == "openai:gpt-5:medium"
+    runs = {load_config(f)["run"]["run_id"]: load_config(f)["run"] for f in files}
+    assert set(runs) == {f"forum-online-k{k}-s0"
+                         for k in [1, 16, 32, 48, 64, 80, 96, 112, 128]}
+    assert all(r["seed"] == 0 and len(r["agents"]) == 10 for r in runs.values())
+
+
+def test_online_mode_dispatches_with_the_online_world(forum_cfg, monkeypatch):
+    """cmd_run in online mode builds the gated run from _load_online_world and
+    replays the log into board_metrics.json without any corpus."""
+    from conftest import FakeEmbedder as Emb4
+    from test_forum_gated_env import FakeLit, FakeTagger, NAMES
+    from innovation.p2_forum.topics import Topic
+
+    topics = [Topic(id=i, name=n, definition=f"def {n}") for i, n in enumerate(NAMES)]
+    monkeypatch.setattr(cli, "_load_online_world",
+                        lambda c: (FakeLit(), FakeTagger(), Emb4(), topics))
+    monkeypatch.setattr(cli, "_load_forum_world",
+                        lambda c: pytest.fail("online mode must not load the corpus"))
+    post = json.dumps({"action": "generate",
+                       "args": {"text": "T0 T1 T2 T3 idea", "cited_ids": ["p0", "p3"]}})
+    llm = FakeLLM(default=post)
+    _use_llm(monkeypatch, llm)
+    forum_cfg.update(literature="online", gating="topics")
+    forum_cfg["models"]["agent"] = "openai:gpt-5:medium"
+    forum_cfg["run"]["topic_draw"] = "nested"
+
+    cli.cmd_run(forum_cfg)
+
+    run_dir = Path(forum_cfg["out_dir"]) / "f1"
+    meta = json.loads((run_dir / "run_meta.json").read_text())
+    assert meta["literature"] == "online"
+    assert {c["model"] for c in llm.calls} == {"openai:gpt-5:medium"}
+    events = load_events(run_dir / "events.jsonl")
+    posted = [e for e in events if "node_id" in e["result"]]
+    assert len(posted) == 4
+    final = json.loads((run_dir / "board_metrics.json").read_text())["final"]
+    assert final["n_posts"] == 4
+    kept = sum(len(e["args"]["cited_ids"]) - len(e["result"].get("dropped_cites", []))
+               for e in posted)
+    assert final["n_post_corpus_edges"] == kept

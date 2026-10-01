@@ -221,3 +221,37 @@ def test_board_trajectory_rejects_a_zero_agent_stride(make_workspace,
         board_trajectory(events, corpus=ws.corpus,
                          corpus_index=ws.corpus_index, embedder=fake_embedder,
                          run_id="t", n_agents=0)
+
+
+class _AnyPaper:
+    """Online replay: every non-board id is an accepted paper."""
+
+    def has(self, pid):
+        return not str(pid).startswith("gen:")
+
+
+def test_online_events_replay_without_a_corpus_and_drop_gated_cites(fake_embedder):
+    events = [{"run_id": "t", "agent_id": "a0", "step": 0, "action": "generate",
+               "args": {"text": "idea", "cited_ids": ["S2abc", "S2hidden"]},
+               "result": {"node_id": "gen:t:0", "topics": [0],
+                          "dropped_cites": ["S2hidden"]}}]
+    series = board_trajectory(events, corpus=None, corpus_index=None,
+                              embedder=fake_embedder, run_id="t", n_agents=1,
+                              external_papers=_AnyPaper())
+    assert series[-1]["n_posts"] == 1
+    assert series[-1]["n_post_corpus_edges"] == 1
+
+
+def test_a_dropped_post_cite_is_not_a_cross_agent_citation(fake_embedder):
+    events = [{"run_id": "t", "agent_id": "a0", "step": 0, "action": "generate",
+               "args": {"text": "one", "cited_ids": []},
+               "result": {"node_id": "gen:t:0", "topics": [0]}},
+              {"run_id": "t", "agent_id": "a1", "step": 1, "action": "generate",
+               "args": {"text": "two", "cited_ids": ["gen:t:0"]},
+               "result": {"node_id": "gen:t:1", "topics": [1],
+                          "dropped_cites": ["gen:t:0"]}}]
+    final = board_trajectory(events, corpus=None, corpus_index=None,
+                             embedder=fake_embedder, run_id="t", n_agents=2,
+                             external_papers=_AnyPaper())[-1]
+    assert final["n_post_post_edges"] == 0
+    assert final["first_cross_agent_citation_step"] is None

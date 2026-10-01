@@ -8,8 +8,9 @@ import networkx as nx
 import numpy as np
 
 from innovation.core.events import EventLog
+from innovation.core.network.graph import IdeaGraph
 from innovation.core.network.index import VectorIndex
-from innovation.p2_forum.env import ForumEnvironment
+from innovation.p2_forum.env import ForumEnvironment, _kept_cites
 from innovation.p2_forum.workspace import CORPUS_REF, Workspace
 
 
@@ -95,7 +96,7 @@ def board_structure(ws: Workspace, events: list[dict]) -> dict:
         if e["action"] != "generate" or "node_id" not in e.get("result", {}):
             continue
         src = e["result"]["node_id"]
-        for dst in e["args"].get("cited_ids", []):
+        for dst in _kept_cites(e):
             if dst in author and author[dst] != e["agent_id"]:
                 first_cross = e["step"] if first_cross is None else first_cross
                 break
@@ -127,7 +128,8 @@ def board_structure(ws: Workspace, events: list[dict]) -> dict:
 
 
 def board_trajectory(events: list[dict], *, corpus, corpus_index, embedder,
-                     run_id: str, n_agents: int) -> list[dict]:
+                     run_id: str, n_agents: int,
+                     external_papers=None) -> list[dict]:
     """The board's structure at each ROUND boundary (spec §5).
 
     One round is `n_agents` events, because the runner is round-robin. Each
@@ -136,12 +138,23 @@ def board_trajectory(events: list[dict], *, corpus, corpus_index, embedder,
 
     The replay is incremental — one workspace, events fed in chunks — so a
     run's whole trajectory costs one pass of embedding, not one per round.
-    The final entry is the finished board."""
+    The final entry is the finished board.
+
+    Online runs pass `corpus=None, corpus_index=None` and `external_papers`,
+    an object whose `has(id)` accepts the paper ids the log cites; the replay
+    then needs no corpus at all."""
     if n_agents < 1:
         raise ValueError(f"n_agents must be >= 1; got {n_agents}")
+    if external_papers is not None:
+        # Online runs have no corpus: papers live in the online literature,
+        # and `external_papers.has()` vouches for the ids the log cites.
+        corpus = IdeaGraph()
+        corpus.freeze()
+        corpus_index = VectorIndex(embedder.dim)
     ws = Workspace(corpus=corpus, corpus_index=corpus_index,
                    board_index=VectorIndex(corpus_index.dim),
-                   embedder=embedder, run_id=run_id)
+                   embedder=embedder, run_id=run_id,
+                   external_papers=external_papers)
     env = ForumEnvironment(run_id=run_id, workspace=ws, event_log=_NullLog(),
                            rng=np.random.default_rng(0))
     series = []

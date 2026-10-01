@@ -140,6 +140,35 @@ def _load_forum_world(cfg):
     return corpus, index, emb
 
 
+def _load_online_world(cfg):
+    """Paper 2's online world: the frozen topic list, its tagger, the online
+    literature behind the scope rule, and the embedder (for the board)."""
+    from innovation.p2_forum.literature import OnlineLiterature, Scope
+    from innovation.p2_forum.s2_online import S2Online
+    from innovation.p2_forum.tagger import TopicTagger
+    from innovation.p2_forum.topics import load_topics
+
+    on = cfg["online"]
+    topics = load_topics(cfg["topics_file"])
+    llm = CachedLLM(RoutedLLM(), Path(on["cache_dir"]) / "llm")
+    tagger = TopicTagger(llm=llm, model=cfg["models"]["tagger"], topics=topics)
+    aliases = tuple(a.lower() for v in on["venues"] for a in v["aliases"])
+    scope = Scope(venue_aliases=aliases, min_citations=on["min_citations_any_venue"],
+                  max_date=on["max_pub_date"])
+    lit = OnlineLiterature(client=S2Online(on["cache_dir"]), scope=scope, tagger=tagger,
+                           cache_dir=on["cache_dir"], search_pool=on.get("search_pool", 50))
+    return lit, tagger, Embedder(cfg["embedding_model"]), topics
+
+
+class _AnyPaper:
+    """Online replay needs no literature: every id the log cites was accepted
+    when it was written, so any non-board id is taken as an existing paper."""
+
+    @staticmethod
+    def has(node_id: str) -> bool:
+        return not str(node_id).startswith("gen:")
+
+
 def _write_board_metrics(cfg, corpus, index, emb) -> Path:
     """The board's structure as a function of round (spec §5), replayed from the
     event log into <run_dir>/board_metrics.json. Round = one action per agent."""
@@ -148,9 +177,12 @@ def _write_board_metrics(cfg, corpus, index, emb) -> Path:
     run_dir = Path(cfg["out_dir"]) / cfg["run"]["run_id"]
     events = load_events(run_dir / "events.jsonl")
     n_agents = len(cfg["run"]["agents"])
-    series = board_trajectory(events, corpus=corpus, corpus_index=index,
+    online = cfg.get("literature") == "online"
+    series = board_trajectory(events, corpus=None if online else corpus,
+                              corpus_index=None if online else index,
                               embedder=emb, run_id=cfg["run"]["run_id"],
-                              n_agents=n_agents)
+                              n_agents=n_agents,
+                              external_papers=_AnyPaper() if online else None)
     out_path = run_dir / "board_metrics.json"
     out_path.write_text(json.dumps(
         {"run_id": cfg["run"]["run_id"], "n_agents": n_agents,
@@ -164,7 +196,10 @@ def cmd_board_metrics(cfg):
     """Re-derive the structural metrics of an existing paper-2 run."""
     if cfg.get("arch", "p1_dial") != "p2_forum":
         raise SystemExit("board-metrics applies to arch: p2_forum runs only")
-    corpus, index, emb = _load_forum_world(cfg)
+    if cfg.get("literature") == "online":
+        corpus, index, emb = None, None, Embedder(cfg["embedding_model"])
+    else:
+        corpus, index, emb = _load_forum_world(cfg)
     path = _write_board_metrics(cfg, corpus, index, emb)
     print(f"wrote {path}")
     print(json.dumps(json.loads(path.read_text())["final"], indent=2))
@@ -185,20 +220,38 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
         from innovation.p2_forum.env import Navigation
         from innovation.p2_forum.runner import (ForumRunConfig, resume_forum,
                                                 run_forum)
-        corpus, index, emb = _load_forum_world(cfg)
-        run_cfg = ForumRunConfig(
+        common = dict(
             run_id=r["run_id"], seed=r["seed"], total_steps=r["total_steps"],
-            agents=r["agents"], topic_pool=_topic_pool(cfg),
+            agents=r["agents"],
             generation_budget=r.get("generation_budget"),
             navigation=Navigation.from_config(cfg.get("navigation")),
-            topic_draw=r.get("topic_draw", "independent"))
+            topic_draw=r.get("topic_draw", "independent"),
+            # ForumRunConfig refuses a mismatched pair (e.g. gating: topics
+            # over the corpus), so a half-edited config cannot run silently.
+            gating=cfg.get("gating", "none"))
         # resume replays the log before continuing; running fresh over an
         # existing log would re-issue gen:<run_id>:<n> ids and make the log
         # unreplayable (the primary research artifact).
         forum = resume_forum if resume else run_forum
-        out = forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
-                    llm=_llm(cfg), model=cfg["models"]["agent"],
-                    out_dir=cfg["out_dir"])
+        if cfg.get("literature") == "online":
+            lit, tagger, emb, topics = _load_online_world(cfg)
+            corpus = index = None
+            run_cfg = ForumRunConfig(
+                **common, literature="online",
+                topic_pool=[t.name for t in topics],
+                topic_definitions={t.name: t.definition for t in topics})
+            out = forum(run_cfg, corpus=None, corpus_index=None, embedder=emb,
+                        llm=_llm(cfg), model=cfg["models"]["agent"],
+                        out_dir=cfg["out_dir"], literature=lit, tagger=tagger)
+        else:
+            corpus, index, emb = _load_forum_world(cfg)
+            # a typo such as `literature: onlne` is refused here, not run as corpus
+            run_cfg = ForumRunConfig(**common,
+                                     literature=cfg.get("literature", "corpus"),
+                                     topic_pool=_topic_pool(cfg))
+            out = forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
+                        llm=_llm(cfg), model=cfg["models"]["agent"],
+                        out_dir=cfg["out_dir"])
         # spec §8: a completed run produces headline AND structural metrics.
         # The headline ones need the judge (cmd_evaluate); the structural ones
         # are a pure replay of the log we just wrote, so write them here.

@@ -171,3 +171,85 @@ def test_run_forum_records_the_topic_draw_scheme(
                            ["alpha", "beta", "gamma"], np.random.default_rng(3),
                            scheme="nested", seed=3)
     assert meta["topic_assignments"] == expected
+
+
+def test_display_order_is_a_seeded_shuffle_independent_of_nesting():
+    from innovation.p2_forum.runner import display_order
+    t = [f"T{i}" for i in range(16)]
+    a = display_order(t, seed=0, agent_index=0)
+    assert sorted(a) == sorted(t) and a != t
+    assert a == display_order(t, seed=0, agent_index=0)
+    assert a != display_order(t, seed=0, agent_index=1)
+
+
+def test_mode_combinations_are_validated():
+    import pytest
+    from innovation.p2_forum.runner import ForumRunConfig
+    with pytest.raises(ValueError):
+        ForumRunConfig(run_id="r", seed=0, total_steps=1, literature="online", gating="none")
+    with pytest.raises(ValueError):
+        ForumRunConfig(run_id="r", seed=0, total_steps=1, literature="corpus", gating="topics")
+
+
+def _online_cfg(total_steps=6):
+    from test_forum_gated_env import NAMES
+    return ForumRunConfig(run_id="r", seed=0, total_steps=total_steps,
+                          literature="online", gating="topics", topic_draw="nested",
+                          topic_pool=NAMES,
+                          topic_definitions={n: f"definition of {n}" for n in NAMES},
+                          agents=[{"agent_id": "a", "k_topics": 1},
+                                  {"agent_id": "b", "k_topics": 1}])
+
+
+def test_online_run_end_to_end_with_fakes(tmp_path):
+    """Two agents, fake literature + tagger + LLM: the run writes run_meta with
+    topic ids and display orders, and every logged search hit is readable."""
+    from innovation.core.events import load_events
+    from innovation.core.llm import FakeLLM
+    from test_forum_gated_env import FakeLit, FakeTagger, NAMES
+    from conftest import FakeEmbedder
+    cfg = _online_cfg()
+    llm = FakeLLM(default='{"action": "search", "args": {"query": "T0 T1 T2 T3"}}')
+    run_forum(cfg, embedder=FakeEmbedder(), llm=llm, model="m", out_dir=tmp_path,
+              literature=FakeLit(), tagger=FakeTagger())
+    meta = json.loads((tmp_path / "r" / "run_meta.json").read_text())
+    assert meta["literature"] == "online" and meta["gating"] == "topics"
+    assert set(meta["topic_ids"]) == {"a", "b"}
+    for aid, names in meta["topic_assignments"].items():
+        assert meta["topic_ids"][aid] == sorted(NAMES.index(t) for t in names)
+        assert sorted(meta["display_orders"][aid]) == sorted(names)
+
+    events = load_events(tmp_path / "r" / "events.jsonl")
+    assert len(events) == 6
+    hits = 0
+    for e in events:
+        mine = {NAMES[i] for i in meta["topic_ids"][e["agent_id"]]}
+        for h in e["result"].get("hits", []):
+            assert set(h["topics"]) & mine
+            hits += 1
+    assert hits > 0
+    # the gated prompt and the topic definitions reach the agent
+    assert "You work ONLY within your topics" in llm.calls[0]["system"]
+    assert "definition of" in llm.calls[0]["system"]
+
+
+def test_online_resume_reuses_the_recorded_topic_ids(tmp_path):
+    from innovation.core.events import load_events
+    from innovation.core.llm import FakeLLM
+    from innovation.p2_forum.runner import resume_forum
+    from test_forum_gated_env import FakeLit, FakeTagger
+    from conftest import FakeEmbedder
+    post = json.dumps({"action": "generate",
+                       "args": {"text": "T0 T1 T2 T3 idea", "cited_ids": ["p0", "p1"]}})
+    kw = dict(embedder=FakeEmbedder(), model="m", out_dir=tmp_path,
+              literature=FakeLit(), tagger=FakeTagger())
+    run_forum(_online_cfg(4), llm=FakeLLM(default=post), **kw)
+    meta = json.loads((tmp_path / "r" / "run_meta.json").read_text())
+    out = resume_forum(_online_cfg(8), llm=FakeLLM(default=post), **kw)
+    assert out["resumed_from_step"] == 4
+    events = load_events(tmp_path / "r" / "events.jsonl")
+    ids = [e["result"]["node_id"] for e in events if "node_id" in e["result"]]
+    assert len(ids) == 8 and len(set(ids)) == 8
+    after = json.loads((tmp_path / "r" / "run_meta.json").read_text())
+    assert after["topic_ids"] == meta["topic_ids"]
+    assert after["display_orders"] == meta["display_orders"]

@@ -12,13 +12,22 @@ from pathlib import Path
 import numpy as np
 
 from innovation.core.events import EventLog, load_events
+from innovation.core.network.graph import IdeaGraph
 from innovation.core.network.index import VectorIndex
-from innovation.p2_forum.agent import ForumAgentPolicy
+from innovation.p2_forum.agent import (GATED_ACTIONS_DOC, GATED_SYSTEM,
+                                       ForumAgentPolicy)
 from innovation.p2_forum.env import ForumEnvironment, Navigation
+from innovation.p2_forum.gated_env import GatedForumEnvironment
 from innovation.p2_forum.workspace import Workspace
 
 
 TOPIC_DRAWS = ("independent", "nested")
+# "corpus"/"none" is the original mode (frozen corpus, soft specialization);
+# "online"/"topics" is online literature behind a hard topic gate. The two
+# axes are not independent: the gate needs labelled literature, and the online
+# literature is only in scope through the gate.
+LITERATURES = ("corpus", "online")
+GATINGS = ("none", "topics")
 
 
 @dataclass
@@ -38,11 +47,30 @@ class ForumRunConfig:
     # prefixes of each other across k -- adjacent k differ ONLY by the added
     # topics, not by a reshuffle.
     topic_draw: str = "independent"
+    literature: str = "corpus"
+    gating: str = "none"
+    # topic name -> one-sentence definition, shown next to each topic in the
+    # gated prompt. Unused in corpus mode.
+    topic_definitions: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def online(self) -> bool:
+        return self.literature == "online"
 
     def __post_init__(self):
         if self.topic_draw not in TOPIC_DRAWS:
             raise ValueError(f"topic_draw must be one of {TOPIC_DRAWS}, "
                              f"got {self.topic_draw!r}")
+        if self.literature not in LITERATURES:
+            raise ValueError(f"literature must be one of {LITERATURES}, "
+                             f"got {self.literature!r}")
+        if self.gating not in GATINGS:
+            raise ValueError(f"gating must be one of {GATINGS}, "
+                             f"got {self.gating!r}")
+        if (self.literature == "online") != (self.gating == "topics"):
+            raise ValueError(
+                "literature: online requires gating: topics and vice versa; "
+                f"got literature={self.literature!r}, gating={self.gating!r}")
         # Per-agent allow_jump/allow_search used to be collapsed with all(...)
         # into one env-wide flag, so one agent opting out silently disabled the
         # channel for every agent. Refuse the key rather than mean something
@@ -54,6 +82,27 @@ class ForumRunConfig:
                 f"{stray} is per-agent in run.agents, but navigation ablations "
                 "are environment-wide (spec §4.3); move them to the top-level "
                 "`navigation:` section, e.g. navigation: {board: {jump: false}}")
+
+
+_DISPLAY_SALT = 0xD15B1A
+
+
+def display_order(topics: list[str], seed: int, agent_index: int) -> list[str]:
+    """Prompt display order, shuffled independently of the nested draw so the
+    first-listed topics are not the small-k topics (spec §7)."""
+    own = np.random.default_rng(
+        np.random.SeedSequence([int(seed), agent_index, _DISPLAY_SALT]))
+    return [topics[int(j)] for j in own.permutation(len(topics))]
+
+
+def _display_orders(cfg: "ForumRunConfig", assignments: dict) -> dict[str, list[str]]:
+    return {a["agent_id"]: display_order(assignments[a["agent_id"]], cfg.seed, i)
+            for i, a in enumerate(cfg.agents)}
+
+
+def _topic_ids(cfg: "ForumRunConfig", assignments: dict) -> dict[str, list[int]]:
+    return {aid: sorted(cfg.topic_pool.index(t) for t in names)
+            for aid, names in assignments.items()}
 
 
 # Mixed into the nested scheme's seed so its per-agent streams never coincide
@@ -97,7 +146,26 @@ def draw_topics(agents: list[dict], pool: list[str], rng, *,
 
 
 def _build_env(cfg: ForumRunConfig, *, run_dir, corpus, corpus_index, embedder,
-               rng) -> ForumEnvironment:
+               rng, literature=None, tagger=None,
+               topic_ids: dict | None = None) -> ForumEnvironment:
+    if cfg.online:
+        if literature is None or tagger is None:
+            raise ValueError("literature: online needs a literature and a tagger")
+        # No corpus: papers live in the online literature, which also vouches
+        # for the paper ids posts cite (Workspace.external_papers).
+        empty = IdeaGraph()
+        empty.freeze()
+        ws = Workspace(corpus=empty, corpus_index=VectorIndex(embedder.dim),
+                       board_index=VectorIndex(embedder.dim),
+                       embedder=embedder, run_id=cfg.run_id,
+                       external_papers=literature)
+        return GatedForumEnvironment(
+            run_id=cfg.run_id, workspace=ws,
+            event_log=EventLog(run_dir / "events.jsonl"), rng=rng,
+            generation_budget=cfg.generation_budget, navigation=cfg.navigation,
+            literature=literature, tagger=tagger,
+            agent_topics={a: set(t) for a, t in topic_ids.items()},
+            topic_names=cfg.topic_pool)
     ws = Workspace(corpus=corpus, corpus_index=corpus_index,
                    board_index=VectorIndex(corpus_index.dim),
                    embedder=embedder, run_id=cfg.run_id)
@@ -108,8 +176,19 @@ def _build_env(cfg: ForumRunConfig, *, run_dir, corpus, corpus_index, embedder,
                             navigation=cfg.navigation)
 
 
-def _build_policies(cfg: ForumRunConfig, *, llm, model,
-                    assignments: dict) -> dict[str, ForumAgentPolicy]:
+def _build_policies(cfg: ForumRunConfig, *, llm, model, assignments: dict,
+                    display_orders: dict | None = None) -> dict[str, ForumAgentPolicy]:
+    if cfg.online:
+        return {
+            a["agent_id"]: ForumAgentPolicy(
+                llm=llm, model=model,
+                topics=[f"{t} — {cfg.topic_definitions.get(t, '')}"
+                        for t in display_orders[a["agent_id"]]],
+                memory_size=a.get("memory_size", 20),
+                identity=f"{cfg.run_id}:{a['agent_id']}",
+                total_steps=cfg.total_steps,
+                system_template=GATED_SYSTEM, actions_doc=GATED_ACTIONS_DOC)
+            for a in cfg.agents}
     return {
         a["agent_id"]: ForumAgentPolicy(
             llm=llm, model=model, topics=assignments[a["agent_id"]],
@@ -130,27 +209,37 @@ def _drive(cfg: ForumRunConfig, env, policies, order, last_result,
             "generated": env.generated_ids()}
 
 
-def run_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
-              model, out_dir) -> dict:
+def run_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None, embedder,
+              llm, model, out_dir, literature=None, tagger=None) -> dict:
     rng = np.random.default_rng(cfg.seed)
     run_dir = Path(out_dir) / cfg.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
     assignments = draw_topics(cfg.agents, cfg.topic_pool, rng,
                               scheme=cfg.topic_draw, seed=cfg.seed)
+    meta = {"run_id": cfg.run_id, "seed": cfg.seed, "arch": "p2_forum",
+            "total_steps": cfg.total_steps,
+            "navigation": asdict(cfg.navigation),
+            "topic_draw": cfg.topic_draw,
+            "topic_assignments": assignments}
+    topic_ids = display_orders = None
+    if cfg.online:
+        # Corpus-mode run_meta stays exactly as before (old runs reproduce
+        # byte for byte); a missing "literature" key means corpus/none.
+        topic_ids = _topic_ids(cfg, assignments)
+        display_orders = _display_orders(cfg, assignments)
+        meta.update(literature=cfg.literature, gating=cfg.gating,
+                    topic_ids=topic_ids, display_orders=display_orders)
     # run_meta is written BEFORE driving: an interrupted run must stay
     # reproducible from its recorded draws rather than re-sampling them.
-    (run_dir / "run_meta.json").write_text(json.dumps(
-        {"run_id": cfg.run_id, "seed": cfg.seed, "arch": "p2_forum",
-         "total_steps": cfg.total_steps,
-         "navigation": asdict(cfg.navigation),
-         "topic_draw": cfg.topic_draw,
-         "topic_assignments": assignments}, indent=1))
+    (run_dir / "run_meta.json").write_text(json.dumps(meta, indent=1))
 
     env = _build_env(cfg, run_dir=run_dir, corpus=corpus,
-                     corpus_index=corpus_index, embedder=embedder, rng=rng)
+                     corpus_index=corpus_index, embedder=embedder, rng=rng,
+                     literature=literature, tagger=tagger, topic_ids=topic_ids)
     policies = _build_policies(cfg, llm=llm, model=model,
-                               assignments=assignments)
+                               assignments=assignments,
+                               display_orders=display_orders)
 
     order = [a["agent_id"] for a in cfg.agents]
     last_result: dict[str, dict] = {aid: {} for aid in order}
@@ -159,8 +248,9 @@ def run_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
     return out
 
 
-def resume_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
-                 model, out_dir) -> dict:
+def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
+                 embedder, llm, model, out_dir, literature=None,
+                 tagger=None) -> dict:
     """Continue an existing paper-2 run up to cfg.total_steps (raise it in the
     config to extend), mirroring p1_dial.runner.resume_simulation.
 
@@ -188,6 +278,16 @@ def resume_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
     if missing:
         raise SystemExit(
             f"cannot resume {run_dir}: no recorded topic draw for {missing}")
+    recorded = meta.get("literature", "corpus")
+    if recorded != cfg.literature:
+        raise SystemExit(
+            f"cannot resume {run_dir}: it was run with literature: {recorded}, "
+            f"the config says {cfg.literature}")
+    topic_ids = display_orders = None
+    if cfg.online:
+        # Reuse what the run recorded; never re-derive the gate's topic sets.
+        topic_ids = meta["topic_ids"]
+        display_orders = meta["display_orders"]
     start_step = max(e["step"] for e in events) + 1
     if start_step >= cfg.total_steps:
         raise SystemExit(f"run already has {start_step} steps; "
@@ -195,11 +295,13 @@ def resume_forum(cfg: ForumRunConfig, *, corpus, corpus_index, embedder, llm,
 
     rng = np.random.default_rng((cfg.seed, start_step))
     env = _build_env(cfg, run_dir=run_dir, corpus=corpus,
-                     corpus_index=corpus_index, embedder=embedder, rng=rng)
+                     corpus_index=corpus_index, embedder=embedder, rng=rng,
+                     literature=literature, tagger=tagger, topic_ids=topic_ids)
     env.restore(events)
 
     policies = _build_policies(cfg, llm=llm, model=model,
-                               assignments=assignments)
+                               assignments=assignments,
+                               display_orders=display_orders)
     order = [a["agent_id"] for a in cfg.agents]
     last_result: dict[str, dict] = {}
     by_agent = {aid: [e for e in events if e["agent_id"] == aid] for aid in order}

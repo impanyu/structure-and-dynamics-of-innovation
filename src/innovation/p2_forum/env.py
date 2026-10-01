@@ -116,6 +116,14 @@ class Navigation:
         return bool(getattr(self, f"{store}_{channel}"))
 
 
+def _kept_cites(e: dict) -> list[str]:
+    """The citations a logged `generate` actually posted: the requested
+    `cited_ids` minus any the topic gate dropped. Old (ungated) runs never log
+    `dropped_cites`, so for them this is `cited_ids` unchanged."""
+    dropped = set(e.get("result", {}).get("dropped_cites", []))
+    return [c for c in e["args"].get("cited_ids", []) if c not in dropped]
+
+
 class ForumEnvironment:
     def __init__(self, *, run_id, workspace, event_log, rng,
                  navigation: Navigation | None = None,
@@ -228,7 +236,7 @@ class ForumEnvironment:
         for e in events:
             result = e.get("result", {})
             if e["action"] == "generate" and "node_id" in result:
-                self.ws.post_idea(e["args"]["text"], e["args"]["cited_ids"],
+                self.ws.post_idea(e["args"]["text"], _kept_cites(e),
                                   meta={"run_id": e["run_id"],
                                         "agent_id": e["agent_id"],
                                         "step": e["step"]},

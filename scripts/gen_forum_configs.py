@@ -60,3 +60,29 @@ for k in NESTED_KS:
                       f"extend with --resume --steps <total>\n")
             yaml.safe_dump(cfg, f, allow_unicode=True, sort_keys=False, width=100)
 print(f"{len(NESTED_KS) * len(NESTED_SEEDS)} nested configs regenerated in {nested_dir}")
+
+# ---- online sweep ------------------------------------------------------------
+# Online literature + hard topic gating (base-online.yaml), on the nested draw.
+# One seed per k (user decision 2026-10-01).
+ONLINE_KS = NESTED_KS
+ONLINE_SEEDS = [0]
+ONLINE_ROUNDS = 40
+
+online_dir = out_dir / "online"
+online_dir.mkdir(parents=True, exist_ok=True)
+for k in ONLINE_KS:
+    for s in ONLINE_SEEDS:
+        cfg = {"extends": "../../base-online.yaml",
+               "run": {"run_id": f"forum-online-k{k}-s{s}", "seed": s,
+                       "total_steps": ONLINE_ROUNDS * N,
+                       "topic_draw": "nested",
+                       "agents": [{"agent_id": f"a{i}", "k_topics": k}
+                                  for i in range(N)]}}
+        with (online_dir / f"k{k}-s{s}.yaml").open("w") as f:
+            f.write(HEADER.replace("draws k distinct topics",
+                                   "takes the first k topics of its own seeded permutation")
+                          .replace("topics-k128.yaml", "topics-v2.yaml")
+                    + f"# online k={k}, seed {s}: {N} agents, {ONLINE_ROUNDS} rounds, "
+                      f"online literature + topic gating; extend with --resume --steps <total>\n")
+            yaml.safe_dump(cfg, f, allow_unicode=True, sort_keys=False, width=100)
+print(f"{len(ONLINE_KS) * len(ONLINE_SEEDS)} online configs regenerated in {online_dir}")
