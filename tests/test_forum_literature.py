@@ -139,3 +139,19 @@ def test_null_paper_id_skipped(tmp_path):
     bad = raw("z"); bad["paperId"] = None
     L, _ = lit(tmp_path, {"a": raw("a")}, refs={"a": [bad, raw("r")]})
     assert [p.paper_id for p in L.references("a")] == ["r"]
+
+
+def test_record_appended_between_lock_phases_is_not_appended_again(tmp_path):
+    papers = {"a": raw("a")}
+    L, tagger = lit(tmp_path, papers)
+    L.search("q")
+    orig = tagger.label_many
+
+    def racing(texts, workers=8):        # another run writes "a" while we tag
+        with (tmp_path / "labels.jsonl").open("a") as f:
+            f.write('{"paper_id": "a", "labels": [9]}\n')
+        return orig(texts, workers)
+    tagger.label_many = racing
+    assert L.labels(["a"]) == {"a": [9]}          # theirs wins, ours not appended
+    lines = (tmp_path / "labels.jsonl").read_text().splitlines()
+    assert len(lines) == 1

@@ -67,7 +67,7 @@ class OnlineLiterature:
         if self._store.exists():
             self._merge(self._store.read_text())
 
-    def _merge(self, text: str) -> None:
+    def _merge(self, text: str) -> set[str]:
         """Fold store lines into memory: skip malformed lines, first write wins
         (a None kept in memory only is replaced by a stored label)."""
         seen = set()
@@ -82,6 +82,7 @@ class OnlineLiterature:
             seen.add(pid)
             if self._labels.get(pid) is None:
                 self._labels[pid] = lab
+        return seen
 
     def _admit(self, raws) -> list[Paper]:
         out = []
@@ -123,26 +124,40 @@ class OnlineLiterature:
     def known(self) -> list[Paper]:
         return list(self._papers.values())
 
+    def _locked(self, fn):
+        """Run fn(file, ids_in_file) under a short exclusive flock, after
+        re-reading and merging the store."""
+        with self._store.open("a+") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                f.seek(0)
+                return fn(f, self._merge(f.read()))
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+
+    def _missing(self, wanted: list[str]) -> list[str]:
+        return [p for p in wanted if self._labels.get(p) is None and p not in self._failed]
+
     def labels(self, pids: list[str]) -> dict[str, list[int] | None]:
-        with self._lock:
+        with self._lock:                 # one in-process tagger at a time
             wanted = [p for p in dict.fromkeys(pids) if p in self._papers]
-            if any(self._labels.get(p) is None and p not in self._failed for p in wanted):
-                with self._store.open("a+") as f:
-                    fcntl.flock(f, fcntl.LOCK_EX)
-                    try:
-                        f.seek(0)
-                        self._merge(f.read())
-                        todo = [p for p in wanted
-                                if self._labels.get(p) is None and p not in self._failed]
-                        if todo:
-                            got = self.tagger.label_many([self._papers[p].text() for p in todo])
-                            for pid, lab in zip(todo, got):
+            if self._missing(wanted):
+                todo = self._locked(lambda f, ids: self._missing(wanted))
+                if todo:                 # tag outside the file lock
+                    got = self.tagger.label_many([self._papers[p].text() for p in todo])
+                    fresh = {}
+                    for pid, lab in zip(todo, got):
+                        if lab is None:
+                            self._failed.add(pid)   # this process only; others retry
+                            self._labels[pid] = None
+                        else:
+                            fresh[pid] = lab
+
+                    def append(f, ids):
+                        for pid, lab in fresh.items():
+                            if pid not in ids:      # another run wrote it first: keep theirs
+                                f.write(json.dumps({"paper_id": pid, "labels": lab}) + "\n")
                                 self._labels[pid] = lab
-                                if lab is None:
-                                    self._failed.add(pid)   # this process only; others retry
-                                else:
-                                    f.write(json.dumps({"paper_id": pid, "labels": lab}) + "\n")
-                            f.flush()
-                    finally:
-                        fcntl.flock(f, fcntl.LOCK_UN)
+                        f.flush()
+                    self._locked(append)
             return {p: self._labels.get(p) for p in pids}
