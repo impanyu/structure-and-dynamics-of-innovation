@@ -101,8 +101,17 @@ def test_midstream_error_event_is_retried():
     assert slept == [5] and len(c.calls) == 2
 
 
-def test_bare_transport_error_during_stream_is_retried():
+_TRANSPORT = [httpx.RemoteProtocolError]
+try:
+    import httpx2
+    _TRANSPORT.append(httpx2.RemoteProtocolError)
+except ImportError:
+    pass
+
+
+@pytest.mark.parametrize("cls", _TRANSPORT)
+def test_bare_transport_error_during_stream_is_retried(cls):
     slept = []
-    c = _Client([_reply(NS(type="text", text="ok"))], midstream=[httpx.RemoteProtocolError("cut")])
+    c = _Client([_reply(NS(type="text", text="ok"))], midstream=[cls("cut")])
     assert _llm(c, slept).complete(model="m", system="s", user="u") == "ok"
     assert slept == [5]

@@ -7,6 +7,13 @@ from typing import Protocol
 
 import httpx
 
+try:  # newer anthropic SDKs use httpx2, whose errors do not subclass httpx's
+    import httpx2
+    _TRANSPORT_ERRORS: tuple = (httpx.TransportError, httpx2.TransportError)
+except ImportError:
+    httpx2 = None
+    _TRANSPORT_ERRORS = (httpx.TransportError,)
+
 
 class LLM(Protocol):
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str: ...
@@ -73,7 +80,7 @@ class AnthropicLLM:
     def _transient(self, e: Exception) -> bool:
         a = self._anthropic
         if isinstance(e, (a.RateLimitError, a.InternalServerError,
-                          a.APIConnectionError, a.APITimeoutError, httpx.TransportError)):
+                          a.APIConnectionError, a.APITimeoutError, *_TRANSPORT_ERRORS)):
             return True
         # An SSE `error` event mid-stream (e.g. overloaded_error) surfaces as a
         # plain APIStatusError carrying the already-open HTTP 200 response.
