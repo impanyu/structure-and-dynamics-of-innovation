@@ -155,3 +155,16 @@ def test_record_appended_between_lock_phases_is_not_appended_again(tmp_path):
     assert L.labels(["a"]) == {"a": [9]}          # theirs wins, ours not appended
     lines = (tmp_path / "labels.jsonl").read_text().splitlines()
     assert len(lines) == 1
+
+
+def test_last_scope_dropped_counts_per_call(tmp_path):
+    L, _ = lit(tmp_path, {"a": raw("a"), "c": raw("c", date="2025-01-01"),
+                          "n": {**raw("n"), "paperId": None}},
+               refs={"a": [raw("r"), raw("late", date="2025-02-02")]})
+    assert L.last_scope_dropped == 0
+    L.search("q")
+    assert L.last_scope_dropped == 2
+    L.references("a")
+    assert L.last_scope_dropped == 1
+    L.citations("a")
+    assert L.last_scope_dropped == 0

@@ -57,8 +57,11 @@ class GatedForumEnvironment(ForumEnvironment):
         refused = self._query_gate(agent_id, query)
         if refused:
             return refused
-        kept = self._gated_papers(agent_id, self.lit.search(query))[:k]
-        return {"hits": [self._paper_hit(p, l) for p, l in kept]}
+        found = self.lit.search(query)
+        scope = self.lit.last_scope_dropped
+        gated = self._gated_papers(agent_id, found)
+        return {"hits": [self._paper_hit(p, l) for p, l in gated[:k]],
+                "filtered": {"scope": scope, "topic": len(found) - len(gated)}}
 
     def _do_browse(self, *, agent_id, step, node_id: str) -> dict:
         p = self.lit.get(node_id)
@@ -70,20 +73,29 @@ class GatedForumEnvironment(ForumEnvironment):
         view = {**self._paper_hit(p, labels), "text": p.abstract}
         if not self.nav.corpus_edges:
             return {**view, "cites": [], "cited_by": []}
-        cites = self._gated_papers(agent_id, self.lit.references(node_id))[:10]
-        cited_by = self._gated_papers(agent_id, self.lit.citations(node_id))[:10]
-        return {**view, "cites": [self._paper_hit(q, l) for q, l in cites],
-                "cited_by": [self._paper_hit(q, l) for q, l in cited_by]}
+        refs = self.lit.references(node_id)
+        scope = self.lit.last_scope_dropped
+        cites = self._gated_papers(agent_id, refs)
+        cits = self.lit.citations(node_id)
+        scope += self.lit.last_scope_dropped
+        cited_by = self._gated_papers(agent_id, cits)
+        topic = len(refs) - len(cites) + len(cits) - len(cited_by)
+        return {**view, "cites": [self._paper_hit(q, l) for q, l in cites[:10]],
+                "cited_by": [self._paper_hit(q, l) for q, l in cited_by[:10]],
+                "filtered": {"scope": scope, "topic": topic}}
 
     def _do_sample_frontier(self, *, agent_id, step) -> dict:
         if not self.nav.corpus_jump:
             return {"error": "random jumps into the literature are closed"}
         topic = self.topic_names[int(self.rng.choice(sorted(self.agent_topics[agent_id])))]
-        kept = self._gated_papers(agent_id, self.lit.search(topic))
+        found = self.lit.search(topic)
+        scope = self.lit.last_scope_dropped
+        kept = self._gated_papers(agent_id, found)
         if not kept:
             return {"error": "no paper found for a random jump"}
         p, l = kept[int(self.rng.integers(len(kept)))]
-        return {**self._paper_hit(p, l), "text": p.abstract}
+        return {**self._paper_hit(p, l), "text": p.abstract,
+                "filtered": {"scope": scope, "topic": len(found) - len(kept)}}
 
     # --- board ---
     def _post_view(self, nid) -> dict:
@@ -105,9 +117,10 @@ class GatedForumEnvironment(ForumEnvironment):
             return refused
         vec = self.ws.embedder.encode([query])[0]
         ranked = self.ws.board_search(vec, k=len(self.ws.board_post_ids()) or 1)
-        kept = [(n, s) for n, s in ranked if self.readable(agent_id, n)][:k]
+        gated = [(n, s) for n, s in ranked if self.readable(agent_id, n)]
         return {"hits": [{**self._post_view(n), "text": self.ws.node(n).text[:300],
-                          "score": s} for n, s in kept]}
+                          "score": s} for n, s in gated[:k]],
+                "filtered": {"scope": 0, "topic": len(ranked) - len(gated)}}
 
     def _do_browse_board(self, *, agent_id, step, node_id: str) -> dict:
         if self.ws.store_of(node_id) != "board" or not self.ws.board.has_node(node_id):

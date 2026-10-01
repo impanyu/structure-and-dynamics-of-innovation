@@ -15,12 +15,15 @@ def gate_counts(events) -> dict:
         r = e.get("result", {})
         if "gate" in r:
             c[r["gate"]] += 1
+        for kind in ("scope", "topic"):
+            c["filtered_" + kind] += (r.get("filtered") or {}).get(kind, 0)
         if e["action"] in ("search", "search_board"):
             c["searches"] += 1
         if e["action"] == "generate" and "node_id" in r:
             c["posts"] += 1
             c["dropped_cites"] += len(r.get("dropped_cites", []))
-    out = {k: c.get(k, 0) for k in (*GATES, "dropped_cites", "posts", "searches")}
+    out = {k: c.get(k, 0) for k in (*GATES, "dropped_cites", "posts", "searches",
+                                         "filtered_scope", "filtered_topic")}
     tried = out["post"] + out["posts"]
     out["rejection_rate"] = out["post"] / tried if tried else 0.0
     return out

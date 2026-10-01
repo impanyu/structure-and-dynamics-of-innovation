@@ -22,6 +22,7 @@ class FakeLit:
     def __init__(self):
         self.refs = {"p0": ["p1", "p2"]}
         self.cits = {"p0": ["p3"]}
+        self.last_scope_dropped = 0
 
     def search(self, q):
         return list(P.values())
@@ -203,3 +204,22 @@ def test_closed_corpus_search_is_refused(tmp_path):
 def test_browse_out_of_scope_paper_reports_scope_gate(tmp_path):
     env = make(tmp_path)
     assert env.execute("a", 0, Action("browse", {"node_id": "zzz"}))["gate"] == "scope"
+
+
+def test_search_and_browse_log_filtered_counts(tmp_path):
+    env = make(tmp_path)
+    env.lit.last_scope_dropped = 3
+    s = env.execute("a", 0, Action("search", {"query": "about T0", "k": 1}))
+    assert len(s["hits"]) == 1 and s["filtered"] == {"scope": 3, "topic": 2}
+    b = env.execute("a", 1, Action("browse", {"node_id": "p0"}))
+    assert b["filtered"] == {"scope": 6, "topic": 2}      # p1 (cites) and p3 (cited_by)
+    f = env.execute("a", 2, Action("sample_frontier", {}))
+    assert f["filtered"] == {"scope": 3, "topic": 2}
+
+
+def test_search_board_logs_filtered_topic(tmp_path):
+    env = make(tmp_path)
+    env.execute("a", 0, Action("generate", {"text": "idea T0", "cited_ids": []}))
+    env.execute("b", 1, Action("generate", {"text": "idea T1", "cited_ids": []}))
+    out = env.execute("a", 2, Action("search_board", {"query": "T0", "k": 5}))
+    assert out["filtered"] == {"scope": 0, "topic": 1}

@@ -58,6 +58,7 @@ class OnlineLiterature:
     def __init__(self, *, client, scope: Scope, tagger, cache_dir, search_pool: int = 50):
         self.client, self.scope, self.tagger = client, scope, tagger
         self.search_pool = search_pool
+        self.last_scope_dropped = 0   # raw records the latest search/references/citations dropped
         self._papers: dict[str, Paper] = {}
         self._known_ids: set[str] = set()
         self._lock = threading.Lock()
@@ -87,11 +88,11 @@ class OnlineLiterature:
 
     def _admit(self, raws) -> list[Paper]:
         out = []
+        dropped = 0
         for r in raws:
-            if not r.get("paperId"):
-                continue
-            branch = self.scope.admit(r)
+            branch = self.scope.admit(r) if r.get("paperId") else None
             if branch is None:
+                dropped += 1
                 continue
             p = Paper(paper_id=r["paperId"], title=r.get("title") or "",
                       abstract=r.get("abstract") or "", year=r.get("year"),
@@ -100,6 +101,7 @@ class OnlineLiterature:
                       citations=r.get("citationCount") or 0, branch=branch)
             self._papers[p.paper_id] = p
             out.append(p)
+        self.last_scope_dropped = dropped
         return out
 
     def search(self, query: str) -> list[Paper]:

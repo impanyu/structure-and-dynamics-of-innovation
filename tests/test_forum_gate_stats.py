@@ -22,6 +22,14 @@ def test_gate_counts():
     assert c["rejection_rate"] == 0.5
 
 
+def test_gate_counts_sums_filtered():
+    ev = [{"action": "search", "result": {"hits": [], "filtered": {"scope": 2, "topic": 3}}},
+          {"action": "browse", "result": {"filtered": {"scope": 1, "topic": 4}}},
+          {"action": "search", "result": {"gate": "query"}}]
+    c = load().gate_counts(ev)
+    assert c["filtered_scope"] == 3 and c["filtered_topic"] == 7
+
+
 def test_tag_quality_helpers_import_clean():
     m = load("tag_quality")
     assert m.jaccard([1, 2], [2, 3]) == 1 / 3
