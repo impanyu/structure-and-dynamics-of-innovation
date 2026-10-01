@@ -7,6 +7,8 @@ from typing import Protocol
 
 import httpx
 
+from innovation.core.fsutil import atomic_write_text
+
 try:  # newer anthropic SDKs use httpx2, whose errors do not subclass httpx's
     import httpx2
     _TRANSPORT_ERRORS: tuple = (httpx.TransportError, httpx2.TransportError)
@@ -50,7 +52,7 @@ class CachedLLM:
         if path.exists():
             return json.loads(path.read_text())["response"]
         response = self.inner.complete(model=model, system=system, user=user, max_tokens=max_tokens)
-        path.write_text(json.dumps(
+        atomic_write_text(path, json.dumps(
             {"model": model, "system": system, "user": user, "response": response}))
         return response
 

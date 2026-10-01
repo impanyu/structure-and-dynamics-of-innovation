@@ -14,6 +14,8 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from innovation.core.fsutil import atomic_write_text
+
 S2_BULK = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
 S2_BATCH = "https://api.semanticscholar.org/graph/v1/paper/batch"
 PAPER_FIELDS = "paperId,title,abstract,year,venue,citationCount,publicationDate"
@@ -41,8 +43,7 @@ def _cached_call(cache_file: Path, do_call, delay: float, attempts: int = 12):
             continue
         resp.raise_for_status()
         payload = resp.json()
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        cache_file.write_text(json.dumps(payload))
+        atomic_write_text(cache_file, json.dumps(payload))
         if delay:
             time.sleep(delay)
         return payload

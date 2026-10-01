@@ -11,6 +11,7 @@ from pathlib import Path
 import requests
 
 from innovation.core.llm import LLM
+from innovation.core.fsutil import atomic_write_text
 
 S2_BASE = "https://api.semanticscholar.org/graph/v1/paper/search"
 OPENALEX_BASE = "https://api.openalex.org/works"
@@ -82,8 +83,7 @@ def _cached_get(url: str, params: dict, cache_dir: Path, http_get,
     payload = r.json()
     if delay:
         time.sleep(delay)
-    cache_file.parent.mkdir(parents=True, exist_ok=True)
-    cache_file.write_text(json.dumps({
+    atomic_write_text(cache_file, json.dumps({
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "url": url, "params": params, "response": payload}))
     return payload
