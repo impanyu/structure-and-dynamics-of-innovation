@@ -177,3 +177,20 @@ def test_a_workspace_refuses_a_frozen_board_index(make_workspace):
     with pytest.raises(ValueError, match="board index must stay writable"):
         Workspace(corpus=ws.corpus, corpus_index=ws.corpus_index,
                   board_index=frozen_board, embedder=ws.embedder, run_id="t")
+
+
+def test_online_eval_reference_collects_shown_papers(tmp_path, monkeypatch):
+    from conftest import FakeEmbedder
+    from innovation import cli
+    run = tmp_path / "runs" / "r"
+    run.mkdir(parents=True)
+    ev = [{"action": "search", "result": {"hits": [{"node_id": "p0", "title": "A", "text": "x"}]}},
+          {"action": "browse", "result": {"node_id": "p1", "title": "B", "text": "y",
+                                          "cites": [{"node_id": "p2", "title": "C"}], "cited_by": []}},
+          {"action": "generate", "result": {"node_id": "gen:r:0", "topics": [0]}}]
+    (run / "events.jsonl").write_text("\n".join(json.dumps(e) for e in ev))
+    cfg = {"literature": "online", "out_dir": str(tmp_path / "runs"), "run": {"run_id": "r"},
+           "embedding_model": "fake"}
+    monkeypatch.setattr(cli, "Embedder", lambda name: FakeEmbedder())
+    titles, vecs = cli._eval_reference(cfg)
+    assert titles == {"a", "b", "c"} and vecs.shape[0] == 3

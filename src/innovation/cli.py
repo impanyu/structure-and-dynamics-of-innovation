@@ -271,14 +271,64 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
     print(json.dumps(out, indent=2))
 
 
-def cmd_evaluate(cfg):
-    graph, index, emb, vec_by_id = _load_world(cfg)
+def _shown_papers(events):
+    """Papers any agent was shown in an online run, as {node_id: (title, text)}.
+
+    Reads hits, browse views, sample_frontier views and their cites/cited_by
+    items; board (gen:) ids are skipped.
+    """
+    shown = {}
+
+    def take(item):
+        if not isinstance(item, dict):
+            return
+        nid, title = item.get("node_id"), item.get("title")
+        if not nid or not title or str(nid).startswith("gen:"):
+            return
+        shown.setdefault(nid, (title, item.get("text") or ""))
+
+    for e in events:
+        res = e.get("result")
+        if not isinstance(res, dict) or "error" in res:
+            continue
+        if e.get("action") == "search":
+            for h in res.get("hits", []):
+                take(h)
+        elif e.get("action") in ("browse", "sample_frontier"):
+            take(res)
+            for k in ("cites", "cited_by"):
+                for it in res.get(k, []) or []:
+                    take(it)
+    return shown
+
+
+def _eval_reference(cfg):
+    """(corpus_titles, corpus_vecs) used for the contamination guard and the
+    near-duplicate check. Online: the papers the run's agents were shown."""
     run_dir = Path(cfg["out_dir"]) / cfg["run"]["run_id"]
+    shown = _shown_papers(load_events(run_dir / "events.jsonl"))
+    titles = {t.strip().lower() for t, _ in shown.values()}
+    texts = [f"{t}\n\n{x}" for t, x in shown.values()]
+    emb = Embedder(cfg["embedding_model"])
+    if not texts:
+        return titles, np.zeros((0, 0))
+    return titles, np.asarray(emb.encode(texts))
+
+
+def cmd_evaluate(cfg):
+    online = cfg.get("literature") == "online"
+    run_dir = Path(cfg["out_dir"]) / cfg["run"]["run_id"]
+    if online:
+        emb = Embedder(cfg["embedding_model"])
+        corpus_titles, corpus_vecs = _eval_reference(cfg)
+    else:
+        graph, index, emb, vec_by_id = _load_world(cfg)
     events = load_events(run_dir / "events.jsonl")
     generated = [(e["result"]["node_id"], e["args"]["text"])
                  for e in events
                  if e["action"] == "generate" and "node_id" in e.get("result", {})]
-    corpus_vecs = np.stack(list(vec_by_id.values()))
+    if not online:
+        corpus_vecs = np.stack(list(vec_by_id.values()))
     llm = _llm(cfg)
     # Recognition rule (evaluation only): a realizing paper counts iff its
     # venue matches the recognized-venue alias list OR its citations clear
@@ -288,8 +338,9 @@ def cmd_evaluate(cfg):
     tier2_aliases = [a.lower() for a in (cfg.get("ccf_b_aliases") or [])]
     # Contamination guard: papers already in the initial graph can never be
     # anticipation hits (the agent may simply have read them).
-    corpus_papers, _ = load_corpus(cfg["data_dir"])
-    corpus_titles = {t.strip().lower() for t in corpus_papers["title"] if t}
+    if not online:
+        corpus_papers, _ = load_corpus(cfg["data_dir"])
+        corpus_titles = {t.strip().lower() for t in corpus_papers["title"] if t}
     verdicts, dup_flags = [], {}
     for nid, text in generated:
         verdicts.append(verify_idea(
@@ -302,8 +353,8 @@ def cmd_evaluate(cfg):
             recognized_min_citations=cfg["eval"].get("recognized_min_citations", 50),
             tier2_min_citations=cfg["eval"].get("tier2_min_citations", 10),
             corpus_titles=corpus_titles))
-        dup_flags[nid] = past_dup_flag(emb.encode([text])[0], corpus_vecs,
-                                       ceiling=cfg["eval"]["dup_ceiling"])
+        dup_flags[nid] = (len(corpus_vecs) > 0 and past_dup_flag(
+            emb.encode([text])[0], corpus_vecs, ceiling=cfg["eval"]["dup_ceiling"]))
     agg = aggregate_run(verdicts, dup_flags,
                         realized_min_date=cfg["eval"].get("realized_min_date"))
     (run_dir / "metrics.json").write_text(json.dumps(agg, indent=2))
