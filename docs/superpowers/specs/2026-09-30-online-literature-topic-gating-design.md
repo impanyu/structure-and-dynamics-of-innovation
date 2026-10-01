@@ -172,13 +172,21 @@ abstracts, exactly as in paper 1.
 - `topics_file: configs/p2_forum/topics-v2.yaml`
 - `gating: topics` (default `none`)
 - `models.tagger: claude-sonnet-5`
+- `models.judge: claude-opus-5-5`; `models.judge_compare: openai:gpt-5-mini:medium`
+- `models.agent: openai:gpt-5:medium` (written out explicitly; it is the API default)
 
 ## 9. Experiment
 
 - Rerun the nested sweep: k ∈ {1, 16, 32, 48, 64, 80, 96, 112, 128} × seeds
   {0, 1, 2}, N = 10 agents, 40 rounds (400 steps), resumable for extension.
-- Evaluate quality with **paper 1's evaluation, unchanged**: the same judge
-  (gpt-5-mini, medium), 3 queries × (Semantic Scholar + OpenAlex) top 5,
+- **Judge.** The headline judge is **Claude Opus 5.5** (`claude-opus-5-5`),
+  stronger than paper 1's gpt-5-mini and independent of the agents (gpt-5),
+  so it cannot favor its own family's ideas. It does both judge jobs: writing
+  the search queries and assigning levels. For a cross-paper comparison line,
+  paper 2 is **also scored with paper 1's judge** (gpt-5-mini, medium). That
+  pass is cheap, and the two judges' agreement is reported. Paper 1's numbers
+  are not rescored.
+- Apart from the judge, the evaluation is **paper 1's, unchanged**: 3 queries × (Semantic Scholar + OpenAlex) top 5,
   levels 0-5, the same three cumulative tiers (tier 1 = CCF-A venue OR ≥ 50
   citations; tier 2 = CCF-A/B OR ≥ 10; tier 3 = any published), candidates
   dated ≤ 2024-09-30 excluded, headline **tier-1 acc@≥2** counting only
