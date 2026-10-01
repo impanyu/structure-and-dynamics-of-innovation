@@ -20,8 +20,8 @@ def _reply(*blocks):
 
 
 class _Stream:
-    def __init__(self, reply):
-        self.reply = reply
+    def __init__(self, reply, fail=None):
+        self.reply, self.fail = reply, fail
 
     def __enter__(self):
         return self
@@ -30,11 +30,14 @@ class _Stream:
         return False
 
     def get_final_message(self):
+        if self.fail:
+            raise self.fail
         return self.reply
 
 
 class _Client:
-    def __init__(self, replies=(), failures=()):
+    def __init__(self, replies=(), failures=(), midstream=()):
+        self.midstream = list(midstream)
         self.replies = list(replies)
         self.failures = list(failures)
         self.calls = []
@@ -44,7 +47,8 @@ class _Client:
         self.calls.append(kw)
         if self.failures:
             raise self.failures.pop(0)
-        return _Stream(self.replies.pop(0))
+        fail = self.midstream.pop(0) if self.midstream else None
+        return _Stream(self.replies[0] if fail else self.replies.pop(0), fail)
 
 
 def _llm(c, slept=None):
@@ -85,3 +89,20 @@ def test_thinking_param_is_forwarded_only_when_set():
     AnthropicLLM(client=c, sleep=lambda s: None, thinking={"type": "disabled"}).complete(
         model="m", system="s", user="u")
     assert "thinking" not in c.calls[0] and c.calls[1]["thinking"] == {"type": "disabled"}
+
+
+def test_midstream_error_event_is_retried():
+    req = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    e = anthropic.APIStatusError("overloaded", response=httpx.Response(200, request=req),
+                                 body={"type": "error"})
+    slept = []
+    c = _Client([_reply(NS(type="text", text="ok"))], midstream=[e])
+    assert _llm(c, slept).complete(model="m", system="s", user="u") == "ok"
+    assert slept == [5] and len(c.calls) == 2
+
+
+def test_bare_transport_error_during_stream_is_retried():
+    slept = []
+    c = _Client([_reply(NS(type="text", text="ok"))], midstream=[httpx.RemoteProtocolError("cut")])
+    assert _llm(c, slept).complete(model="m", system="s", user="u") == "ok"
+    assert slept == [5]

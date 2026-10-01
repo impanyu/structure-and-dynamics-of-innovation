@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from typing import Protocol
 
+import httpx
+
 
 class LLM(Protocol):
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str: ...
@@ -32,6 +34,7 @@ class CachedLLM:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _path(self, model: str, system: str, user: str) -> Path:
+        # Key excludes thinking/max_tokens: changing them does not invalidate the cache.
         payload = json.dumps({"model": model, "system": system, "user": user}, sort_keys=True)
         return self.cache_dir / (hashlib.sha256(payload.encode()).hexdigest() + ".json")
 
@@ -69,8 +72,12 @@ class AnthropicLLM:
 
     def _transient(self, e: Exception) -> bool:
         a = self._anthropic
-        return isinstance(e, (a.RateLimitError, a.InternalServerError,
-                              a.APIConnectionError, a.APITimeoutError))
+        if isinstance(e, (a.RateLimitError, a.InternalServerError,
+                          a.APIConnectionError, a.APITimeoutError, httpx.TransportError)):
+            return True
+        # An SSE `error` event mid-stream (e.g. overloaded_error) surfaces as a
+        # plain APIStatusError carrying the already-open HTTP 200 response.
+        return isinstance(e, a.APIStatusError) and e.status_code == 200
 
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
         for delay in [*self.RETRY_DELAYS, None]:
