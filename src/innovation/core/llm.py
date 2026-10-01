@@ -93,7 +93,10 @@ class AnthropicLLM:
             try:
                 # Streaming: the SDK refuses non-streaming calls with large max_tokens.
                 with self.client.messages.stream(
-                        model=model, system=system, max_tokens=max_tokens + self.HEADROOM,
+                        model=model, max_tokens=max_tokens + self.HEADROOM,
+                        # Cache the (often large, repeated) system prompt.
+                        system=[{"type": "text", "text": system,
+                                 "cache_control": {"type": "ephemeral"}}],
                         messages=[{"role": "user", "content": user}],
                         **self._extra) as stream:
                     msg = stream.get_final_message()

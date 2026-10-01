@@ -115,3 +115,10 @@ def test_bare_transport_error_during_stream_is_retried(cls):
     c = _Client([_reply(NS(type="text", text="ok"))], midstream=[cls("cut")])
     assert _llm(c, slept).complete(model="m", system="s", user="u") == "ok"
     assert slept == [5]
+
+
+def test_system_prompt_is_sent_as_cacheable_block():
+    c = _Client(replies=[_reply(NS(type="text", text="ok"))])
+    _llm(c).complete(model="m", system="big prompt", user="u")
+    assert c.calls[0]["system"] == [
+        {"type": "text", "text": "big prompt", "cache_control": {"type": "ephemeral"}}]
