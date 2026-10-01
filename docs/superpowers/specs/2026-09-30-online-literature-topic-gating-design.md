@@ -147,6 +147,12 @@ agent's step.
 **k = 128** makes every in-scope item readable and accepts every post: the
 ungated control.
 
+**Post format is unchanged from paper 1:** a 3-4 sentence idea paragraph
+(problem, key insight, method; ~125 words, no results). Agents now read raw
+abstracts (~180 words, with results) but write proposals, which have no
+results yet. The judge compares idea paragraphs with realizing papers'
+abstracts, exactly as in paper 1.
+
 ## 7. Topic draws and the prompt
 
 - Topic sets stay nested (`topic_draw: nested`): an agent's k-topic set is
