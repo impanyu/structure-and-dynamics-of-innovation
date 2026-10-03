@@ -238,3 +238,24 @@ def test_verify_idea_degrades_when_openalex_unavailable(tmp_path):
                     cutoff_date="2025-01-01", mailto="a@b.c",
                     cache_dir=tmp_path, http_get=fake_get, n_queries=1)
     assert v.best["tier1"]["level"] == 4  # no alias lists -> everything tier1
+
+
+def test_tier_of_exclude_workshops_is_opt_in():
+    from innovation.core.eval.search_verify import tier_of
+    t1, t2 = ["computer vision and pattern recognition", "cvpr"], ["emnlp"]
+    ws = {"venue": "CVPR Workshops", "citations": 0}
+    assert tier_of(ws, t1, t2, 50) == "tier1"  # default: unchanged
+    assert tier_of(ws, t1, t2, 50, exclude_workshops=True) == "tier3"
+    assert tier_of({**ws, "citations": 80}, t1, t2, 50) == "tier1"  # default
+    # flag on: the venue alias branches are off, citation branches still apply
+    assert tier_of({**ws, "citations": 80}, t1, t2, 50,
+                   exclude_workshops=True) == "tier1"
+    assert tier_of({**ws, "citations": 12}, t1, t2, 50,
+                   exclude_workshops=True) == "tier2"
+    assert tier_of({"venue": "EMNLP Workshop on X", "citations": 0}, t1, t2, 50,
+                   exclude_workshops=True) == "tier3"  # no tier-2 alias branch
+    assert tier_of({"venue": "EMNLP Workshop on X", "citations": 0}, t1, t2, 50) == "tier2"
+    assert tier_of({"venue": "Workshop on X", "citations": 5}, t1, t2, 50,
+                   exclude_workshops=True) == "tier3"
+    assert tier_of({"venue": "CVPR", "citations": 0}, t1, t2, 50,
+                   exclude_workshops=True) == "tier1"

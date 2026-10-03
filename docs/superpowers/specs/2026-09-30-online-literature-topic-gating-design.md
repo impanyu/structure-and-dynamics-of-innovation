@@ -40,9 +40,15 @@ Paper 2 therefore:
 The **CCF-A artificial-intelligence conferences** (CCF recommended list,
 2026, 7th edition): **AAAI, NeurIPS, ACL, CVPR, ICCV, ICML, ICLR**.
 
-These seven venues define both the topic list (§3) and what the literature
-tools can return (§5). The scope is paper 1's corpus venues (NeurIPS, ICLR,
-ICML, AAAI) extended with NLP (ACL) and vision (CVPR, ICCV).
+These seven venues define the **topic list** (§3): it is built from their
+submission areas, unchanged.
+
+What the literature tools can return (§5) uses the evaluation's tier-1 venue
+rule instead, so reading and recognition share one source of truth: the venue
+set is `recognized_venues` (the CCF-A list across computer science, 60
+venues, inherited from paper 1's config), plus any paper with at least
+`eval.recognized_min_citations` (50) citations. The topic gate (§4) keeps
+reading within the AI topics.
 
 ## 3. The topic list (built once, then frozen)
 
@@ -85,11 +91,14 @@ shared cache.
 **Scope filter, applied everywhere** (search hits, browse targets,
 reference and citation lists, random jumps):
 
-- the paper is **published at one of the seven venues OR has ≥ 50
-  citations** (any venue, including journals, other conferences and arXiv).
-  This is the same rule as paper 1's tier-1 recognition (venue alias OR
-  `recognized_min_citations: 50`). Venues are matched on Semantic Scholar's
-  venue records;
+- the paper is **published at a tier-1 venue (the CCF-A list across computer
+  science, `recognized_venues`) OR has ≥ 50 citations** (any venue, including
+  journals, other conferences and arXiv). This is exactly the evaluation's
+  tier-1 rule (venue alias OR `eval.recognized_min_citations: 50`), built from
+  the same config keys by one helper. Venues are matched on Semantic Scholar's
+  venue records, and a venue string containing "workshop" never satisfies the
+  venue branch (a workshop paper can still qualify through the ≥ 50 citation
+  branch);
 - **and** the publication date is **on or before 2024-09-30**, the cutoff of
   paper 1 and the agent model's official knowledge cutoff;
 - there is no lower year bound.
@@ -167,8 +176,11 @@ abstracts.
 
 - `literature: online` (new; `corpus` keeps the frozen-corpus mode for the old
   runs)
-- `online.venues`: the seven venues; `online.min_citations_any_venue: 50`;
-  `online.max_pub_date: "2024-09-30"`
+- `online.max_pub_date: "2024-09-30"`. The reading scope's venues and
+  citation floor come from `recognized_venues` and
+  `eval.recognized_min_citations`; `online.venues` and
+  `online.min_citations_any_venue` are removed and a config that still sets
+  them is refused
 - `online.cache_dir: data/online_cache`
 - `topics_file: configs/p2_forum/topics-v2.yaml`
 - `gating: topics` (default `none`)
@@ -193,6 +205,11 @@ abstracts.
   excluded; headline **tier-1 acc@≥2**, counting only realizations dated ≥
   2025-06-01 (the agent model's recall horizon); ideas with cosine ≥ 0.95 to a
   paper the agents could read are floored to 0.
+- **Workshops:** `eval.exclude_workshops: true` (new, default false, set in
+  the online config) stops a venue string containing "workshop" from
+  satisfying the tier-1 or tier-2 venue (alias) branches, matching the reading
+  rule; the citation branches still apply (≥ 50 → tier 1, ≥ 10 → tier 2,
+  otherwise tier 3). Paper 1's evaluation leaves the flag off.
 - **Contamination guard:** candidates whose title is in the online cache
   (every paper any agent was shown) are excluded. The near-duplicate check
   runs against the cached papers' embeddings.

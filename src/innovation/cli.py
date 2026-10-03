@@ -140,6 +140,14 @@ def _load_forum_world(cfg):
     return corpus, index, emb
 
 
+def _tier1_aliases(cfg) -> tuple[str, ...]:
+    """The lowercased venue aliases of the tier-1 recognition rule
+    (cfg["recognized_venues"]). One source of truth: the evaluation's tier-1
+    venue test and the online reading scope both use it."""
+    return tuple(a.lower() for v in (cfg.get("recognized_venues") or [])
+                 for a in v.get("aliases", []))
+
+
 def _load_online_world(cfg):
     """Paper 2's online world: the frozen topic list, its tagger, the online
     literature behind the scope rule, and the embedder (for the board)."""
@@ -149,11 +157,18 @@ def _load_online_world(cfg):
     from innovation.p2_forum.topics import load_topics
 
     on = cfg["online"]
+    stale = [k for k in ("venues", "min_citations_any_venue") if k in on]
+    if stale:
+        raise SystemExit(
+            f"online.{stale[0]} is no longer a config key: the reading scope uses "
+            "the evaluation's tier-1 rule (top-level recognized_venues and "
+            "eval.recognized_min_citations). Remove "
+            + ", ".join(f"online.{k}" for k in stale) + " from the config.")
     topics = load_topics(cfg["topics_file"])
     llm = CachedLLM(RoutedLLM(), Path(on["cache_dir"]) / "llm")
     tagger = TopicTagger(llm=llm, model=cfg["models"]["tagger"], topics=topics)
-    aliases = tuple(a.lower() for v in on["venues"] for a in v["aliases"])
-    scope = Scope(venue_aliases=aliases, min_citations=on["min_citations_any_venue"],
+    scope = Scope(venue_aliases=_tier1_aliases(cfg),
+                  min_citations=cfg["eval"].get("recognized_min_citations", 50),
                   max_date=on["max_pub_date"])
     lit = OnlineLiterature(client=S2Online(on["cache_dir"]), scope=scope, tagger=tagger,
                            cache_dir=on["cache_dir"], search_pool=on.get("search_pool", 50))
@@ -336,8 +351,7 @@ def cmd_evaluate(cfg):
     # Recognition rule (evaluation only): a realizing paper counts iff its
     # venue matches the recognized-venue alias list OR its citations clear
     # eval.recognized_min_citations.
-    recognized = cfg.get("recognized_venues") or []
-    aliases = [a.lower() for v in recognized for a in v.get("aliases", [])]
+    aliases = list(_tier1_aliases(cfg))
     tier2_aliases = [a.lower() for a in (cfg.get("ccf_b_aliases") or [])]
     # Contamination guard: papers already in the initial graph can never be
     # anticipation hits (the agent may simply have read them).
@@ -355,6 +369,7 @@ def cmd_evaluate(cfg):
             tier2_aliases=tier2_aliases or None,
             recognized_min_citations=cfg["eval"].get("recognized_min_citations", 50),
             tier2_min_citations=cfg["eval"].get("tier2_min_citations", 10),
+            exclude_workshops=cfg["eval"].get("exclude_workshops", False),
             corpus_titles=corpus_titles))
         dup_flags[nid] = (len(corpus_vecs) > 0 and past_dup_flag(
             emb.encode([text])[0], corpus_vecs, ceiling=cfg["eval"]["dup_ceiling"]))

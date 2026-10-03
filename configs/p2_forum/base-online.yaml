@@ -7,16 +7,11 @@ topics_file: configs/p2_forum/topics-v2.yaml
 online:
   cache_dir: data/online_cache
   max_pub_date: "2024-09-30"
-  min_citations_any_venue: 50
   search_pool: 50
-  venues:
-    - {name: AAAI, aliases: ["aaai conference on artificial intelligence", "aaai"]}
-    - {name: NeurIPS, aliases: ["neurips", "neural information processing"]}
-    - {name: ACL, aliases: ["annual meeting of the association for computational linguistics"]}
-    - {name: CVPR, aliases: ["computer vision and pattern recognition", "cvpr"]}
-    - {name: ICCV, aliases: ["international conference on computer vision", "iccv"]}
-    - {name: ICML, aliases: ["international conference on machine learning", "icml"]}
-    - {name: ICLR, aliases: ["international conference on learning representations", "iclr"]}
+# Reading scope = the evaluation's tier-1 rule: top-level recognized_venues
+# (CCF-A, inherited) OR eval.recognized_min_citations, AND date <= max_pub_date.
+eval:
+  exclude_workshops: true
 models:
   agent: openai:gpt-5:medium
   tagger: claude-sonnet-5

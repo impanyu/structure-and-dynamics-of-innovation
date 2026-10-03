@@ -209,15 +209,21 @@ class Verdict:
 
 def tier_of(cand: dict, tier1_aliases: list[str] | None,
             tier2_aliases: list[str] | None, min_citations: int,
-            tier2_min_citations: int = 10) -> str:
+            tier2_min_citations: int = 10,
+            exclude_workshops: bool = False) -> str:
     """Recognition tier of a realizing paper (user rule 2026-08-30):
     tier1 = CCF-A venue OR citations >= 50;
     tier2 = CCF-A/B venue OR citations >= 10;
     tier3 = any other published paper. Unmatched venues fall DOWNWARD
-    (conservative). With no alias lists configured, everything is tier1."""
+    (conservative). With no alias lists configured, everything is tier1.
+    exclude_workshops (opt-in, default off): a venue string containing
+    "workshop" does not satisfy the tier-1 or tier-2 alias branches; the
+    citation branches still apply."""
     if tier1_aliases is None:
         return "tier1"
     venue = (cand.get("venue") or "").lower()
+    if exclude_workshops and "workshop" in venue:
+        venue = ""
     cites = cand.get("citations") or 0
     if (venue and any(a in venue for a in tier1_aliases)) or cites >= min_citations:
         return "tier1"
@@ -233,6 +239,7 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
                 tier2_aliases: list[str] | None = None,
                 recognized_min_citations: int = 50,
                 tier2_min_citations: int = 10,
+                exclude_workshops: bool = False,
                 corpus_titles: set[str] | None = None) -> Verdict:
     queries = extract_queries(llm, model=model, idea_text=idea_text, n=n_queries)
     candidates, seen_titles = [], set()
@@ -282,7 +289,8 @@ def verify_idea(llm: LLM, *, model: str, idea_id: str, idea_text: str,
             v.excluded_pre_cutoff.append(entry)  # NEVER scored (spec §3.6)
             continue
         tier = tier_of(cand, recognized_aliases, tier2_aliases,
-                       recognized_min_citations, tier2_min_citations)
+                       recognized_min_citations, tier2_min_citations,
+                       exclude_workshops)
         entry["tier"] = tier
         v.candidates[tier].append(entry)
         # cumulative bests: a tier-1 paper scores at every tier, tier-2 at

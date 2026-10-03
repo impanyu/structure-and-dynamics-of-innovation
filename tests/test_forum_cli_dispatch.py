@@ -317,3 +317,38 @@ def test_online_mode_dispatches_with_the_online_world(forum_cfg, monkeypatch):
     kept = sum(len(e["args"]["cited_ids"]) - len(e["result"].get("dropped_cites", []))
                for e in posted)
     assert final["n_post_corpus_edges"] == kept
+
+
+def _online_cfg(**online_extra):
+    from innovation.core.config import load_config
+    cfg = load_config("configs/p2_forum/base-online.yaml")
+    cfg["online"].update(online_extra)
+    return cfg
+
+
+def test_online_scope_uses_the_tier1_rule(monkeypatch, tmp_path):
+    """Reading scope and cmd_evaluate share one helper: same aliases, same floor."""
+    from innovation import cli
+    cfg = _online_cfg(cache_dir=str(tmp_path))
+    monkeypatch.setattr(cli, "Embedder", lambda name: object())
+    monkeypatch.setattr(cli, "RoutedLLM", lambda: object())
+    monkeypatch.setattr(cli, "CachedLLM", lambda llm, d: object())
+    import innovation.p2_forum.topics as topics_mod
+    monkeypatch.setattr(topics_mod, "load_topics", lambda path: [])
+    lit, _, _, _ = cli._load_online_world(cfg)
+    aliases = cli._tier1_aliases(cfg)
+    assert len(aliases) > 50 and "neurips" in aliases and "cvpr" in aliases
+    assert lit.scope.venue_aliases == aliases
+    assert lit.scope.min_citations == cfg["eval"]["recognized_min_citations"] == 50
+    assert lit.scope.max_date == "2024-09-30"
+    assert cfg["eval"]["exclude_workshops"] is True
+    assert "venues" not in cfg["online"]
+    assert "min_citations_any_venue" not in cfg["online"]
+
+
+@pytest.mark.parametrize("key,val", [("venues", [{"name": "X", "aliases": ["x"]}]),
+                                     ("min_citations_any_venue", 10)])
+def test_online_stale_scope_keys_are_refused(key, val):
+    from innovation import cli
+    with pytest.raises(SystemExit, match=f"online.{key}"):
+        cli._load_online_world(_online_cfg(**{key: val}))
