@@ -304,3 +304,12 @@ def test_restore_picks_up_ids_from_related_lists(tmp_path):
     fresh.tagger = None
     fresh.restore(events)
     assert fresh.lit.has("p2") and fresh.lit.has("p0")
+
+
+def test_search_reports_openalex_source(tmp_path):
+    env = make(tmp_path)
+    env.lit.last_source, env.lit.last_unmapped = "openalex", 3
+    out = env.execute("a", 0, Action("search", {"query": "about T0", "k": 5}))
+    assert out["source"] == "openalex" and out["unmapped"] == 3
+    env.lit.last_source = "s2"
+    assert "source" not in env.execute("a", 1, Action("search", {"query": "about T0", "k": 5}))

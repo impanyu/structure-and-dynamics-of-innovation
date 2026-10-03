@@ -19,10 +19,11 @@ FIELDS = ("paperId,title,abstract,year,venue,publicationVenue,"
 
 
 class S2Online:
-    def __init__(self, cache_dir, http_get=None, delay: float = 1.1):
+    def __init__(self, cache_dir, http_get=None, delay: float = 1.1, http_post=None):
         self.cache_dir = Path(cache_dir) / "s2"
         self.get = http_get or functools.partial(requests.get, timeout=30)
         self.delay = delay
+        self.post = http_post
 
     def _call(self, url: str, params: dict, *, cache_404=None) -> dict | None:
         """A cached GET. A 404 returns None, or, when cache_404 is given, caches
@@ -63,6 +64,21 @@ class S2Online:
         out = self._call(f"{BASE}/paper/search/match", {"query": title, "fields": FIELDS},
                          cache_404={"data": []})
         return self._clean(self._data(out))
+
+    def batch(self, ids: list[str]) -> list[dict | None]:
+        """Resolve external ids (DOI:..., ARXIV:...) in one POST; one entry per id,
+        None where S2 does not know it. Cached by the sorted id list."""
+        ids = list(ids)
+        if not ids:
+            return []
+        key = hashlib.sha256(json.dumps(["batch", sorted(ids)]).encode()).hexdigest()
+        cache_file = self.cache_dir / f"{key}.json"
+        post = self.post or functools.partial(requests.post, timeout=30)
+        out = _cached_call(cache_file,
+                           lambda: post(f"{BASE}/paper/batch", params={"fields": FIELDS},
+                                        json={"ids": ids}, headers=s2_headers()),
+                           self.delay)
+        return [p if isinstance(p, dict) and p.get("paperId") else None for p in (out or [])]
 
     def paper(self, pid: str) -> dict | None:
         return self._call(f"{BASE}/paper/{pid}", {"fields": FIELDS})

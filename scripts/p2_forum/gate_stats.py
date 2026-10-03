@@ -19,13 +19,17 @@ def gate_counts(events) -> dict:
             c["filtered_" + kind] += (r.get("filtered") or {}).get(kind, 0)
         if e["action"] in ("search", "search_board"):
             c["searches"] += 1
+        if r.get("source") == "openalex":
+            c["openalex_fallbacks"] += 1
+            c["openalex_unmapped"] += r.get("unmapped", 0)
         if e["action"] == "related":
             c["related"] += 1
         if e["action"] == "generate" and "node_id" in r:
             c["posts"] += 1
             c["dropped_cites"] += len(r.get("dropped_cites", []))
     out = {k: c.get(k, 0) for k in (*GATES, "dropped_cites", "posts", "searches", "related",
-                                         "filtered_scope", "filtered_topic")}
+                                         "filtered_scope", "filtered_topic",
+                                         "openalex_fallbacks", "openalex_unmapped")}
     tried = out["post"] + out["posts"]
     out["rejection_rate"] = out["post"] / tried if tried else 0.0
     return out

@@ -2,6 +2,7 @@
 import argparse
 import dataclasses
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -171,8 +172,15 @@ def _load_online_world(cfg):
     scope = Scope(venue_aliases=_tier1_aliases(cfg),
                   min_citations=cfg["eval"].get("recognized_min_citations", 50),
                   max_date=on["max_pub_date"])
+    openalex = None
+    if os.environ.get("OPENALEX_API_KEY", "").strip():
+        from innovation.p2_forum.openalex_online import OpenAlexOnline
+        openalex = OpenAlexOnline(on["cache_dir"])
+    else:
+        print("WARN OPENALEX_API_KEY is not set: agent search has no OpenAlex fallback")
     lit = OnlineLiterature(client=S2Online(on["cache_dir"]), scope=scope, tagger=tagger,
-                           cache_dir=on["cache_dir"], search_pool=on.get("search_pool", 50))
+                           cache_dir=on["cache_dir"], search_pool=on.get("search_pool", 50),
+                           openalex=openalex)
     return lit, tagger, Embedder(cfg["embedding_model"]), topics
 
 

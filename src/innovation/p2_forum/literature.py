@@ -80,11 +80,15 @@ def label_store_path(cache_dir, tagger) -> Path:
 
 
 class OnlineLiterature:
-    def __init__(self, *, client, scope: Scope, tagger, cache_dir, search_pool: int = 50):
+    def __init__(self, *, client, scope: Scope, tagger, cache_dir, search_pool: int = 50,
+                 openalex=None):
         self.client, self.scope, self.tagger = client, scope, tagger
+        self.openalex = openalex     # last-resort search; None skips that stage
         self.search_pool = search_pool
         self.last_scope_dropped = 0   # raw records the latest search/references/citations dropped
         self.last_query_used: str | None = None   # the rewrite the latest search ran, if any
+        self.last_source = "s2"       # "s2" | "openalex": what answered the latest search
+        self.last_unmapped = 0        # OpenAlex hits with no Semantic Scholar record
         self._papers: dict[str, Paper] = {}
         self._known_ids: set[str] = set()
         self._lock = threading.Lock()
@@ -133,9 +137,11 @@ class OnlineLiterature:
     def search(self, query: str) -> list[Paper]:
         """Relevance search, forgiving like a search engine: when it admits no
         in-scope paper, try the query as a paper title, then once more with
-        the stopwords dropped (recorded in last_query_used). last_scope_dropped
+        the stopwords dropped (recorded in last_query_used), and as a last resort
+        OpenAlex (mapped to S2 records; last_source, last_unmapped). last_scope_dropped
         sums the drops of every stage that ran."""
         self.last_query_used = None
+        self.last_source, self.last_unmapped = "s2", 0
         dropped = 0
 
         def stage(raws):
@@ -153,6 +159,13 @@ class OnlineLiterature:
             if short and short != query:
                 self.last_query_used = short
                 got = stage(run(short))
+        if not got and self.openalex is not None:
+            from innovation.p2_forum.openalex_online import map_to_s2
+            hits = self.openalex.search(query, max_date=self.scope.max_date)
+            recs, self.last_unmapped = map_to_s2(hits, self.client, max_date=self.scope.max_date)
+            got = stage(recs)
+            if got:
+                self.last_source = "openalex"
         self.last_scope_dropped = dropped
         return got
 

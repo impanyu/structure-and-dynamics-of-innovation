@@ -80,3 +80,11 @@ def test_gate_counts_counts_related_calls():
           {"action": "search", "result": {"hits": []}}]
     c = load().gate_counts(ev)
     assert c["related"] == 2 and c["searches"] == 1 and c["result"] == 1
+
+
+def test_gate_counts_openalex_fallbacks():
+    ev = [{"action": "search", "result": {"hits": [], "source": "openalex", "unmapped": 2}},
+          {"action": "search", "result": {"hits": [], "source": "openalex", "unmapped": 1}},
+          {"action": "search", "result": {"hits": []}}]
+    c = load().gate_counts(ev)
+    assert c["openalex_fallbacks"] == 2 and c["openalex_unmapped"] == 3 and c["searches"] == 3

@@ -70,6 +70,9 @@ class GatedForumEnvironment(ForumEnvironment):
                "filtered": {"scope": scope, "topic": len(found) - len(gated)}}
         if rewritten:     # like a search engine's "Showing results for ..."
             out["showing_results_for"] = rewritten
+        if getattr(self.lit, "last_source", "s2") == "openalex":
+            out["source"] = "openalex"
+            out["unmapped"] = self.lit.last_unmapped
         return out
 
     def _do_browse(self, *, agent_id, step, node_id: str) -> dict:
