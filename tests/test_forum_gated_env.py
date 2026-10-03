@@ -223,3 +223,32 @@ def test_search_board_logs_filtered_topic(tmp_path):
     env.execute("b", 1, Action("generate", {"text": "idea T1", "cited_ids": []}))
     out = env.execute("a", 2, Action("search_board", {"query": "T0", "k": 5}))
     assert out["filtered"] == {"scope": 0, "topic": 1}
+
+
+class ManyRefsLit(FakeLit):
+    """p0 cites twelve readable papers r0..r11 and one unreadable one."""
+    def __init__(self):
+        super().__init__()
+        self.extra = {f"r{i}": Paper(f"r{i}", f"ref {i}", "long abstract " * 50, 2020 + i % 3,
+                                     "ICML", "2021-01-01", 0, "venue") for i in range(12)}
+        self.refs = {"p0": [f"r{i}" for i in range(12)] + ["p1"]}
+
+    def get(self, pid):
+        return self.extra.get(pid) or P.get(pid)
+
+    def references(self, pid):
+        return [self.get(x) for x in self.refs.get(pid, [])]
+
+    def labels(self, pids):
+        return {p: [0] if p in self.extra else LAB.get(p) for p in pids}
+
+
+def test_browse_lists_every_readable_reference_compactly(tmp_path):
+    env = make(tmp_path)
+    env.lit = ManyRefsLit()
+    v = env.execute("a", 0, Action("browse", {"node_id": "p0"}))
+    assert [c["node_id"] for c in v["cites"]] == [f"r{i}" for i in range(12)]
+    assert all(set(c) == {"node_id", "title", "year", "venue"} for c in v["cites"])
+    assert v["cites"][3] == {"node_id": "r3", "title": "ref 3", "year": 2020, "venue": "ICML"}
+    assert v["filtered"] == {"scope": 0, "topic": 2}       # p1 (cites) and p3 (cited_by)
+    assert "text" in v and "topics" in v                   # the paper itself stays full

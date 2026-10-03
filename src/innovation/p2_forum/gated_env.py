@@ -40,6 +40,11 @@ class GatedForumEnvironment(ForumEnvironment):
                 "text": p.abstract[:300], "year": p.year, "venue": p.venue,
                 "topics": self._names(labels)}
 
+    @staticmethod
+    def _ref_entry(p) -> dict:
+        """A reference-list line: enough to recognise a paper and decide to open it."""
+        return {"node_id": p.paper_id, "title": p.title, "year": p.year, "venue": p.venue}
+
     def _query_gate(self, agent_id, query):
         try:
             labels = self.tagger.label(query)
@@ -80,8 +85,8 @@ class GatedForumEnvironment(ForumEnvironment):
         scope += self.lit.last_scope_dropped
         cited_by = self._gated_papers(agent_id, cits)
         topic = len(refs) - len(cites) + len(cits) - len(cited_by)
-        return {**view, "cites": [self._paper_hit(q, l) for q, l in cites[:10]],
-                "cited_by": [self._paper_hit(q, l) for q, l in cited_by[:10]],
+        return {**view, "cites": [self._ref_entry(q) for q, _ in cites],
+                "cited_by": [self._ref_entry(q) for q, _ in cited_by],
                 "filtered": {"scope": scope, "topic": topic}}
 
     def _do_sample_frontier(self, *, agent_id, step) -> dict:
