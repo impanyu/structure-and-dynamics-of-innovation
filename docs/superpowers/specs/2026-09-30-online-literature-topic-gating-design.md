@@ -116,6 +116,7 @@ topic is an AI topic.
 |---|---|
 | `search` | query gate → Semantic Scholar search (over-fetch ~50) → scope filter → label each → result gate → top k, each with title, abstract snippet, year, venue and topic names |
 | `browse` | target must pass the scope filter and the result gate, otherwise error. Returns title, full abstract, year, venue, topic names, and `cites` / `cited_by` lists (each scope-filtered and result-gated, up to 10) |
+| `related` | source must be readable; returns up to k readable recommendations from Semantic Scholar's embedding-based recommender (all-cs pool), scope-filtered and result-gated; closed with the corpus search channel |
 | `sample_frontier` | picks one of the agent's topics at random, searches its name, returns a random gated hit |
 
 **Cache.** Every fetched paper record (metadata, abstract, references,

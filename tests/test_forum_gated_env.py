@@ -264,3 +264,43 @@ def test_search_reports_a_rewritten_query(tmp_path):
     assert out["showing_results_for"] == "T0 rewritten" and out["hits"]
     f = env.execute("a", 2, Action("sample_frontier", {}))
     assert "showing_results_for" not in f
+
+
+def test_related_returns_readable_hits_up_to_k(tmp_path):
+    env = make(tmp_path)
+    env.lit.recs = {"p0": ["p1", "p2", "p0", "p3"]}
+    env.lit.related = lambda pid: [P[x] for x in env.lit.recs[pid]]
+    env.lit.last_scope_dropped = 4
+    out = env.execute("a", 0, Action("related", {"node_id": "p0", "k": 10}))
+    assert out["node_id"] == "p0"
+    assert [h["node_id"] for h in out["related"]] == ["p2", "p0"]      # S2 order, readable only
+    assert out["filtered"] == {"scope": 4, "topic": 2}
+    assert out["related"][0] == {"node_id": "p2", "store": "corpus", "title": "title p2",
+                                 "text": "abstract p2", "year": 2023, "venue": "NeurIPS",
+                                 "topics": ["T0", "T2"]}
+    one = env.execute("a", 1, Action("related", {"node_id": "p0", "k": 1}))
+    assert [h["node_id"] for h in one["related"]] == ["p2"]
+
+
+def test_related_refuses_unreadable_or_unknown_source_and_closed_channel(tmp_path):
+    from innovation.p2_forum.env import Navigation
+    env = make(tmp_path)
+    env.lit.related = lambda pid: [P["p0"]]
+    assert env.execute("a", 0, Action("related", {"node_id": "p1"}))["gate"] == "result"
+    assert env.execute("a", 1, Action("related", {"node_id": "zzz"}))["gate"] == "scope"
+    env.nav = Navigation(corpus_search=False)
+    out = env.execute("a", 2, Action("related", {"node_id": "p0"}))
+    assert "closed" in out["error"] and "related" not in out
+
+
+def test_restore_picks_up_ids_from_related_lists(tmp_path):
+    env = make_cold(tmp_path)
+    env.lit.related = lambda pid: [P["p2"]]
+    env.lit.seen.add("p0")
+    out = env.execute("a", 0, Action("related", {"node_id": "p0"}))
+    assert [h["node_id"] for h in out["related"]] == ["p2"]
+    events = env.event_log.read_all()
+    fresh = make_cold(tmp_path / "x")
+    fresh.tagger = None
+    fresh.restore(events)
+    assert fresh.lit.has("p2") and fresh.lit.has("p0")

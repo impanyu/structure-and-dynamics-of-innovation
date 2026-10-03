@@ -100,3 +100,21 @@ def test_other_404s_are_still_not_cached(tmp_path):
     c = S2Online(tmp_path, http_get=get, delay=0)
     assert c.paper("nope") is None and c.paper("nope") is None
     assert len(get.calls) == 2
+
+
+def test_recommend_uses_all_cs_pool_unwraps_tolerates_nulls_and_caches(tmp_path):
+    get = fake_get({"/recommendations/v1/papers/forpaper/z": Resp(
+        200, {"recommendedPapers": [None, {"paperId": None}, P]})})
+    c = S2Online(tmp_path, http_get=get, delay=0)
+    assert c.recommend("z") == [P] and c.recommend("z") == [P]
+    assert len(get.calls) == 1
+    url, params = get.calls[0]
+    assert url == "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/z"
+    assert params["limit"] == 500 and params["from"] == "all-cs" and "paperId" in params["fields"]
+
+
+def test_recommend_null_and_missing(tmp_path):
+    get = fake_get({"/forpaper/n": Resp(200, {"recommendedPapers": None}),
+                    "/forpaper/m": Resp(404, {})})
+    c = S2Online(tmp_path, http_get=get, delay=0)
+    assert c.recommend("n") == [] and c.recommend("m") == []

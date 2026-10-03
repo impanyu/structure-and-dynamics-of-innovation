@@ -72,3 +72,11 @@ def test_gate_stats_main_skips_missing_events_and_no_json_for_explicit(tmp_path,
     (tmp_path / "r2" / "events.jsonl").write_text('{"action":"search","result":{}}\n')
     m.main(["r1", "r2"])
     assert not (tmp_path / "runs/p2_forum/gate_stats.json").exists()
+
+
+def test_gate_counts_counts_related_calls():
+    ev = [{"action": "related", "result": {"related": []}},
+          {"action": "related", "result": {"gate": "result"}},
+          {"action": "search", "result": {"hits": []}}]
+    c = load().gate_counts(ev)
+    assert c["related"] == 2 and c["searches"] == 1 and c["result"] == 1

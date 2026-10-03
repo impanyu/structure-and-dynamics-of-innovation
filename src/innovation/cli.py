@@ -294,6 +294,9 @@ def _shown_papers(events):
         if e.get("action") == "search":
             for h in res.get("hits", []):
                 take(h)
+        elif e.get("action") == "related":
+            for h in res.get("related", []):
+                take(h)
         elif e.get("action") in ("browse", "sample_frontier"):
             take(res)
             for k in ("cites", "cited_by"):

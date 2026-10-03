@@ -86,8 +86,8 @@ def test_a_full_run_leaves_the_corpus_bit_identical(tmp_path, make_workspace,
     assert len(out["generated"]) == 2
 
     events = load_events(tmp_path / "inv" / "events.jsonl")
-    # the run really did drive all nine actions, not two of them
-    assert {e["action"] for e in events} == VALID_ACTIONS
+    # the run really did drive all nine old-mode actions ("related" is online-only)
+    assert {e["action"] for e in events} == VALID_ACTIONS - {"related"}
     by_action = {}
     for e in events:
         by_action.setdefault(e["action"], []).append(e["result"])
@@ -194,3 +194,10 @@ def test_online_eval_reference_collects_shown_papers(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "Embedder", lambda name: FakeEmbedder())
     titles, vecs = cli._eval_reference(cfg)
     assert titles == {"a", "b", "c"} and vecs.shape[0] == 3
+
+
+def test_shown_papers_includes_related_hits():
+    from innovation import cli
+    ev = [{"action": "related", "result": {"node_id": "p0", "related": [
+        {"node_id": "p5", "title": "R", "text": "t"}], "filtered": {"scope": 0, "topic": 0}}}]
+    assert cli._shown_papers(ev) == {"p5": ("R", "t")}

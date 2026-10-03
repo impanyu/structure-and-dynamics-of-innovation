@@ -93,6 +93,20 @@ class GatedForumEnvironment(ForumEnvironment):
                 "cited_by": [self._ref_entry(q) for q, _ in cited_by],
                 "filtered": {"scope": scope, "topic": topic}}
 
+    def _do_related(self, *, agent_id, step, node_id: str, k: int = 10) -> dict:
+        if not self.nav.corpus_search:
+            return {"error": "finding related papers is closed"}
+        if self.lit.get(node_id) is None:
+            return {"error": f"{node_id} is not an available paper", "gate": "scope"}
+        if not self._ok(agent_id, self.lit.labels([node_id])[node_id]):
+            return {"error": f"{node_id} is outside your topics", "gate": "result"}
+        found = self.lit.related(node_id)
+        scope = self.lit.last_scope_dropped
+        gated = self._gated_papers(agent_id, found)
+        return {"node_id": node_id,
+                "related": [self._paper_hit(p, l) for p, l in gated[:k]],
+                "filtered": {"scope": scope, "topic": len(found) - len(gated)}}
+
     def _do_sample_frontier(self, *, agent_id, step) -> dict:
         if not self.nav.corpus_jump:
             return {"error": "random jumps into the literature are closed"}
@@ -221,7 +235,9 @@ class GatedForumEnvironment(ForumEnvironment):
                 continue
             for h in r.get("hits", []):
                 add(h.get("node_id"))
-            if e["action"] in ("browse", "sample_frontier"):
+            for h in r.get("related", []):
+                add(h.get("node_id"))
+            if e["action"] in ("browse", "sample_frontier", "related"):
                 add(r.get("node_id"))
             for key in ("cites", "cited_by"):
                 for v in r.get(key, []):

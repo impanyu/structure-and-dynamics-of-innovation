@@ -14,7 +14,7 @@ from innovation.core.llm import LLM
 from innovation.core.policy import Policy
 from innovation.p2_forum.env import Action
 
-VALID_ACTIONS = {"search", "browse", "sample_frontier",
+VALID_ACTIONS = {"search", "browse", "related", "sample_frontier",
                  "search_board", "browse_board", "sample_board",
                  "generate", "add_links", "remove_links"}
 
@@ -74,6 +74,7 @@ Your topics:
 GATED_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
 {"action": "search", "args": {"query": "<the title of a specific paper, or a short meaningful phrase as you would type into Google Scholar>", "k": 5}} -- search the published literature (do not paste lists of keywords)
 {"action": "browse", "args": {"node_id": "<paper id>"}} -- open a paper by its id (from a search result or a reference list) to read its abstract, its full reference list and the papers citing it
+{"action": "related", "args": {"node_id": "<paper id>", "k": 10}} -- list papers related to a paper (like "Related articles" in Google Scholar)
 {"action": "sample_frontier", "args": {}} -- jump to a random paper in one of your topics
 {"action": "search_board", "args": {"query": "<text>", "k": 5}} -- semantic search over the board
 {"action": "browse_board", "args": {"node_id": "<post id>"}} -- read a post and its reference neighbors

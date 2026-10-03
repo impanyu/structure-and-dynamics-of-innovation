@@ -13,6 +13,7 @@ from innovation.core.data.s2 import _cached_call, s2_headers
 from innovation.core.fsutil import atomic_write_text
 
 BASE = "https://api.semanticscholar.org/graph/v1"
+REC_BASE = "https://api.semanticscholar.org/recommendations/v1"
 FIELDS = ("paperId,title,abstract,year,venue,publicationVenue,"
           "publicationDate,citationCount")
 
@@ -73,3 +74,11 @@ class S2Online:
     def citations(self, pid: str) -> list[dict]:
         out = self._call(f"{BASE}/paper/{pid}/citations", {"fields": FIELDS, "limit": 1000})
         return self._clean(d.get("citingPaper") for d in self._data(out))
+
+    def recommend(self, pid: str) -> list[dict]:
+        """Embedding-based recommendations for a paper (Scholar's "Related
+        articles"). The all-cs pool, not the default last-60-days one; 500 is
+        the maximum, over-fetched because the scope rule drops many."""
+        out = self._call(f"{REC_BASE}/papers/forpaper/{pid}",
+                         {"fields": FIELDS, "limit": 500, "from": "all-cs"})
+        return self._clean((out or {}).get("recommendedPapers") or [])

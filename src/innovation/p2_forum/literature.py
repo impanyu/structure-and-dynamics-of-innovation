@@ -169,6 +169,9 @@ class OnlineLiterature:
     def citations(self, pid: str) -> list[Paper]:
         return self._admit(self.client.citations(pid))
 
+    def related(self, pid: str) -> list[Paper]:
+        return self._admit(self.client.recommend(pid))
+
     def remember_ids(self, ids) -> None:
         """Mark ids as known in-scope papers (seen in an earlier process,
         e.g. from a replayed event log) without fetching them."""

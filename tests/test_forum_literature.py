@@ -273,3 +273,11 @@ def test_in_scope_title_match_stops_the_fallback(tmp_path):
     assert [p.paper_id for p in L.search(title)] == ["lrm"]
     assert L.last_query_used is None and L.last_scope_dropped == 1
     assert client.queries == [("search", title), ("match", title)]
+
+
+def test_related_is_scope_filtered_and_counts_drops(tmp_path):
+    L, _ = lit(tmp_path, {"a": raw("a")})
+    L.client.recommend = lambda pid: [raw("r"), raw("late", date="2025-02-02"),
+                                      raw("x", venue="Nature", cites=1)]
+    assert [p.paper_id for p in L.related("a")] == ["r"]
+    assert L.last_scope_dropped == 2

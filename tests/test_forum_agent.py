@@ -14,7 +14,7 @@ class ScriptedLLM:
 
 
 def test_every_action_name_is_available_to_the_agent():
-    assert VALID_ACTIONS == {"search", "browse", "sample_frontier",
+    assert VALID_ACTIONS == {"search", "browse", "related", "sample_frontier",
                              "search_board", "browse_board", "sample_board",
                              "generate", "add_links", "remove_links"}
 
@@ -131,3 +131,11 @@ def test_gated_system_describes_search_hits_and_opened_papers():
             "papers citing it.") in " ".join(GATED_SYSTEM.split())
     assert "Each search or read shows" not in GATED_SYSTEM
     assert "Each search or read shows" not in FORUM_SYSTEM and "fixed network" in FORUM_SYSTEM
+
+
+def test_gated_doc_offers_related_after_browse_and_old_mode_does_not():
+    from innovation.p2_forum.agent import ACTIONS_DOC, GATED_ACTIONS_DOC, VALID_ACTIONS
+    lines = GATED_ACTIONS_DOC.splitlines()
+    assert lines[3] == ('{"action": "related", "args": {"node_id": "<paper id>", "k": 10}} -- '
+                        'list papers related to a paper (like "Related articles" in Google Scholar)')
+    assert "related" in VALID_ACTIONS and "related" not in ACTIONS_DOC
