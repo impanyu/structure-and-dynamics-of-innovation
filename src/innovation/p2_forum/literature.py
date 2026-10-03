@@ -131,20 +131,30 @@ class OnlineLiterature:
         return out
 
     def search(self, query: str) -> list[Paper]:
-        """Relevance search, forgiving like a search engine: when it finds no
-        record, try the query as a paper title, then once more with the
-        stopwords dropped (recorded in last_query_used)."""
+        """Relevance search, forgiving like a search engine: when it admits no
+        in-scope paper, try the query as a paper title, then once more with
+        the stopwords dropped (recorded in last_query_used). last_scope_dropped
+        sums the drops of every stage that ran."""
         self.last_query_used = None
+        dropped = 0
+
+        def stage(raws):
+            nonlocal dropped
+            got = self._admit(raws)
+            dropped += self.last_scope_dropped
+            return got
+
         run = lambda q: self.client.search(q, limit=self.search_pool, max_date=self.scope.max_date)
-        raws = run(query)
-        if not raws:
-            raws = self.client.match(query, max_date=self.scope.max_date)
-        if not raws:
+        got = stage(run(query))
+        if not got:
+            got = stage(self.client.match(query, max_date=self.scope.max_date))
+        if not got:
             short = drop_stopwords(query)
             if short and short != query:
-                raws = run(short)
                 self.last_query_used = short
-        return self._admit(raws)
+                got = stage(run(short))
+        self.last_scope_dropped = dropped
+        return got
 
     def get(self, pid: str) -> Paper | None:
         if pid in self._papers:

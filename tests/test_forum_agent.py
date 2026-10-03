@@ -114,4 +114,20 @@ def test_latest_result_is_capped():
     llm = ScriptedLLM(['{"action": "sample_frontier", "args": {}}'])
     pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"], latest_result_chars=100)
     pol.act({"step": 0, "last_result": BIG})
-    assert "Latest result (full):\n" + json.dumps(BIG)[:100] + "\n\n" in llm.prompts[0][1]
+    assert "Latest result (full):\n" + json.dumps(BIG)[:100] + "…(truncated)\n\n" in llm.prompts[0][1]
+
+
+def test_latest_result_within_the_cap_has_no_marker():
+    llm = ScriptedLLM(['{"action": "sample_frontier", "args": {}}'])
+    pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"], latest_result_chars=20000)
+    pol.act({"step": 0, "last_result": BIG})
+    assert "truncated" not in llm.prompts[0][1]
+
+
+def test_gated_system_describes_search_hits_and_opened_papers():
+    from innovation.p2_forum.agent import FORUM_SYSTEM, GATED_SYSTEM
+    assert ("Search results show each paper's title, an abstract snippet, year, venue and topics. "
+            "Opening a paper (browse) shows its abstract, topics, full reference list and the "
+            "papers citing it.") in " ".join(GATED_SYSTEM.split())
+    assert "Each search or read shows" not in GATED_SYSTEM
+    assert "Each search or read shows" not in FORUM_SYSTEM and "fixed network" in FORUM_SYSTEM

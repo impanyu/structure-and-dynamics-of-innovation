@@ -85,3 +85,18 @@ def test_match_returns_the_data_list_and_caches(tmp_path):
 def test_match_without_a_title_match_is_empty(tmp_path):
     c = S2Online(tmp_path, http_get=fake_get({"/paper/search/match": Resp(404, {})}), delay=0)
     assert c.match("no such title", max_date="2024-09-30") == []
+
+
+def test_match_caches_a_404_as_empty(tmp_path):
+    get = fake_get({"/paper/search/match": Resp(404, {})})
+    c = S2Online(tmp_path, http_get=get, delay=0)
+    assert c.match("t", max_date="2024-09-30") == []
+    assert c.match("t", max_date="2024-09-30") == []
+    assert len(get.calls) == 1
+
+
+def test_other_404s_are_still_not_cached(tmp_path):
+    get = fake_get({"/paper/": Resp(404, {})})
+    c = S2Online(tmp_path, http_get=get, delay=0)
+    assert c.paper("nope") is None and c.paper("nope") is None
+    assert len(get.calls) == 2

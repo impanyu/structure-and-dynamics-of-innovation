@@ -240,3 +240,36 @@ def test_no_retry_when_the_rewrite_changes_nothing(tmp_path):
     assert L.search("diffusion transformers") == []
     assert client.queries == [("search", "diffusion transformers"), ("match", "diffusion transformers")]
     assert L.last_query_used is None
+
+
+def test_post_cutoff_title_match_falls_through_to_the_rewrite(tmp_path):
+    title = "Sparse Autoencoders for the Language Models"
+    short = "Sparse Autoencoders Language Models"
+    client = FakeClient({}, by_query={short: [raw("s")]},
+                        titles={title: [raw("late", date="2025-01-01")]})
+    L = OnlineLiterature(client=client, scope=SCOPE, tagger=FakeTagger({}), cache_dir=tmp_path)
+    assert [p.paper_id for p in L.search(title)] == ["s"]
+    assert client.queries == [("search", title), ("match", title), ("search", short)]
+    assert L.last_query_used == short
+
+
+def test_scope_drops_are_summed_across_fallback_stages(tmp_path):
+    title = "A Study of the Things"
+    short = "Study Things"
+    client = FakeClient({}, by_query={title: [raw("x", venue="Nature"), raw("y", venue="Nature")],
+                                      short: [raw("ok"), raw("z", date="2025-01-01")]},
+                        titles={title: [raw("late", date="2025-01-01")]})
+    L = OnlineLiterature(client=client, scope=SCOPE, tagger=FakeTagger({}), cache_dir=tmp_path)
+    assert [p.paper_id for p in L.search(title)] == ["ok"]
+    assert L.last_scope_dropped == 4          # 2 relevance + 1 match + 1 rewrite
+    assert L.last_query_used == short
+
+
+def test_in_scope_title_match_stops_the_fallback(tmp_path):
+    title = "The LRM Paper"
+    client = FakeClient({}, by_query={title: [raw("old", venue="Nature")]},
+                        titles={title: [raw("lrm")]})
+    L = OnlineLiterature(client=client, scope=SCOPE, tagger=FakeTagger({}), cache_dir=tmp_path)
+    assert [p.paper_id for p in L.search(title)] == ["lrm"]
+    assert L.last_query_used is None and L.last_scope_dropped == 1
+    assert client.queries == [("search", title), ("match", title)]

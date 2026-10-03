@@ -10,6 +10,7 @@ from pathlib import Path
 import requests
 
 from innovation.core.data.s2 import _cached_call, s2_headers
+from innovation.core.fsutil import atomic_write_text
 
 BASE = "https://api.semanticscholar.org/graph/v1"
 FIELDS = ("paperId,title,abstract,year,venue,publicationVenue,"
@@ -22,17 +23,23 @@ class S2Online:
         self.get = http_get or functools.partial(requests.get, timeout=30)
         self.delay = delay
 
-    def _call(self, url: str, params: dict) -> dict | None:
+    def _call(self, url: str, params: dict, *, cache_404=None) -> dict | None:
+        """A cached GET. A 404 returns None, or, when cache_404 is given, caches
+        and returns that payload so the same miss is not asked again."""
         key = hashlib.sha256(json.dumps([url, params], sort_keys=True).encode()).hexdigest()
+        cache_file = self.cache_dir / f"{key}.json"
         try:
-            return _cached_call(self.cache_dir / f"{key}.json",
+            return _cached_call(cache_file,
                                 lambda: self.get(url, params=params, headers=s2_headers(),
                                                  timeout=30),
                                 self.delay)
         except requests.HTTPError as e:
-            if getattr(e.response, "status_code", None) == 404:
+            if getattr(e.response, "status_code", None) != 404:
+                raise
+            if cache_404 is None:
                 return None
-            raise
+            atomic_write_text(cache_file, json.dumps(cache_404))
+            return cache_404
 
     @staticmethod
     def _data(out) -> list[dict]:
@@ -51,8 +58,9 @@ class S2Online:
 
     def match(self, title: str, *, max_date: str) -> list[dict]:
         """The single best title match (a list of at most one); [] when S2 finds
-        none (404). max_date is not sent: the scope rule applies the cutoff."""
-        out = self._call(f"{BASE}/paper/search/match", {"query": title, "fields": FIELDS})
+        none (404, cached as empty). max_date is not sent: the scope rule applies the cutoff."""
+        out = self._call(f"{BASE}/paper/search/match", {"query": title, "fields": FIELDS},
+                         cache_404={"data": []})
         return self._clean(self._data(out))
 
     def paper(self, pid: str) -> dict | None:

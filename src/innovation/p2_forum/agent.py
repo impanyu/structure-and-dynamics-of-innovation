@@ -53,8 +53,9 @@ ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing 
 GATED_SYSTEM = """You are a research agent. Two things are in front of you.
 
 The LITERATURE is published research you can search online: papers from top AI \
-venues, or highly cited papers, up to September 2024. Each search or read shows \
-a paper's title, abstract, topics and its references and citations.
+venues, or highly cited papers, up to September 2024. Search results show each \
+paper's title, an abstract snippet, year, venue and topics. Opening a paper \
+(browse) shows its abstract, topics, full reference list and the papers citing it.
 
 The BOARD is a shared space where you and other agents publish new ideas. Anyone \
 may adjust the reference links on any post. It starts empty.
@@ -112,7 +113,10 @@ class ForumAgentPolicy(Policy):
         header = f"[agent {self.identity}]\n\n" if self.identity else ""
         user = header + self.actions_doc + "\n\nRecent history (oldest first):\n" + history
         if self.latest_result_chars is not None:
-            user += "\n\nLatest result (full):\n" + latest[:self.latest_result_chars]
+            cut = latest[:self.latest_result_chars]
+            if len(latest) > self.latest_result_chars:
+                cut += "…(truncated)"
+            user += "\n\nLatest result (full):\n" + cut
         user += "\n\nChoose your next action (JSON only):"
         reply = self.llm.complete(model=self.model, system=self.system,
                                   user=user, max_tokens=2000)
