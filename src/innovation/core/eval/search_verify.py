@@ -3,6 +3,7 @@ Semantic Scholar + OpenAlex only; hits count anticipation only."""
 import functools
 import hashlib
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -142,10 +143,13 @@ def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> lis
     # never honor; a truly dead channel still trips the breaker below and the
     # caller degrades per-query to S2-only.
     http_get = http_get or functools.partial(requests.get, timeout=30)
+    api_key = os.environ.get("OPENALEX_API_KEY", "").strip()
+    sent = (lambda url, params, **kw: http_get(url, params={**params, "api_key": api_key}, **kw)
+            ) if api_key else http_get      # the key is not part of the cache key
     try:
         payload = _cached_get(OPENALEX_BASE,
                               {"search": query, "per-page": 10, "mailto": mailto},
-                              Path(cache_dir), http_get, attempts=6, delay=1.0,
+                              Path(cache_dir), sent, attempts=6, delay=1.0,
                               max_sleep=60.0)
     except requests.RequestException:
         _OA_BREAKER["fails"] += 1

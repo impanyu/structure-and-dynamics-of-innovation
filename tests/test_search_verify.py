@@ -259,3 +259,24 @@ def test_tier_of_exclude_workshops_is_opt_in():
                    exclude_workshops=True) == "tier3"
     assert tier_of({"venue": "CVPR", "citations": 0}, t1, t2, 50,
                    exclude_workshops=True) == "tier1"
+
+
+def test_openalex_search_sends_key_but_not_in_cache_key(tmp_path, monkeypatch):
+    import innovation.core.eval.search_verify as sv
+    monkeypatch.setitem(sv._OA_BREAKER, "until", 0.0)
+    monkeypatch.setattr(sv.time, "sleep", lambda s: None)
+    seen = []
+
+    def get(url, params=None, **kw):
+        seen.append(dict(params))
+        return FakeResponse({"results": []})
+
+    monkeypatch.delenv("OPENALEX_API_KEY", raising=False)
+    sv.openalex_search("q", mailto="m@x", cache_dir=tmp_path / "c", http_get=get)
+    assert "api_key" not in seen[0]
+    monkeypatch.setenv("OPENALEX_API_KEY", "sekrit")
+    sv.openalex_search("q", mailto="m@x", cache_dir=tmp_path / "c2", http_get=get)
+    assert seen[1]["api_key"] == "sekrit"
+    sv.openalex_search("q", mailto="m@x", cache_dir=tmp_path / "c", http_get=get)
+    assert len(seen) == 2                      # the pre-key cache entry still hits
+    assert "sekrit" not in "".join(f.read_text() for f in (tmp_path / "c2").iterdir())
