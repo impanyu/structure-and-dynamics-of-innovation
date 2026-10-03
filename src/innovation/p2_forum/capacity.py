@@ -201,6 +201,24 @@ class BulkCounter:
 
 # --- the estimator --------------------------------------------------------
 
+class NoTextAsEmpty:
+    """Wraps the tagger's LLM (outside its cache): a reply without text (e.g.
+    stop_reason=refusal) becomes "", so the tagger retries and finally leaves
+    that sample paper unlabeled instead of aborting the whole estimate.
+    Nothing is cached for such a reply."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    def complete(self, **kw) -> str:
+        try:
+            return self.inner.complete(**kw)
+        except ValueError as e:
+            if not str(e).startswith("no text in reply"):
+                raise
+            return ""
+
+
 def _text(rec: dict) -> str:
     title, abstract = (rec.get("title") or "").strip(), (rec.get("abstract") or "").strip()
     return f"{title}\n\n{abstract}" if abstract else title

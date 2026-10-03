@@ -19,7 +19,7 @@ from innovation.core.config import load_env
 from innovation.core.ideas.embed import Embedder
 from innovation.core.llm import AnthropicLLM, CachedLLM, RoutedLLM
 from innovation.p2_forum.balance import LLMRewriter, Similarity, run_balance, write_outputs
-from innovation.p2_forum.capacity import BulkCounter, CapacityEstimator
+from innovation.p2_forum.capacity import BulkCounter, CapacityEstimator, NoTextAsEmpty
 from innovation.p2_forum.tagger import TopicTagger
 from innovation.p2_forum.topics import backbone_prompt, parse_topic_list
 
@@ -53,7 +53,9 @@ def backbone_draft(llm, venues) -> list[dict]:
         try:
             return parse_topic_list(reply, N, names)
         except ValueError as e:
-            feedback = f"\n\nYour previous answer was rejected: {e}. Fix it."
+            feedback = (f"\n\nYour previous answer was rejected: {e}. Fix it: return "
+                        f"exactly {N} objects (merge the closest topics if you have too "
+                        f"many) and cite only these venues: {', '.join(sorted(names))}.")
     raise SystemExit("could not obtain a valid backbone topic list in 3 attempts")
 
 
@@ -92,7 +94,7 @@ def main():
     counter = BulkCounter(CACHE / "capacity", tier1)
     estimate = CapacityEstimator(
         counter=counter, llm=gen_llm, model=MODEL, workers=args.workers,
-        tagger_factory=lambda ts: TopicTagger(llm=tag_llm, model=MODEL, topics=ts),
+        tagger_factory=lambda ts: TopicTagger(llm=NoTextAsEmpty(tag_llm), model=MODEL, topics=ts),
         log=lambda m: print(m, flush=True))
     result = run_balance(topics, estimate, LLMRewriter(gen_llm, MODEL),
                          Similarity(Embedder().encode), n=N, max_rounds=args.max_rounds,

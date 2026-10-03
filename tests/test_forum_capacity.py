@@ -1,7 +1,8 @@
 import pytest
 
 from innovation.core.llm import FakeLLM
-from innovation.p2_forum.capacity import (BulkCounter, CapacityEstimator, capacity,
+from innovation.p2_forum.capacity import (BulkCounter, CapacityEstimator, NoTextAsEmpty,
+                                          capacity,
                                           parse_query, precision, union_count,
                                           venue_chunks)
 
@@ -155,3 +156,21 @@ def test_estimator_retries_a_bad_query_then_gives_up():
     with pytest.raises(RuntimeError, match="no valid query"):
         CapacityEstimator(counter=FakeCounter(), llm=FakeLLM(default="bad"), model="m",
                           tagger_factory=FakeTagger).query({"name": "A", "definition": "a"})
+
+
+def test_no_text_reply_leaves_the_paper_unlabeled_instead_of_raising():
+    from innovation.p2_forum.tagger import TopicTagger
+    from innovation.p2_forum.topics import Topic
+
+    class Refusing:
+        def complete(self, **kw):
+            raise ValueError("no text in reply (stop_reason=refusal)")
+
+    class Broken:
+        def complete(self, **kw):
+            raise ValueError("something else")
+    topics = [Topic(id=0, name="A", definition="a")]
+    tagger = TopicTagger(llm=NoTextAsEmpty(Refusing()), model="m", topics=topics)
+    assert tagger.label_many(["x", "y"]) == [None, None]
+    with pytest.raises(ValueError, match="something else"):
+        NoTextAsEmpty(Broken()).complete(model="m", system="s", user="u")

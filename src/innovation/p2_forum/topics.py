@@ -55,6 +55,7 @@ def backbone_prompt(venues: list[dict], n: int, backbone: str = "AAAI") -> str:
             prefix, sep, kw = a.partition(":")
             groups.setdefault(prefix.strip() if sep else "", []).append(
                 kw.strip() if sep else a)
+    n_kw = sum(len(k) for k in groups.values())
     ref = "\n".join(f"[{p}] " + "; ".join(kws) for p, kws in groups.items())
     others = "\n".join(f"{v['venue']}: {a}" for v in venues
                        if v["venue"] != backbone for a in v["areas"])
@@ -63,19 +64,22 @@ def backbone_prompt(venues: list[dict], n: int, backbone: str = "AAAI") -> str:
         f"{ref}\n\n"
         "OTHER VENUES' submission areas, one per line as '<venue>: <area>':\n"
         f"{others}\n\n"
-        f"Design exactly {n} research topics that together cover all of the above, "
-        f"every topic at the granularity of one {backbone} keyword or a few closely "
-        f"related {backbone} keywords. Map the other venues' areas onto that "
+        f"Design exactly {n} research topics that together cover all of the above. "
+        f"The {backbone} list has {n_kw} keywords, so a topic covers on average "
+        f"{n_kw / n:.1f} closely related {backbone} keywords (merge near-neighbours "
+        "and keywords too small to stand alone; never exceed the count). Map the other venues' areas onto that "
         "granularity: split coarse areas (e.g. 'Deep Learning', 'Generative Models', "
         "'General Machine Learning') into their real sub-areas at keyword level, and "
         "keep areas that are already fine. Topics must not overlap in meaning, must "
         "be of uniform granularity, and must avoid generic modifiers such as "
         "'robust', 'efficient', 'scalable' or 'advances in' unless they name the "
         "topic itself.\n"
-        "Reply with ONLY a JSON list of objects: "
-        '{"name": "<3-8 word topic name>", "definition": "<one sentence: what is in, '
-        'what is out>", "sources": ["<venue>", ...]} where sources lists every venue '
-        "whose areas or keywords this topic absorbs.")
+        f"Reply with ONLY a JSON list of exactly {n} objects, numbered so you can "
+        f"keep count: "
+        '{"id": <0-based position>, "name": "<3-8 word topic name>", "definition": '
+        '"<one sentence: what is in, what is out>", "sources": ["<venue>", ...]} where '
+        f"sources lists every venue whose areas or keywords this topic absorbs. The "
+        f"last object must have id {n - 1}.")
 
 
 def parse_topic_list(reply: str, n: int, venue_names: set[str]) -> list[dict]:
