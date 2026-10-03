@@ -67,18 +67,22 @@ class S2Online:
 
     def batch(self, ids: list[str]) -> list[dict | None]:
         """Resolve external ids (DOI:..., ARXIV:...) in one POST; one entry per id,
-        None where S2 does not know it. Cached by the sorted id list."""
+        None where S2 does not know it. Ids are sent sorted and cached that way; the result follows the caller's order."""
         ids = list(ids)
-        if not ids:
-            return []
-        key = hashlib.sha256(json.dumps(["batch", sorted(ids)]).encode()).hexdigest()
-        cache_file = self.cache_dir / f"{key}.json"
         post = self.post or functools.partial(requests.post, timeout=30)
-        out = _cached_call(cache_file,
-                           lambda: post(f"{BASE}/paper/batch", params={"fields": FIELDS},
-                                        json={"ids": ids}, headers=s2_headers()),
-                           self.delay)
-        return [p if isinstance(p, dict) and p.get("paperId") else None for p in (out or [])]
+        got: dict[str, dict | None] = {}
+        canon = sorted(set(ids))
+        for i in range(0, len(canon), 500):         # the endpoint takes at most 500 ids
+            chunk = canon[i:i + 500]                # sent sorted, so the cached payload's
+            key = hashlib.sha256(json.dumps(["batch", chunk]).encode()).hexdigest()
+            out = _cached_call(self.cache_dir / f"{key}.json",     # positions are canonical
+                               lambda: post(f"{BASE}/paper/batch", params={"fields": FIELDS},
+                                            json={"ids": chunk}, headers=s2_headers()),
+                               self.delay)
+            recs = [p if isinstance(p, dict) and p.get("paperId") else None
+                    for p in (out or [])]
+            got.update(zip(chunk, recs + [None] * (len(chunk) - len(recs))))
+        return [got[i] for i in ids]
 
     def paper(self, pid: str) -> dict | None:
         return self._call(f"{BASE}/paper/{pid}", {"fields": FIELDS})

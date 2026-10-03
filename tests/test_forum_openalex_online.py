@@ -33,17 +33,27 @@ def test_lookup_ids():
     assert s2_lookup_id(OA["results"][2]) is None
 
 
-def test_batch_cached_by_sorted_ids(tmp_path):
+def test_batch_cache_is_order_safe(tmp_path):
     calls = []
 
     def post(url, params=None, json=None, headers=None, timeout=None):
         calls.append((url, params, json))
-        return Resp(200, [raw("a"), None])
+        return Resp(200, [raw("x"), raw("y")] if json["ids"] == ["DOI:x", "DOI:y"] else [])
     c = S2Online(tmp_path, http_get=None, delay=0, http_post=post)
-    assert c.batch(["DOI:x", "DOI:y"]) == [raw("a"), None]
-    assert c.batch(["DOI:y", "DOI:x"]) == [raw("a"), None]
+    assert [r["paperId"] for r in c.batch(["DOI:x", "DOI:y"])] == ["x", "y"]
+    assert [r["paperId"] for r in c.batch(["DOI:y", "DOI:x"])] == ["y", "x"]   # cached, realigned
     assert len(calls) == 1 and calls[0][0].endswith("/paper/batch")
-    assert calls[0][2] == {"ids": ["DOI:x", "DOI:y"]}
+
+
+def test_batch_chunks_at_500_ids(tmp_path):
+    sizes = []
+
+    def post(url, params=None, json=None, headers=None, timeout=None):
+        sizes.append(len(json["ids"]))
+        return Resp(200, [None] * len(json["ids"]))
+    c = S2Online(tmp_path, delay=0, http_post=post)
+    assert c.batch([f"DOI:{i:04d}" for i in range(501)]) == [None] * 501
+    assert sizes == [500, 1]
 
 
 class MapClient:
@@ -123,3 +133,56 @@ def test_unmapped_counted_and_scope_drops_summed(tmp_path):
     L = make_lit(tmp_path, C({}, by_query={}), FakeOA(HIT + [{"id": "W8", "title": None}]))
     assert L.search("q") == []
     assert L.last_unmapped == 1 and L.last_scope_dropped == 1 and L.last_source == "s2"
+
+
+class BoomOA:
+    def search(self, q, *, max_date, limit=25):
+        import requests
+        raise requests.RequestException("down")
+
+
+def test_failing_openalex_stage_returns_empty_and_logs(tmp_path):
+    L = make_lit(tmp_path, OAClient({}, by_query={}), BoomOA())
+    assert L.search("my query") == [] and L.last_source == "s2"
+    assert "my query" in (tmp_path / "openalex_errors.log").read_text()
+
+
+def test_errors_never_carry_the_api_key(tmp_path, monkeypatch):
+    import requests
+    monkeypatch.setenv("OPENALEX_API_KEY", "sekrit")
+    url = "https://api.openalex.org/works?search=q&api_key=sekrit"
+
+    class Bad:
+        status_code = 403
+        headers = {}
+
+        def raise_for_status(self):
+            raise requests.HTTPError(f"403 Client Error: Forbidden for url: {url}", response=self)
+
+    def conn(u, params=None, **kw):
+        raise requests.ConnectionError(f"HTTPSConnectionPool: Max retries exceeded with url: {url}")
+    for get in (lambda u, params=None, **kw: Bad(), conn):
+        c = OpenAlexOnline(tmp_path / str(id(get)), http_get=get, delay=0)
+        try:
+            c.search("q", max_date="2024-09-30")
+            raise AssertionError("expected an error")
+        except requests.RequestException as e:
+            assert "sekrit" not in str(e) and "***" in str(e)
+            assert e.__cause__ is None and e.__suppress_context__
+
+
+def test_429_gives_up_after_few_attempts(tmp_path, monkeypatch):
+    import innovation.core.data.s2 as s2m
+    monkeypatch.setattr(s2m.time, "sleep", lambda s: None)
+    n = []
+
+    def get(u, params=None, **kw):
+        n.append(1)
+        return Resp(429, {})
+    import requests
+    c = OpenAlexOnline(tmp_path, http_get=get, delay=0)
+    try:
+        c.search("q", max_date="2024-09-30")
+    except requests.RequestException:
+        pass
+    assert len(n) == 4

@@ -92,3 +92,19 @@ def fetch_field_works(query: str, year_from: int, year_to: int, *,
     cache_key = f"field_{query.replace(' ', '_')}_{year_from}_{year_to}{key_suffix}"
     return _fetch_works(filter_str, cache_key, mailto=mailto,
                         cache_dir=cache_dir, http_get=http_get or requests.get)
+
+
+def redact_key(text: str, key: str) -> str:
+    """text with the API key (raw or URL-encoded) replaced by ***."""
+    from urllib.parse import quote
+    for k in {key, quote(key, safe=""), quote(key)}:
+        if k:
+            text = text.replace(k, "***")
+    return text
+
+
+def redacted_error(exc: Exception, key: str) -> "requests.RequestException":
+    """A fresh error carrying exc's text with the key removed. Raise it `from None`:
+    requests embeds the full URL (api_key=...) in its messages."""
+    import requests
+    return requests.RequestException(redact_key(f"{type(exc).__name__}: {exc}", key))

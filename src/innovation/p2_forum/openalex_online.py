@@ -10,9 +10,11 @@ from pathlib import Path
 
 import requests
 
+from innovation.core.data.openalex import redacted_error
 from innovation.core.data.s2 import _cached_call
 
 WORKS = "https://api.openalex.org/works"
+ATTEMPTS = 4      # a last-resort stage must not stall a run on a persistent 429
 SELECT = "id,doi,title,ids,publication_date"
 
 
@@ -29,8 +31,12 @@ class OpenAlexOnline:
         key = hashlib.sha256(json.dumps([WORKS, params], sort_keys=True).encode()).hexdigest()
         api_key = os.environ.get("OPENALEX_API_KEY", "").strip()
         sent = {**params, "api_key": api_key} if api_key else params
-        out = _cached_call(self.cache_dir / f"{key}.json",
-                           lambda: self.get(WORKS, params=sent), self.delay)
+        try:
+            out = _cached_call(self.cache_dir / f"{key}.json",
+                               lambda: self.get(WORKS, params=sent), self.delay,
+                               attempts=ATTEMPTS)
+        except requests.RequestException as e:
+            raise redacted_error(e, api_key) from None   # the URL carries the key
         return [w for w in ((out or {}).get("results") or []) if isinstance(w, dict)]
 
 

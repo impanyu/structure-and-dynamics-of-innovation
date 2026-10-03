@@ -151,12 +151,13 @@ def openalex_search(query: str, *, mailto: str, cache_dir, http_get=None) -> lis
                               {"search": query, "per-page": 10, "mailto": mailto},
                               Path(cache_dir), sent, attempts=6, delay=1.0,
                               max_sleep=60.0)
-    except requests.RequestException:
+    except requests.RequestException as exc:
         _OA_BREAKER["fails"] += 1
         if _OA_BREAKER["fails"] >= 5:
             _OA_BREAKER.update(fails=0, until=time.time() + 600)
             print("WARN openalex_search circuit OPEN for 10min (5 consecutive failures)")
-        raise
+        from innovation.core.data.openalex import redacted_error
+        raise redacted_error(exc, api_key) from None   # the URL carries the key
     _OA_BREAKER["fails"] = 0
 
     def venue_of(w):

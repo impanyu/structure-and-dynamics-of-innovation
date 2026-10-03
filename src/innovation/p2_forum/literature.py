@@ -160,13 +160,26 @@ class OnlineLiterature:
                 self.last_query_used = short
                 got = stage(run(short))
         if not got and self.openalex is not None:
-            from innovation.p2_forum.openalex_online import map_to_s2
-            hits = self.openalex.search(query, max_date=self.scope.max_date)
-            recs, self.last_unmapped = map_to_s2(hits, self.client, max_date=self.scope.max_date)
-            got = stage(recs)
-            if got:
-                self.last_source = "openalex"
+            got = self._openalex_stage(query, stage)
         self.last_scope_dropped = dropped
+        return got
+
+    def _openalex_stage(self, query: str, stage) -> list[Paper]:
+        """The last-resort stage. A failed call (already key-free) counts as no
+        result and is logged; it must not end the run."""
+        import requests
+        from innovation.p2_forum.openalex_online import map_to_s2
+        try:
+            hits = self.openalex.search(query, max_date=self.scope.max_date)
+            recs, unmapped = map_to_s2(hits, self.client, max_date=self.scope.max_date)
+        except requests.RequestException as e:
+            with (self._store.parent / "openalex_errors.log").open("a") as f:
+                f.write(f"{query[:80]!r}: {e}\n")
+            return []
+        self.last_unmapped = unmapped
+        got = stage(recs)
+        if got:
+            self.last_source = "openalex"
         return got
 
     def get(self, pid: str) -> Paper | None:

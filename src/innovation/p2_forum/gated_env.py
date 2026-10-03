@@ -72,6 +72,7 @@ class GatedForumEnvironment(ForumEnvironment):
             out["showing_results_for"] = rewritten
         if getattr(self.lit, "last_source", "s2") == "openalex":
             out["source"] = "openalex"
+        if getattr(self.lit, "last_unmapped", 0):
             out["unmapped"] = self.lit.last_unmapped
         return out
 

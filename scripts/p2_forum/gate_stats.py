@@ -21,7 +21,7 @@ def gate_counts(events) -> dict:
             c["searches"] += 1
         if r.get("source") == "openalex":
             c["openalex_fallbacks"] += 1
-            c["openalex_unmapped"] += r.get("unmapped", 0)
+        c["openalex_unmapped"] += r.get("unmapped", 0)
         if e["action"] == "related":
             c["related"] += 1
         if e["action"] == "generate" and "node_id" in r:

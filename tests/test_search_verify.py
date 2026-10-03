@@ -280,3 +280,31 @@ def test_openalex_search_sends_key_but_not_in_cache_key(tmp_path, monkeypatch):
     sv.openalex_search("q", mailto="m@x", cache_dir=tmp_path / "c", http_get=get)
     assert len(seen) == 2                      # the pre-key cache entry still hits
     assert "sekrit" not in "".join(f.read_text() for f in (tmp_path / "c2").iterdir())
+
+
+def test_openalex_search_errors_are_redacted(tmp_path, monkeypatch):
+    import pytest
+    import requests
+    import innovation.core.eval.search_verify as sv
+    monkeypatch.setitem(sv._OA_BREAKER, "until", 0.0)
+    monkeypatch.setattr(sv.time, "sleep", lambda s: None)
+    monkeypatch.setenv("OPENALEX_API_KEY", "sekrit")
+
+    class Bad:
+        def __init__(self, code):
+            self.status_code = code
+            self.headers = {}
+
+        def raise_for_status(self):
+            raise requests.HTTPError(
+                f"{self.status_code} Error for url: https://api.openalex.org/works?api_key=sekrit",
+                response=self)
+
+    def conn(url, params=None, **kw):
+        raise requests.ConnectionError("failed: https://api.openalex.org/works?api_key=sekrit")
+    for i, get in enumerate([lambda u, params=None, **kw: Bad(403),
+                             lambda u, params=None, **kw: Bad(429), conn]):
+        with pytest.raises(requests.RequestException) as ei:
+            sv.openalex_search("q", mailto="m", cache_dir=tmp_path / str(i), http_get=get)
+        assert "sekrit" not in str(ei.value) and "***" in str(ei.value)
+        assert ei.value.__cause__ is None

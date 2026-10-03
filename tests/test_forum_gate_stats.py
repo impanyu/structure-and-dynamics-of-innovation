@@ -88,3 +88,8 @@ def test_gate_counts_openalex_fallbacks():
           {"action": "search", "result": {"hits": []}}]
     c = load().gate_counts(ev)
     assert c["openalex_fallbacks"] == 2 and c["openalex_unmapped"] == 3 and c["searches"] == 3
+
+
+def test_gate_counts_sums_unmapped_whatever_the_source():
+    ev = [{"action": "search", "result": {"hits": [], "unmapped": 4}}]
+    assert load().gate_counts(ev)["openalex_unmapped"] == 4
