@@ -231,6 +231,7 @@ def test_online_run_end_to_end_with_fakes(tmp_path):
     # the gated prompt and the topic definitions reach the agent
     assert "You work ONLY within your topics" in llm.calls[0]["system"]
     assert "definition of" in llm.calls[0]["system"]
+    assert "Latest result (full):\n" in llm.calls[1]["user"]
 
 
 def test_online_resume_reuses_the_recorded_topic_ids(tmp_path):
@@ -253,3 +254,15 @@ def test_online_resume_reuses_the_recorded_topic_ids(tmp_path):
     after = json.loads((tmp_path / "r" / "run_meta.json").read_text())
     assert after["topic_ids"] == meta["topic_ids"]
     assert after["display_orders"] == meta["display_orders"]
+
+
+def test_only_online_policies_show_the_latest_result_in_full():
+    from innovation.p2_forum.runner import LATEST_RESULT_CHARS, _build_policies
+    corpus = ForumRunConfig(run_id="r", seed=0, total_steps=1,
+                            agents=[{"agent_id": "a", "k_topics": 1}])
+    pols = _build_policies(corpus, llm=None, model="m", assignments={"a": ["t"]})
+    assert pols["a"].latest_result_chars is None
+    online = _online_cfg()
+    pols = _build_policies(online, llm=None, model="m", assignments={},
+                           display_orders={"a": ["T0"], "b": ["T1"]})
+    assert pols["a"].latest_result_chars == LATEST_RESULT_CHARS == 20000

@@ -73,3 +73,39 @@ def test_gated_doc_asks_for_short_search_queries():
     from innovation.p2_forum.agent import GATED_ACTIONS_DOC
     assert "<short keyword query, 2-6 words>" in GATED_ACTIONS_DOC
     assert "short queries work best" in GATED_ACTIONS_DOC
+
+
+BIG = {"node_id": "p0", "text": "x" * 3000, "cites": [{"node_id": "r12", "title": "last ref"}]}
+
+
+def test_default_policy_prompt_is_unchanged():
+    from innovation.p2_forum.agent import ACTIONS_DOC
+    llm = ScriptedLLM(['{"action": "sample_frontier", "args": {}}'] * 2)
+    pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"], identity="r:a")
+    pol.act({"step": 0, "last_result": {}})
+    pol.act({"step": 1, "last_result": BIG})
+    expected = ("[agent r:a]\n\n" + ACTIONS_DOC + "\n\nRecent history (oldest first):\n"
+                + "(none) -> {}\n" + "sample_frontier -> " + json.dumps(BIG)[:1500]
+                + "\n\nChoose your next action (JSON only):")
+    assert llm.prompts[1][1] == expected
+
+
+def test_gated_policy_shows_the_latest_result_in_full():
+    from innovation.p2_forum.agent import GATED_ACTIONS_DOC, GATED_SYSTEM
+    llm = ScriptedLLM(['{"action": "sample_frontier", "args": {}}'] * 2)
+    pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"], system_template=GATED_SYSTEM,
+                           actions_doc=GATED_ACTIONS_DOC, latest_result_chars=20000)
+    pol.act({"step": 0, "last_result": {}})
+    pol.act({"step": 1, "last_result": BIG})
+    user = llm.prompts[1][1]
+    assert "Latest result (full):\n" + json.dumps(BIG) in user
+    assert user.index("Recent history") < user.index("Latest result (full)")
+    assert user.endswith("\n\nChoose your next action (JSON only):")
+    assert pol.memory[-1] == ("sample_frontier", json.dumps(BIG)[:1500])   # history stays truncated
+
+
+def test_latest_result_is_capped():
+    llm = ScriptedLLM(['{"action": "sample_frontier", "args": {}}'])
+    pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"], latest_result_chars=100)
+    pol.act({"step": 0, "last_result": BIG})
+    assert "Latest result (full):\n" + json.dumps(BIG)[:100] + "\n\n" in llm.prompts[0][1]

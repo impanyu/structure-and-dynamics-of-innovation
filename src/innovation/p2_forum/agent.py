@@ -86,7 +86,8 @@ class ForumAgentPolicy(Policy):
     def __init__(self, *, llm: LLM, model: str, topics: list[str],
                  memory_size: int = 20, identity: str = "",
                  total_steps: int = 0,
-                 system_template: str = FORUM_SYSTEM, actions_doc: str = ACTIONS_DOC):
+                 system_template: str = FORUM_SYSTEM, actions_doc: str = ACTIONS_DOC,
+                 latest_result_chars: int | None = None):
         self.llm = llm
         self.model = model
         self.topics = list(topics)
@@ -97,16 +98,22 @@ class ForumAgentPolicy(Policy):
         bullets = "\n".join(f"- {t}" for t in self.topics)
         self.system = system_template.format(topics=bullets)
         self.actions_doc = actions_doc
+        # None: the newest result appears only in the (truncated) history.
+        # An int: it is also shown in full, up to this many characters, so a
+        # long read (abstract plus a full reference list) is not cut off.
+        self.latest_result_chars = latest_result_chars
         self.memory: deque[tuple[str, str]] = deque(maxlen=memory_size)
         self._last_action: str = "(none)"
 
     def act(self, obs: dict) -> Action:
-        result_snippet = json.dumps(obs.get("last_result", {}))[:1500]
-        self.memory.append((self._last_action, result_snippet))
+        latest = json.dumps(obs.get("last_result", {}))
+        self.memory.append((self._last_action, latest[:1500]))
         history = "\n".join(f"{a} -> {r}" for a, r in self.memory)
         header = f"[agent {self.identity}]\n\n" if self.identity else ""
-        user = (header + self.actions_doc + "\n\nRecent history (oldest first):\n"
-                + history + "\n\nChoose your next action (JSON only):")
+        user = header + self.actions_doc + "\n\nRecent history (oldest first):\n" + history
+        if self.latest_result_chars is not None:
+            user += "\n\nLatest result (full):\n" + latest[:self.latest_result_chars]
+        user += "\n\nChoose your next action (JSON only):"
         reply = self.llm.complete(model=self.model, system=self.system,
                                   user=user, max_tokens=2000)
         action = self._parse(reply)

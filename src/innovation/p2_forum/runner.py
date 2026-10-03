@@ -28,6 +28,9 @@ TOPIC_DRAWS = ("independent", "nested")
 # literature is only in scope through the gate.
 LITERATURES = ("corpus", "online")
 GATINGS = ("none", "topics")
+# Online mode: how much of an agent's newest result its prompt shows in full
+# (older results stay in the history at 1500 characters each).
+LATEST_RESULT_CHARS = 20000
 
 
 @dataclass
@@ -187,7 +190,8 @@ def _build_policies(cfg: ForumRunConfig, *, llm, model, assignments: dict,
                 memory_size=a.get("memory_size", 20),
                 identity=f"{cfg.run_id}:{a['agent_id']}",
                 total_steps=cfg.total_steps,
-                system_template=GATED_SYSTEM, actions_doc=GATED_ACTIONS_DOC)
+                system_template=GATED_SYSTEM, actions_doc=GATED_ACTIONS_DOC,
+                latest_result_chars=LATEST_RESULT_CHARS)
             for a in cfg.agents}
     return {
         a["agent_id"]: ForumAgentPolicy(
