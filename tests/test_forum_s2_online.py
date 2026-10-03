@@ -118,3 +118,6 @@ def test_recommend_null_and_missing(tmp_path):
                     "/forpaper/m": Resp(404, {})})
     c = S2Online(tmp_path, http_get=get, delay=0)
     assert c.recommend("n") == [] and c.recommend("m") == []
+    assert c.recommend("m") == []
+    assert [u for u, _ in get.calls].count(
+        "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/m") == 1

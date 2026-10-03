@@ -80,5 +80,6 @@ class S2Online:
         articles"). The all-cs pool, not the default last-60-days one; 500 is
         the maximum, over-fetched because the scope rule drops many."""
         out = self._call(f"{REC_BASE}/papers/forpaper/{pid}",
-                         {"fields": FIELDS, "limit": 500, "from": "all-cs"})
+                         {"fields": FIELDS, "limit": 500, "from": "all-cs"},
+                         cache_404={"recommendedPapers": []})
         return self._clean((out or {}).get("recommendedPapers") or [])
