@@ -1,8 +1,7 @@
 import pytest
 
 from innovation.core.llm import FakeLLM
-from innovation.p2_forum.capacity import (BulkCounter, CapacityEstimator, NoTextAsEmpty,
-                                          capacity,
+from innovation.p2_forum.capacity import (BulkCounter, CapacityEstimator, capacity,
                                           parse_query, precision, union_count,
                                           venue_chunks)
 
@@ -158,19 +157,11 @@ def test_estimator_retries_a_bad_query_then_gives_up():
                           tagger_factory=FakeTagger).query({"name": "A", "definition": "a"})
 
 
-def test_no_text_reply_leaves_the_paper_unlabeled_instead_of_raising():
-    from innovation.p2_forum.tagger import TopicTagger
-    from innovation.p2_forum.topics import Topic
 
-    class Refusing:
-        def complete(self, **kw):
-            raise ValueError("no text in reply (stop_reason=refusal)")
-
-    class Broken:
-        def complete(self, **kw):
-            raise ValueError("something else")
-    topics = [Topic(id=0, name="A", definition="a")]
-    tagger = TopicTagger(llm=NoTextAsEmpty(Refusing()), model="m", topics=topics)
-    assert tagger.label_many(["x", "y"]) == [None, None]
-    with pytest.raises(ValueError, match="something else"):
-        NoTextAsEmpty(Broken()).complete(model="m", system="s", user="u")
+def test_citation_only_cache_key_depends_on_the_venue_list(tmp_path):
+    s2 = FakeS2()
+    BulkCounter(tmp_path, VENUES, http_get=s2, delay=0).count("q | r")
+    n = len(s2.calls)
+    BulkCounter(tmp_path, [VENUES[0], VENUES[2]], http_get=s2, delay=0).count("q | r")
+    cited_only = [p for p in s2.calls[n:] if "venue" not in p]
+    assert len(cited_only) == 1        # a different list cannot reuse the old sample

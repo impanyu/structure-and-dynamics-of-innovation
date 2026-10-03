@@ -166,7 +166,8 @@ def _load_online_world(cfg):
             + ", ".join(f"online.{k}" for k in stale) + " from the config.")
     topics = load_topics(cfg["topics_file"])
     llm = CachedLLM(RoutedLLM(), Path(on["cache_dir"]) / "llm")
-    tagger = TopicTagger(llm=llm, model=cfg["models"]["tagger"], topics=topics)
+    tagger = TopicTagger(llm=llm, model=cfg["models"]["tagger"], topics=topics,
+                         refusal_log=Path(on["cache_dir"]) / "tagger_refusals.jsonl")
     scope = Scope(venue_aliases=_tier1_aliases(cfg),
                   min_citations=cfg["eval"].get("recognized_min_citations", 50),
                   max_date=on["max_pub_date"])

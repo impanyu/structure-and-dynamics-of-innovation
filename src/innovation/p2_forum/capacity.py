@@ -146,7 +146,8 @@ class BulkCounter:
             params["venue"] = ",".join(chunk)
         if cited:
             params["minCitationCount"] = str(self.min_citations)
-        spec = [params, sample, self.sample_n]
+        spec = [params, sample, self.sample_n,
+                sorted(self.venue_set) if sample == "cited_only" else None]
         key = hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()
         target = chunk[0] if chunk and len(chunk) == 1 else None
 
@@ -201,23 +202,6 @@ class BulkCounter:
 
 # --- the estimator --------------------------------------------------------
 
-class NoTextAsEmpty:
-    """Wraps the tagger's LLM (outside its cache): a reply without text (e.g.
-    stop_reason=refusal) becomes "", so the tagger retries and finally leaves
-    that sample paper unlabeled instead of aborting the whole estimate.
-    Nothing is cached for such a reply."""
-
-    def __init__(self, inner):
-        self.inner = inner
-
-    def complete(self, **kw) -> str:
-        try:
-            return self.inner.complete(**kw)
-        except ValueError as e:
-            if not str(e).startswith("no text in reply"):
-                raise
-            return ""
-
 
 def _text(rec: dict) -> str:
     title, abstract = (rec.get("title") or "").strip(), (rec.get("abstract") or "").strip()
@@ -229,6 +213,11 @@ class Estimate:
     records: list[dict]                       # per topic, in list order
     labels: dict[str, list[int] | None]       # sample paper id -> labels
     titles: list[list[str]]                   # per topic: sample titles labeled with it
+
+    @property
+    def unlabeled(self) -> int:
+        """Sample papers the tagger left unlabeled (refusals, unparsable replies)."""
+        return sum(v is None for v in self.labels.values())
 
     @property
     def capacities(self) -> list[float]:

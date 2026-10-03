@@ -3,13 +3,24 @@ a fixed system-prompt prefix so a provider-side prompt cache can reuse it.
 Agents never label their own work: this runs inside the environment."""
 import json
 import re
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from innovation.p2_forum.topics import Topic
 
 
 class UnlabeledError(Exception):
     pass
+
+
+def is_refusal(e: Exception) -> bool:
+    """The LLM client's error for a reply without text because the model
+    refused (core.llm.AnthropicLLM); other no-text stop reasons are not."""
+    msg = str(e)
+    return (isinstance(e, ValueError) and msg.startswith("no text in reply")
+            and "stop_reason=refusal" in msg)
 
 
 def parse_labels(reply: str, n_topics: int, max_labels: int = 5) -> list[int] | None:
@@ -35,9 +46,15 @@ def parse_labels(reply: str, n_topics: int, max_labels: int = 5) -> list[int] | 
 
 class TopicTagger:
     def __init__(self, *, llm, model: str, topics: list[Topic],
-                 max_labels: int = 5, attempts: int = 3):
+                 max_labels: int = 5, attempts: int = 3,
+                 refusal_log: Path | None = None):
         self.llm, self.model, self.topics = llm, model, topics
         self.max_labels, self.attempts = max_labels, attempts
+        # A refusal is a failed attempt (retried; after the last one the item
+        # is unlabeled), never a crash; each one is counted and logged.
+        self.refusal_log = Path(refusal_log) if refusal_log else None
+        self.refusals = 0
+        self._lock = threading.Lock()
         listing = "\n".join(f"{t.id}: {t.name} — {t.definition}" for t in topics)
         self.system = (
             "You label AI research texts with topics from a fixed list.\n\n"
@@ -51,12 +68,28 @@ class TopicTagger:
             # The attempt number is part of the prompt, so a disk cache keyed on
             # the prompt never replays a reply that already failed to parse.
             user = f"TEXT:\n{text}" + (f"\n\n(retry {attempt})" if attempt else "")
-            reply = self.llm.complete(model=self.model, system=self.system,
-                                      user=user, max_tokens=100)
+            try:
+                reply = self.llm.complete(model=self.model, system=self.system,
+                                          user=user, max_tokens=100)
+            except ValueError as e:
+                if not is_refusal(e):
+                    raise
+                self._record_refusal(text, attempt)
+                continue
             labels = parse_labels(reply, len(self.topics), self.max_labels)
             if labels is not None:
                 return labels
         raise UnlabeledError(f"no valid labels after {self.attempts} attempts")
+
+    def _record_refusal(self, text: str, attempt: int) -> None:
+        line = json.dumps({"ts": time.time(), "model": self.model,
+                           "text_head": text[:200], "attempt": attempt}) + "\n"
+        with self._lock:
+            self.refusals += 1
+            if self.refusal_log:
+                self.refusal_log.parent.mkdir(parents=True, exist_ok=True)
+                with self.refusal_log.open("a") as f:
+                    f.write(line)
 
     def label_many(self, texts: list[str], workers: int = 8) -> list[list[int] | None]:
         def one(t):

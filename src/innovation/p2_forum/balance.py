@@ -202,7 +202,8 @@ def _round_summary(r: int, est, n: int, info) -> dict:
     caps = est.capacities
     tau, lo, hi = band(caps, n)
     out = {"round": r, "tau": tau, "band": [lo, hi], "max": max(caps), "min": min(caps),
-           "max_min_ratio": max_min_ratio(caps), "out_of_band": len(out_of_band(caps, n))}
+           "max_min_ratio": max_min_ratio(caps), "out_of_band": len(out_of_band(caps, n)),
+           "unlabeled_samples": est.unlabeled}
     if info:
         out["changes"] = {k: info[k] for k in ("splits", "merges", "restored_from")}
     return out

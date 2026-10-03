@@ -10,6 +10,7 @@ run resumes. The user reviews the draft; renaming it to topics-v2.yaml freezes i
 Run: uv run python scripts/p2_forum/balance_topics.py
 """
 import argparse
+import threading
 import time
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from innovation.core.config import load_env
 from innovation.core.ideas.embed import Embedder
 from innovation.core.llm import AnthropicLLM, CachedLLM, RoutedLLM
 from innovation.p2_forum.balance import LLMRewriter, Similarity, run_balance, write_outputs
-from innovation.p2_forum.capacity import BulkCounter, CapacityEstimator, NoTextAsEmpty
+from innovation.p2_forum.capacity import BulkCounter, CapacityEstimator
 from innovation.p2_forum.tagger import TopicTagger
 from innovation.p2_forum.topics import backbone_prompt, parse_topic_list
 
@@ -37,10 +38,11 @@ class Counting:
     """Counts calls that reach the provider (placed under CachedLLM)."""
 
     def __init__(self, inner):
-        self.inner, self.calls = inner, 0
+        self.inner, self.calls, self._lock = inner, 0, threading.Lock()
 
     def complete(self, **kw):
-        self.calls += 1
+        with self._lock:
+            self.calls += 1
         return self.inner.complete(**kw)
 
 
@@ -60,11 +62,11 @@ def backbone_draft(llm, venues) -> list[dict]:
 
 
 def summary(result) -> str:
-    lines = ["| round | max/min | out of band | tau |", "|---|---|---|---|"]
+    lines = ["| round | max/min | out of band | tau | unlabeled samples |", "|---|---|---|---|---|"]
     for h in result["history"]:
         r = h["max_min_ratio"]
-        lines.append(f"| {h['round']} | {r:.2f} | {h['out_of_band']} | {h['tau']:.0f} |"
-                     if r else f"| {h['round']} | inf | {h['out_of_band']} | {h['tau']:.0f} |")
+        lines.append(f"| {h['round']} | {f'{r:.2f}' if r else 'inf'} | {h['out_of_band']} "
+                     f"| {h['tau']:.0f} | {h['unlabeled_samples']} |")
     lines += ["", "Exceptions:" if result["exceptions"] else "Exceptions: none"]
     lines += [f"- {e['id']}. {e['name']} ({e['capacity']:.0f}, {e['side']}): {e['reason']}"
               for e in result["exceptions"]]
@@ -92,18 +94,27 @@ def main():
     topics = backbone_draft(gen_llm, venues)
     print(f"step A: backbone draft with {len(topics)} topics", flush=True)
     counter = BulkCounter(CACHE / "capacity", tier1)
+    taggers = []
+
+    def make_tagger(ts):
+        taggers.append(TopicTagger(llm=tag_llm, model=MODEL, topics=ts,
+                                   refusal_log=CACHE / "capacity" / "tagger_refusals.jsonl"))
+        return taggers[-1]
     estimate = CapacityEstimator(
         counter=counter, llm=gen_llm, model=MODEL, workers=args.workers,
-        tagger_factory=lambda ts: TopicTagger(llm=NoTextAsEmpty(tag_llm), model=MODEL, topics=ts),
+        tagger_factory=make_tagger,
         log=lambda m: print(m, flush=True))
     result = run_balance(topics, estimate, LLMRewriter(gen_llm, MODEL),
                          Similarity(Embedder().encode), n=N, max_rounds=args.max_rounds,
                          log=lambda m: print(m, flush=True))
     run = {"wall_clock_s": round(time.time() - t0), "s2_live_calls": counter.live_calls,
-           "tagger_live_calls": tag.calls, "generation_live_calls": gen.calls}
+           "tagger_live_calls": tag.calls, "generation_live_calls": gen.calls,
+           "tagger_refusals": sum(t.refusals for t in taggers),
+           "unlabeled_samples_final": result["estimate"].unlabeled}
     write_outputs(result, OUT_YAML, OUT_JSON, HEADER, run)
     print(f"wrote {OUT_YAML} and {OUT_JSON}; {run}")
     print(summary(result))
+    print(f"tagger refusals: {run['tagger_refusals']}")
 
 
 if __name__ == "__main__":
