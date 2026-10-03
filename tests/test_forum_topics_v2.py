@@ -3,7 +3,7 @@ import json
 import pytest
 import yaml
 
-from innovation.p2_forum.topics import (Topic, consolidation_prompt,
+from innovation.p2_forum.topics import (Topic, backbone_prompt, consolidation_prompt,
                                         load_topics, parse_topic_list)
 
 VENUES = [{"venue": "NeurIPS", "areas": ["Deep learning", "Theory"]},
@@ -18,6 +18,16 @@ def _topics(n):
 def test_prompt_lists_every_area_with_its_venue():
     p = consolidation_prompt(VENUES, n=128)
     assert "NeurIPS: Deep learning" in p and "ACL: Machine translation" in p
+    assert "exactly 128" in p
+
+
+def test_backbone_prompt_groups_aaai_keywords_and_lists_other_areas():
+    venues = VENUES + [{"venue": "AAAI", "areas": ["ML: Clustering", "ML: Ensemble Methods",
+                                                    "CV: Biometrics"]}]
+    p = backbone_prompt(venues, n=128)
+    assert "[ML] Clustering; Ensemble Methods" in p and "[CV] Biometrics" in p
+    assert "NeurIPS: Deep learning" in p and "ACL: Machine translation" in p
+    assert "AAAI: ML: Clustering" not in p
     assert "exactly 128" in p
 
 

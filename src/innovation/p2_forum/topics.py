@@ -43,6 +43,41 @@ def consolidation_prompt(venues: list[dict], n: int) -> str:
         "whose areas this topic absorbs.")
 
 
+def backbone_prompt(venues: list[dict], n: int, backbone: str = "AAAI") -> str:
+    """Uniform-granularity variant: the backbone venue's fine keyword list
+    (grouped by its 'PREFIX: keyword' prefixes) sets the granularity, and the
+    other venues' areas are mapped onto it (coarse areas split, fine kept)."""
+    groups: dict[str, list[str]] = {}
+    for v in venues:
+        if v["venue"] != backbone:
+            continue
+        for a in v["areas"]:
+            prefix, sep, kw = a.partition(":")
+            groups.setdefault(prefix.strip() if sep else "", []).append(
+                kw.strip() if sep else a)
+    ref = "\n".join(f"[{p}] " + "; ".join(kws) for p, kws in groups.items())
+    others = "\n".join(f"{v['venue']}: {a}" for v in venues
+                       if v["venue"] != backbone for a in v["areas"])
+    return (
+        f"GRANULARITY REFERENCE: the {backbone} keyword list, grouped by prefix:\n"
+        f"{ref}\n\n"
+        "OTHER VENUES' submission areas, one per line as '<venue>: <area>':\n"
+        f"{others}\n\n"
+        f"Design exactly {n} research topics that together cover all of the above, "
+        f"every topic at the granularity of one {backbone} keyword or a few closely "
+        f"related {backbone} keywords. Map the other venues' areas onto that "
+        "granularity: split coarse areas (e.g. 'Deep Learning', 'Generative Models', "
+        "'General Machine Learning') into their real sub-areas at keyword level, and "
+        "keep areas that are already fine. Topics must not overlap in meaning, must "
+        "be of uniform granularity, and must avoid generic modifiers such as "
+        "'robust', 'efficient', 'scalable' or 'advances in' unless they name the "
+        "topic itself.\n"
+        "Reply with ONLY a JSON list of objects: "
+        '{"name": "<3-8 word topic name>", "definition": "<one sentence: what is in, '
+        'what is out>", "sources": ["<venue>", ...]} where sources lists every venue '
+        "whose areas or keywords this topic absorbs.")
+
+
 def parse_topic_list(reply: str, n: int, venue_names: set[str]) -> list[dict]:
     start, end = reply.find("["), reply.rfind("]")
     if start == -1 or end <= start:
