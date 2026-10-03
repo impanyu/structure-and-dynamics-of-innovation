@@ -69,10 +69,16 @@ def test_gated_prompt_states_the_hard_rule_and_uses_given_order():
     assert GATED_ACTIONS_DOC.splitlines()[1] in pol.llm.calls[0]["user"]
 
 
-def test_gated_doc_asks_for_short_search_queries():
+def test_gated_doc_asks_for_researcher_style_searches():
     from innovation.p2_forum.agent import GATED_ACTIONS_DOC
-    assert "<short keyword query, 2-6 words>" in GATED_ACTIONS_DOC
-    assert "short queries work best" in GATED_ACTIONS_DOC
+    lines = GATED_ACTIONS_DOC.splitlines()
+    assert lines[1] == ('{"action": "search", "args": {"query": "<the title of a specific paper, '
+                        'or a short meaningful phrase as you would type into Google Scholar>", '
+                        '"k": 5}} -- search the published literature (do not paste lists of keywords)')
+    assert lines[2] == ('{"action": "browse", "args": {"node_id": "<paper id>"}} -- open a paper by '
+                        'its id (from a search result or a reference list) to read its abstract, '
+                        'its full reference list and the papers citing it')
+    assert "short keyword query" not in GATED_ACTIONS_DOC
 
 
 BIG = {"node_id": "p0", "text": "x" * 3000, "cites": [{"node_id": "r12", "title": "last ref"}]}

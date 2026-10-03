@@ -71,8 +71,8 @@ Your topics:
 {topics}"""
 
 GATED_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
-{"action": "search", "args": {"query": "<short keyword query, 2-6 words>", "k": 5}} -- search the literature online (short queries work best)
-{"action": "browse", "args": {"node_id": "<paper id>"}} -- read a paper's abstract, references and citations
+{"action": "search", "args": {"query": "<the title of a specific paper, or a short meaningful phrase as you would type into Google Scholar>", "k": 5}} -- search the published literature (do not paste lists of keywords)
+{"action": "browse", "args": {"node_id": "<paper id>"}} -- open a paper by its id (from a search result or a reference list) to read its abstract, its full reference list and the papers citing it
 {"action": "sample_frontier", "args": {}} -- jump to a random paper in one of your topics
 {"action": "search_board", "args": {"query": "<text>", "k": 5}} -- semantic search over the board
 {"action": "browse_board", "args": {"node_id": "<post id>"}} -- read a post and its reference neighbors
