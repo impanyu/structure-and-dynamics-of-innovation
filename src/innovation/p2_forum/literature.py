@@ -55,6 +55,20 @@ class Scope:
         return None
 
 
+STOPWORDS = frozenset(
+    "a an the of to for in on with and or how what which using use via by from "
+    "into is are be that this we our".split())
+PUNCT = ".,;:!?\"'()[]{}"
+
+
+def drop_stopwords(query: str, max_words: int = 8) -> str:
+    """A search engine's fallback rewrite: drop English stopwords and keep the
+    first max_words remaining words (surrounding punctuation stripped)."""
+    words = [w.strip(PUNCT) for w in query.split()]
+    kept = [w for w in words if w and w.lower() not in STOPWORDS]
+    return " ".join(kept[:max_words])
+
+
 def label_store_path(cache_dir, tagger) -> Path:
     """Labels depend on the topic list, so the store is keyed by a hash of the
     tagger's system prompt (which embeds the list). Taggers without one
@@ -70,6 +84,7 @@ class OnlineLiterature:
         self.client, self.scope, self.tagger = client, scope, tagger
         self.search_pool = search_pool
         self.last_scope_dropped = 0   # raw records the latest search/references/citations dropped
+        self.last_query_used: str | None = None   # the rewrite the latest search ran, if any
         self._papers: dict[str, Paper] = {}
         self._known_ids: set[str] = set()
         self._lock = threading.Lock()
@@ -116,8 +131,20 @@ class OnlineLiterature:
         return out
 
     def search(self, query: str) -> list[Paper]:
-        return self._admit(self.client.search(query, limit=self.search_pool,
-                                              max_date=self.scope.max_date))
+        """Relevance search, forgiving like a search engine: when it finds no
+        record, try the query as a paper title, then once more with the
+        stopwords dropped (recorded in last_query_used)."""
+        self.last_query_used = None
+        run = lambda q: self.client.search(q, limit=self.search_pool, max_date=self.scope.max_date)
+        raws = run(query)
+        if not raws:
+            raws = self.client.match(query, max_date=self.scope.max_date)
+        if not raws:
+            short = drop_stopwords(query)
+            if short and short != query:
+                raws = run(short)
+                self.last_query_used = short
+        return self._admit(raws)
 
     def get(self, pid: str) -> Paper | None:
         if pid in self._papers:

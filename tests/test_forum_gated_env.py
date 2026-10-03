@@ -23,6 +23,7 @@ class FakeLit:
         self.refs = {"p0": ["p1", "p2"]}
         self.cits = {"p0": ["p3"]}
         self.last_scope_dropped = 0
+        self.last_query_used = None
 
     def search(self, q):
         return list(P.values())
@@ -252,3 +253,14 @@ def test_browse_lists_every_readable_reference_compactly(tmp_path):
     assert v["cites"][3] == {"node_id": "r3", "title": "ref 3", "year": 2020, "venue": "ICML"}
     assert v["filtered"] == {"scope": 0, "topic": 2}       # p1 (cites) and p3 (cited_by)
     assert "text" in v and "topics" in v                   # the paper itself stays full
+
+
+def test_search_reports_a_rewritten_query(tmp_path):
+    env = make(tmp_path)
+    out = env.execute("a", 0, Action("search", {"query": "about T0", "k": 5}))
+    assert "showing_results_for" not in out
+    env.lit.last_query_used = "T0 rewritten"
+    out = env.execute("a", 1, Action("search", {"query": "about the T0", "k": 5}))
+    assert out["showing_results_for"] == "T0 rewritten" and out["hits"]
+    f = env.execute("a", 2, Action("sample_frontier", {}))
+    assert "showing_results_for" not in f

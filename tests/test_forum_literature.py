@@ -33,13 +33,22 @@ def test_scope_reads_publication_venue_names():
 
 
 class FakeClient:
-    def __init__(self, papers, refs=None, cits=None):
+    def __init__(self, papers, refs=None, cits=None, by_query=None, titles=None):
         self.papers, self.refs, self.cits = papers, refs or {}, cits or {}
+        self.by_query, self.titles = by_query, titles or {}   # by_query: query -> raw list
         self.search_calls = 0
+        self.queries = []
 
     def search(self, q, *, limit, max_date):
         self.search_calls += 1
+        self.queries.append(("search", q))
+        if self.by_query is not None:
+            return self.by_query.get(q, [])[:limit]
         return list(self.papers.values())[:limit]
+
+    def match(self, title, *, max_date):
+        self.queries.append(("match", title))
+        return self.titles.get(title, [])
 
     def paper(self, pid):
         return self.papers.get(pid)
@@ -186,3 +195,48 @@ def test_label_store_is_keyed_by_tagger_system(tmp_path):
     t = FakeTagger({})
     t.system = "list A"
     assert label_store_path(tmp_path, t) == a._store
+
+
+SAE = "how to use sparse autoencoders to find interpretable features in language models"
+
+
+def test_search_uses_the_query_as_is_when_it_finds_records(tmp_path):
+    L, _ = lit(tmp_path, {"a": raw("a")})
+    assert [p.paper_id for p in L.search(SAE)] == ["a"]
+    assert L.last_query_used is None and L.client.queries == [("search", SAE)]
+
+
+def test_search_falls_back_to_a_title_match(tmp_path):
+    title = "LRM: Large Reconstruction Model for Single Image to 3D"
+    client = FakeClient({}, by_query={}, titles={title: [raw("lrm")]})
+    L = OnlineLiterature(client=client, scope=SCOPE, tagger=FakeTagger({}), cache_dir=tmp_path)
+    assert [p.paper_id for p in L.search(title)] == ["lrm"]
+    assert L.last_query_used is None
+    assert client.queries == [("search", title), ("match", title)]
+
+
+def test_search_falls_back_to_dropping_stopwords(tmp_path):
+    short = "sparse autoencoders find interpretable features language models"
+    client = FakeClient({}, by_query={short: [raw("s"), raw("late", date="2025-01-01")]})
+    L = OnlineLiterature(client=client, scope=SCOPE, tagger=FakeTagger({}), cache_dir=tmp_path)
+    assert [p.paper_id for p in L.search(SAE)] == ["s"]
+    assert L.last_query_used == short and L.last_scope_dropped == 1
+    assert client.queries == [("search", SAE), ("match", SAE), ("search", short)]
+    L.search(short)                       # a later plain search resets it
+    assert L.last_query_used is None
+
+
+def test_stopword_rewrite_keeps_the_first_eight_words(tmp_path):
+    from innovation.p2_forum.literature import drop_stopwords
+    assert drop_stopwords("The role of attention in a model") == "role attention model"
+    assert drop_stopwords("one two three four five six seven eight nine ten") == \
+        "one two three four five six seven eight"
+    assert drop_stopwords("How, using what?") == ""
+
+
+def test_no_retry_when_the_rewrite_changes_nothing(tmp_path):
+    client = FakeClient({}, by_query={})
+    L = OnlineLiterature(client=client, scope=SCOPE, tagger=FakeTagger({}), cache_dir=tmp_path)
+    assert L.search("diffusion transformers") == []
+    assert client.queries == [("search", "diffusion transformers"), ("match", "diffusion transformers")]
+    assert L.last_query_used is None

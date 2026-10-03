@@ -64,9 +64,13 @@ class GatedForumEnvironment(ForumEnvironment):
             return refused
         found = self.lit.search(query)
         scope = self.lit.last_scope_dropped
+        rewritten = self.lit.last_query_used
         gated = self._gated_papers(agent_id, found)
-        return {"hits": [self._paper_hit(p, l) for p, l in gated[:k]],
-                "filtered": {"scope": scope, "topic": len(found) - len(gated)}}
+        out = {"hits": [self._paper_hit(p, l) for p, l in gated[:k]],
+               "filtered": {"scope": scope, "topic": len(found) - len(gated)}}
+        if rewritten:     # like a search engine's "Showing results for ..."
+            out["showing_results_for"] = rewritten
+        return out
 
     def _do_browse(self, *, agent_id, step, node_id: str) -> dict:
         p = self.lit.get(node_id)

@@ -69,3 +69,19 @@ def test_null_data_and_null_entries_are_tolerated(tmp_path):
     assert c.search("q", limit=5, max_date="2024-09-30") == []
     assert c.references("z") == [P]
     assert c.citations("z") == []
+
+
+def test_match_returns_the_data_list_and_caches(tmp_path):
+    get = fake_get({"/paper/search/match": Resp(200, {"data": [{**P, "matchScore": 99.0}]})})
+    c = S2Online(tmp_path, http_get=get, delay=0)
+    got = c.match("A", max_date="2024-09-30")
+    assert [p["paperId"] for p in got] == ["a"]
+    assert c.match("A", max_date="2024-09-30") == got
+    assert len(get.calls) == 1
+    url, params = get.calls[0]
+    assert url.endswith("/paper/search/match") and params["query"] == "A"
+
+
+def test_match_without_a_title_match_is_empty(tmp_path):
+    c = S2Online(tmp_path, http_get=fake_get({"/paper/search/match": Resp(404, {})}), delay=0)
+    assert c.match("no such title", max_date="2024-09-30") == []

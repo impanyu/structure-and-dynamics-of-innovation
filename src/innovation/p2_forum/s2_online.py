@@ -49,6 +49,12 @@ class S2Online:
                           "publicationDateOrYear": f":{max_date}"})
         return self._clean(self._data(out))
 
+    def match(self, title: str, *, max_date: str) -> list[dict]:
+        """The single best title match (a list of at most one); [] when S2 finds
+        none (404). max_date is not sent: the scope rule applies the cutoff."""
+        out = self._call(f"{BASE}/paper/search/match", {"query": title, "fields": FIELDS})
+        return self._clean(self._data(out))
+
     def paper(self, pid: str) -> dict | None:
         return self._call(f"{BASE}/paper/{pid}", {"fields": FIELDS})
 
