@@ -73,20 +73,53 @@ def query_prompt(topic: dict) -> str:
         "Reply with ONLY the query on one line.")
 
 
+_TOKEN = re.compile(r'"[^"]*"|[^\s"]+')
+
+
+def _norm_term(t: str) -> str:
+    """One OR term. A bare term is one phrase (quoted when it has a space or
+    hyphen). A term mixing quoted phrases and bare words (e.g.
+    '"genetic algorithm" fuzzy') is S2's implicit AND of its tokens; it is
+    kept token by token in the same normal form."""
+    if '"' not in t:
+        if _BAD_CHARS.search(t):
+            raise ValueError(f"phrase {t!r} has operators")
+        return f'"{t}"' if re.search(r"[\s-]", t) else t
+    if t.count('"') % 2 or _TOKEN.sub("", t).strip():
+        raise ValueError(f"phrase {t!r} has stray quotes")
+    out = []
+    for tok in _TOKEN.findall(t):
+        inner = tok[1:-1].strip() if tok.startswith('"') else tok
+        if not inner or _BAD_CHARS.search(inner):
+            raise ValueError(f"phrase {t!r} has operators or empty quotes")
+        # Same normal form as a pure term: quoted iff it has a space or hyphen.
+        out.append(f'"{inner}"' if re.search(r"[\s-]", inner) else inner)
+    return " ".join(out)
+
+
 def parse_query(reply: str) -> str:
     line = next((ln.strip().strip("`").strip() for ln in reply.splitlines()
                  if ln.strip().strip("`").strip()), "")
     terms = [t.strip() for t in line.split("|")]
     if not 2 <= len(terms) <= 5 or not all(terms):
         raise ValueError(f"need 2-5 non-empty phrases joined by |, got {line!r}")
-    out = []
-    for t in terms:
-        inner = t[1:-1] if len(t) >= 2 and t[0] == t[-1] == '"' else t
-        if '"' in inner or _BAD_CHARS.search(inner) or not inner.strip():
-            raise ValueError(f"phrase {t!r} has operators or stray quotes")
-        inner = inner.strip()
-        out.append(f'"{inner}"' if re.search(r"[\s-]", inner) else inner)
-    return " | ".join(out)
+    return " | ".join(_norm_term(t) for t in terms)
+
+
+def fallback_query(name: str) -> str | None:
+    """Deterministic query from the topic name when the LLM gave no valid one:
+    split on '&', ',', '/' and the word 'and', strip other punctuation, quote
+    each phrase, join with |. None when nothing usable is left."""
+    parts = re.split(r"\s*(?:&|,|/|\band\b)\s*", name, flags=re.I)
+    phrases = []
+    for p in parts:
+        p = re.sub(r"[^\w\s-]", " ", p)
+        p = re.sub(r"\s+", " ", p).strip(" -")
+        if p and p.lower() not in {x.lower() for x in phrases}:
+            phrases.append(p)
+    if not phrases:
+        return None
+    return " | ".join(f'"{p}"' if re.search(r"[\s-]", p) else p for p in phrases[:5])
 
 
 # --- S2 counts ------------------------------------------------------------
@@ -234,23 +267,46 @@ class CapacityEstimator:
         self.counter, self.llm, self.model = counter, llm, model
         self.tagger_factory, self.workers, self.log = tagger_factory, workers, log
 
-    def query(self, topic: dict) -> str:
+    def query(self, topic: dict) -> str | None:
+        """The LLM's query; after 3 invalid replies, fallback_query(name)
+        (logged). The attempt number is in every retry prompt, so the LLM
+        cache cannot replay a rejected reply. None when both fail."""
         prompt, feedback = query_prompt(topic), ""
-        for _ in range(3):
+        for attempt in range(3):
+            user = prompt + feedback + (f"\n\n(attempt {attempt + 1})" if attempt else "")
             reply = self.llm.complete(model=self.model, system=QUERY_SYSTEM,
-                                      user=prompt + feedback, max_tokens=200)
+                                      user=user, max_tokens=200)
             try:
                 return parse_query(reply)
             except ValueError as e:
                 feedback = f"\n\nYour previous answer was rejected: {e}. Fix it."
-        raise RuntimeError(f"no valid query for topic {topic['name']!r} in 3 attempts")
+        q = fallback_query(topic["name"])
+        self.log(f"  query fallback for {topic['name']!r}: {q!r}")
+        return q
+
+    def _count(self, topic: dict):
+        """(query, Counts, error): a topic whose query or counts fail is kept
+        with zero counts and an error, never aborting the estimate. S2
+        outages (retries exhausted on 429/5xx) still raise."""
+        q = self.query(topic)
+        if q is None:
+            return None, Counts(0, 0, 0), "no valid query (LLM and name fallback)"
+        try:
+            return q, self.counter.count(q), None
+        except requests.HTTPError as e:
+            code = getattr(e.response, "status_code", None)
+            if code is None or code >= 500 or code == 429:
+                raise
+            self.log(f"  S2 rejected the query for {topic['name']!r}: {e}")
+            return q, Counts(0, 0, 0), f"S2 rejected the query (HTTP {code})"
 
     def __call__(self, topics: list[dict]) -> Estimate:
-        queries, counts = [], []
+        queries, counts, errors = [], [], []
         for i, t in enumerate(topics):
-            q = self.query(t)
+            q, c, err = self._count(t)
             queries.append(q)
-            counts.append(self.counter.count(q))
+            counts.append(c)
+            errors.append(err)
             if (i + 1) % 16 == 0:
                 self.log(f"  counted {i + 1}/{len(topics)} topics "
                          f"(live S2 calls so far: {self.counter.live_calls})")
@@ -266,7 +322,7 @@ class CapacityEstimator:
         got = tagger.label_many([_text(papers[p]) for p in pids], workers=self.workers)
         labels = dict(zip(pids, got))
         records, titles = [], []
-        for i, (t, q, c) in enumerate(zip(topics, queries, counts)):
+        for i, (t, q, c, err) in enumerate(zip(topics, queries, counts, errors)):
             sv = [r["paperId"] for r in c.venue_sample]
             sc = [r["paperId"] for r in c.citation_sample]
             p_v, k_v = precision(sv, labels, i)
@@ -275,6 +331,8 @@ class CapacityEstimator:
                             "n_v": c.n_v, "n_c": c.n_c, "n_vc": c.n_vc,
                             "p_v": p_v, "p_c": p_c, "sample_v": k_v, "sample_c": k_c,
                             "query": q})
+            if err:
+                records[-1]["error"] = err
             own = [papers[p]["title"] for p in sv + sc if i in (labels.get(p) or [])]
             titles.append(own or [papers[p]["title"] for p in sv + sc])
         return Estimate(records=records, labels=labels, titles=titles)

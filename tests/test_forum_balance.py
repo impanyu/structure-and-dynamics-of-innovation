@@ -206,3 +206,71 @@ def test_similarity_uses_normalized_embeddings():
     sim = Similarity(embed)
     assert sim({"name": "a", "definition": ""}, {"name": "b", "definition": ""}) == pytest.approx(
         1 / math.sqrt(2))
+
+
+class FailingRewriter(FakeRewriter):
+    def __init__(self, fail_split=(), fail_merge=(), **kw):
+        super().__init__(**kw)
+        self.fail_split, self.fail_merge = set(fail_split), set(fail_merge)
+
+    def split(self, t, p, titles, taken):
+        if t["name"] in self.fail_split:
+            raise RuntimeError("no valid LLM answer in 3 attempts")
+        return super().split(t, p, titles, taken)
+
+    def merge(self, s, t, taken):
+        if s["name"] in self.fail_merge:
+            raise RuntimeError("no valid LLM answer in 3 attempts")
+        return super().merge(s, t, taken)
+
+
+def test_failed_split_and_merge_keep_the_topics_and_flag_them():
+    caps = [60, 20, 15, 5]
+    rw = FailingRewriter(fail_split={"T0"}, fail_merge={"T3"})
+    topics, flags, info = rebalance_round(_topics(4), _est(caps), rw, TableSim(), n=4)
+    assert [t["name"] for t in topics] == ["T0", "T1", "T2", "T3"]
+    assert flags["T0"].startswith("split failed") and flags["T3"].startswith("merge failed")
+    assert info["splits"] == [] and info["merges"] == []
+
+
+def test_a_topic_whose_estimate_failed_is_frozen_and_listed():
+    est = _est([30, 30, 30, 0])
+    est.records[3]["error"] = "no valid query (LLM and name fallback)"
+    rw = FakeRewriter()
+    topics, flags, _ = rebalance_round(_topics(4), est, rw, TableSim(), n=4)
+    assert rw.merges == [] and [t["name"] for t in topics] == ["T0", "T1", "T2", "T3"]
+    assert flags["T3"].startswith("no valid query")
+
+    def estimate(ts):
+        e = _est([25, 25, 25, 25])
+        e.records[3]["error"] = "no valid query (LLM and name fallback)"
+        return e
+    out = run_balance(_topics(4), estimate, rw, TableSim(), n=4, log=lambda *_: None)
+    assert [(x["name"], x["side"]) for x in out["exceptions"]] == [("T3", "in band")]
+    assert out["exceptions"][0]["reason"].startswith("no valid query")
+
+
+def test_frozen_topics_are_never_merge_targets():
+    s, a = W("S", 1, {0}), W("A", 5, {1})
+    a["frozen"] = True
+    assert choose_merge_target(s, [s, a], {"p": [0, 1]}, TableSim(), cap=None) is None
+
+
+def test_restore_moves_past_a_failed_split():
+    work = [W("A", 10, {0}), W("B", 40, {1})]
+    out = restore_count(work, 3, {}, TableSim(), FailingRewriter(fail_split={"B"}),
+                        cap=100, titles_of=lambda w: [])
+    assert [w["name"] for w in out] == ["A/0", "A/1", "B"]
+
+
+def test_round_is_reverted_when_n_cannot_be_restored():
+    # T0 splits (4 -> 6 topics) and every merge is refused: n cannot be restored.
+    caps = [80, 20, 15, 5]
+
+    class RefuseAll(FakeRewriter):
+        def merge(self, s, t, taken):
+            return None
+    rw = RefuseAll()
+    topics, flags, info = rebalance_round(_topics(4), _est(caps), rw, TableSim(), n=4)
+    assert [t["name"] for t in topics] == ["T0", "T1", "T2", "T3"]
+    assert "reverted" in info and flags["T0"].startswith("round reverted")

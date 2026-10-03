@@ -70,7 +70,8 @@ def choose_merge_target(s: dict, work: list[dict], labels: dict, sim,
     cap): highest co-labeling rate, ties broken by cosine similarity."""
     best, best_key = None, None
     for t in work:
-        if t is s or (cap is not None and s["capacity"] + t["capacity"] > cap):
+        if t is s or t.get("frozen") or (cap is not None
+                                          and s["capacity"] + t["capacity"] > cap):
             continue
         key = (colabel_rate(labels, s["members"], t["members"]), sim(s, t))
         if best_key is None or key > best_key:
@@ -106,19 +107,32 @@ def _split(w: dict, p: int, titles: list[str], work: list[dict], rewriter) -> li
              "members": w["members"]} for k in kids]
 
 
+REWRITE_ERRORS = (RuntimeError, ValueError)   # LLMRewriter gave up / no text in reply
+
+
+def _try(fn, *args):
+    """(result, error message): a rewriter failure is reported, never raised."""
+    try:
+        return fn(*args), None
+    except REWRITE_ERRORS as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
 def restore_count(work: list[dict], n: int, labels: dict, sim, rewriter, *,
                   cap: float, titles_of, skip: set[str] = frozenset()) -> list[dict]:
     """Back to exactly n topics: while too many, merge the smallest topic into
-    its nearest (within cap when possible) — a refused pair moves on to the
-    next smallest; while too few, split the largest in two."""
+    its nearest (within cap when possible) — a refused or failed pair moves on
+    to the next smallest; while too few, split the largest in two (a failed
+    split moves on to the next largest). Frozen topics are never touched.
+    Raises RuntimeError only when no merge/split at all succeeds."""
     work, refused = list(work), set(skip)
     while len(work) > n:
         for s in sorted(work, key=lambda w: w["capacity"]):
-            if s["name"] in refused:
+            if s["name"] in refused or s.get("frozen"):
                 continue
             t = (choose_merge_target(s, work, labels, sim, cap)
                  or choose_merge_target(s, work, labels, sim, None))
-            named = rewriter.merge(s, t, _names_except(work, s, t)) if t else None
+            named, _ = _try(rewriter.merge, s, t, _names_except(work, s, t)) if t else (None, None)
             if named is None:
                 refused.add(s["name"])
                 continue
@@ -126,16 +140,27 @@ def restore_count(work: list[dict], n: int, labels: dict, sim, rewriter, *,
             break
         else:
             raise RuntimeError(f"cannot restore {n} topics: every merge was refused")
+    failed: set[str] = set()
     while len(work) < n:
-        w = max(work, key=lambda x: x["capacity"])
+        cands = [w for w in work if w["name"] not in failed and not w.get("frozen")]
+        if not cands:
+            raise RuntimeError(f"cannot restore {n} topics: every split failed")
+        w = max(cands, key=lambda x: x["capacity"])
+        kids, _ = _try(_split, w, 2, titles_of(w), work, rewriter)
+        if kids is None:
+            failed.add(w["name"])
+            continue
         i = _at(work, w)
-        work[i:i + 1] = _split(w, 2, titles_of(w), work, rewriter)
+        work[i:i + 1] = kids
     return work
 
 
 def rebalance_round(topics: list[dict], est, rewriter, sim, n: int):
     """One round on an estimated list -> (new topics, flags, info). flags maps
-    a topic name to why it stayed out of band."""
+    a topic name to why it stayed out of band. Nothing here aborts the run: a
+    topic whose estimate failed is frozen (kept as is), a failed split or
+    merge keeps the topic and flags it, and if the list cannot be restored to
+    n the round is reverted."""
     caps = est.capacities
     tau, lo, hi = band(caps, n)
     titles = {i: est.titles[i] for i in range(len(topics))}
@@ -145,31 +170,42 @@ def rebalance_round(topics: list[dict], est, rewriter, sim, n: int):
 
     work = [{"name": t["name"], "definition": t["definition"],
              "sources": list(t.get("sources", [])), "capacity": c,
-             "members": frozenset({i})} for i, (t, c) in enumerate(zip(topics, caps))]
-    flags, info = {}, {"splits": [], "merges": [], "tau": tau, "band": [lo, hi]}
-    for w in [w for w in work if w["capacity"] > hi]:
-        p = split_count(w["capacity"], tau)
+             "members": frozenset({i}), "frozen": "error" in rec}
+            for i, (t, c, rec) in enumerate(zip(topics, caps, est.records))]
+    flags = {w["name"]: rec["error"] for w, rec in zip(work, est.records) if "error" in rec}
+    info = {"splits": [], "merges": [], "tau": tau, "band": [lo, hi]}
+    for w in [w for w in work if w["capacity"] > hi and not w["frozen"]]:
+        kids, err = _try(_split, w, split_count(w["capacity"], tau), titles_of(w), work, rewriter)
+        if kids is None:
+            flags[w["name"]] = f"split failed ({err})"
+            continue
         i = _at(work, w)
-        kids = _split(w, p, titles_of(w), work, rewriter)
         work[i:i + 1] = kids
         info["splits"].append({"topic": w["name"], "into": [k["name"] for k in kids]})
-    for s in sorted([w for w in work if w["capacity"] < lo], key=lambda w: w["capacity"]):
+    for s in sorted([w for w in work if w["capacity"] < lo and not w["frozen"]],
+                    key=lambda w: w["capacity"]):
         if not any(s is w for w in work):
             continue                      # already absorbed as a merge target
         t = choose_merge_target(s, work, est.labels, sim, hi)
         if t is None:
             flags[s["name"]] = "no merge target within the band cap"
             continue
-        named = rewriter.merge(s, t, _names_except(work, s, t))
+        named, err = _try(rewriter.merge, s, t, _names_except(work, s, t))
         if named is None:
-            flags[s["name"]] = f"no sensible merge (with {t['name']!r})"
+            flags[s["name"]] = (f"merge failed ({err})" if err
+                                else f"no sensible merge (with {t['name']!r})")
             continue
         m = _merged(s, t, named)
         _replace_pair(work, s, t, m)
         info["merges"].append({"topics": [s["name"], t["name"]], "into": m["name"]})
     before = len(work)
-    work = restore_count(work, n, est.labels, sim, rewriter, cap=hi,
-                         titles_of=titles_of, skip=set(flags))
+    try:
+        work = restore_count(work, n, est.labels, sim, rewriter, cap=hi,
+                             titles_of=titles_of, skip=set(flags))
+    except RuntimeError as e:
+        info.update(splits=[], merges=[], reverted=str(e))
+        reverted = {t["name"]: f"round reverted: {e}" for t in topics}
+        return [dict(t) for t in topics], {**reverted, **flags}, info
     info["restored_from"] = before
     return ([{"name": w["name"], "definition": w["definition"], "sources": w["sources"]}
              for w in work], flags, info)
@@ -188,11 +224,14 @@ def run_balance(topics: list[dict], estimate, rewriter, sim, *, n: int = 128,
         history.append(_round_summary(rounds, est, n, info))
         log(f"round {rounds}: { {k: v for k, v in history[-1].items() if k != 'changes'} }")
     tau, lo, hi = band(est.capacities, n)
+    bad = sorted(set(out_of_band(est.capacities, n))
+                 | {i for i, r in enumerate(est.records) if "error" in r})
     exceptions = [{"id": i, "name": topics[i]["name"], "capacity": est.capacities[i],
-                   "side": "below" if est.capacities[i] < lo else "above",
-                   "reason": flags.get(topics[i]["name"],
-                                       f"out of band after {rounds} round(s)")}
-                  for i in out_of_band(est.capacities, n)]
+                   "side": ("below" if est.capacities[i] < lo
+                            else "above" if est.capacities[i] > hi else "in band"),
+                   "reason": est.records[i].get("error") or flags.get(
+                       topics[i]["name"], f"out of band after {rounds} round(s)")}
+                  for i in bad]
     return {"topics": topics, "estimate": est, "tau": tau, "band": [lo, hi],
             "rounds": rounds, "history": history, "exceptions": exceptions,
             "max_min_ratio": max_min_ratio(est.capacities)}
@@ -293,9 +332,11 @@ class LLMRewriter:
 
     def _ask(self, prompt: str, parse):
         feedback = ""
-        for _ in range(self.attempts):
+        for attempt in range(self.attempts):
+            # The attempt number keeps a disk cache from replaying a rejected reply.
+            user = prompt + feedback + (f"\n\n(attempt {attempt + 1})" if attempt else "")
             reply = self.llm.complete(model=self.model, system=SYSTEM,
-                                      user=prompt + feedback, max_tokens=4000)
+                                      user=user, max_tokens=4000)
             try:
                 return parse(reply)
             except (ValueError, json.JSONDecodeError, AttributeError) as e:

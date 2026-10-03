@@ -2,6 +2,7 @@ import pytest
 
 from innovation.core.llm import FakeLLM
 from innovation.p2_forum.capacity import (BulkCounter, CapacityEstimator, capacity,
+                                          fallback_query,
                                           parse_query, precision, union_count,
                                           venue_chunks)
 
@@ -146,17 +147,20 @@ def test_estimator_measures_precision_with_current_list():
     assert est.labels["v1b"] == [1]
 
 
-def test_estimator_retries_a_bad_query_then_gives_up():
+def test_estimator_retries_a_bad_query_then_falls_back_to_the_name():
     llm = FakeLLM(["nope", '"alpha one" | two'])
     e = CapacityEstimator(counter=FakeCounter(), llm=llm, model="m",
                           tagger_factory=FakeTagger, log=lambda *_: None)
     assert e.query({"name": "A", "definition": "a"}) == '"alpha one" | two'
     assert "rejected" in llm.calls[1]["user"]
-    with pytest.raises(RuntimeError, match="no valid query"):
-        CapacityEstimator(counter=FakeCounter(), llm=FakeLLM(default="bad"), model="m",
-                          tagger_factory=FakeTagger).query({"name": "A", "definition": "a"})
-
-
+    logs = []
+    bad = FakeLLM(default="bad")
+    e = CapacityEstimator(counter=FakeCounter(), llm=bad, model="m",
+                          tagger_factory=FakeTagger, log=logs.append)
+    assert e.query({"name": "Fuzzy & Evolutionary Methods", "definition": "a"}) == \
+        'Fuzzy | "Evolutionary Methods"'
+    assert len({c["user"] for c in bad.calls}) == 3   # a cache cannot replay a rejected reply
+    assert any("fallback" in m for m in logs)
 
 def test_citation_only_cache_key_depends_on_the_venue_list(tmp_path):
     s2 = FakeS2()
@@ -165,3 +169,44 @@ def test_citation_only_cache_key_depends_on_the_venue_list(tmp_path):
     BulkCounter(tmp_path, [VENUES[0], VENUES[2]], http_get=s2, delay=0).count("q | r")
     cited_only = [p for p in s2.calls[n:] if "venue" not in p]
     assert len(cited_only) == 1        # a different list cannot reuse the old sample
+
+
+def test_parse_query_accepts_s2_implicit_and_terms():
+    # The live failure: a quoted phrase followed by bare words in one OR term.
+    reply = '"neuro-fuzzy" | "genetic algorithm" neural fuzzy | "fuzzy neural network"'
+    assert parse_query(reply) == reply
+    assert parse_query('"fuzzy" | x') == "fuzzy | x"        # same normal form as before
+    for bad in ['"genetic algorithm neural | x', '"a" (b) | x', '"" b | x']:
+        with pytest.raises(ValueError):
+            parse_query(bad)
+
+
+@pytest.mark.parametrize("name, want", [
+    ("Hybrid Neuro-Evolutionary & Fuzzy Optimization Methods",
+     '"Hybrid Neuro-Evolutionary" | "Fuzzy Optimization Methods"'),
+    ("Fairness, Bias and Equity (Tabular)", 'Fairness | Bias | "Equity Tabular"'),
+    ("Reinforcement Learning", '"Reinforcement Learning"'),
+    ("& , /", None),
+])
+def test_fallback_query_from_the_name(name, want):
+    assert fallback_query(name) == want
+
+
+class RejectingCounter(FakeCounter):
+    def count(self, q):
+        import requests
+        resp = type("R", (), {"status_code": 400})()
+        raise requests.HTTPError("400 bad query", response=resp)
+
+
+def test_a_topic_without_a_usable_query_is_kept_with_an_error():
+    topics = [{"name": "& /", "definition": "x", "sources": ["AAAI"]},
+              {"name": "B", "definition": "b", "sources": ["AAAI"]}]
+    est = CapacityEstimator(counter=FakeCounter(), llm=FakeLLM(default="bad"), model="m",
+                            tagger_factory=FakeTagger, log=lambda *_: None)(topics)
+    assert est.records[0]["error"].startswith("no valid query")
+    assert est.records[0]["capacity"] == 0 and est.records[0]["query"] is None
+    assert "error" not in est.records[1]
+    est = CapacityEstimator(counter=RejectingCounter(), llm=FakeLLM(default="a | b"), model="m",
+                            tagger_factory=FakeTagger, log=lambda *_: None)(topics[1:])
+    assert "HTTP 400" in est.records[0]["error"]
