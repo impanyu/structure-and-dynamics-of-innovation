@@ -88,7 +88,8 @@ def main():
     # Thinking off for generation (as build_topic_list.py); the tagger keeps
     # the model default, exactly as it labels at run time.
     gen = Counting(RoutedLLM(anthropic_factory=lambda: AnthropicLLM(thinking={"type": "disabled"})))
-    tag = Counting(RoutedLLM())
+    # Topic-list building only: thinking off for the tagger to cut cost (user decision 2026-10-04); experiment runs keep thinking.
+    tag = Counting(RoutedLLM(anthropic_factory=lambda: AnthropicLLM(thinking={"type": "disabled"})))
     gen_llm, tag_llm = CachedLLM(gen, CACHE / "llm"), CachedLLM(tag, CACHE / "llm")
 
     topics = backbone_draft(gen_llm, venues)
