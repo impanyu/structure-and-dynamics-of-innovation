@@ -75,22 +75,20 @@ exactly the experiment's tagger settings (§4). The result is a paper→labels
 table; the coverage of any topic set S is the share of sample papers with at
 least one label in S (the gate's "any label" rule).
 
-**3.3 Assigning topics for a target coverage c (seed expansion).**
-1. Precompute each topic's own coverage on the sample.
-2. Seed: random among topics whose own coverage < c.
-3. Expand: at each step the candidates are the topics whose **own coverage <
-   the remaining budget** (c minus the current coverage). Among them, pick at
-   random from the few most related to the current set. Relatedness is the
-   co-labeling rate on the sample, with name+definition embedding similarity
-   as a tie-breaker. Because a topic's added coverage never exceeds its own
-   coverage, the set's coverage never exceeds c.
-4. Stop when coverage ≥ c − max(0.5 percentage points, 10% of c).
-5. Nesting: an agent's sets are built for increasing c, each continuing from
-   the previous one, so a smaller-c set is a subset of a larger-c set.
-6. If the candidates run out before the stop condition holds, retry with a new
-   seed (up to 10 times), then keep the closest result and flag it.
-7. run_meta.json records, per agent and target, the topic ids, the seed, the
-   achieved coverage and any flag.
+**3.3 Assigning topics for a target coverage c (greedy seed expansion).**
+1. Seed: random (per agent, seeded) among topics whose own sample coverage ≤ c.
+2. Order every other topic by distance from the seed, nearest first. Distance
+   is the co-labeling rate with the seed on the sample, with name+definition
+   embedding similarity as the tie-breaker.
+3. Scan that order once: add a topic if the set's actual coverage after adding
+   it is ≤ c; otherwise skip it. Stop when every topic has been tried.
+4. Nesting: an agent's targets are processed from smallest to largest c. Each
+   larger target starts from the previous target's set and scans the same
+   order again, so a smaller-c set is a subset of a larger-c set.
+5. No tolerance parameter: coverage never exceeds c, and the achieved coverage
+   is recorded and used in the analysis.
+6. run_meta.json records, per agent and target, the seed, the topic ids and
+   the achieved coverage.
 
 ## 4. Labels and the tagger
 
