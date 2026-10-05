@@ -50,33 +50,60 @@ venues, inherited from paper 1's config), plus any paper with at least
 `eval.recognized_min_citations` (50) citations. The topic gate (§4) keeps
 reading within the AI topics.
 
-## 3. The topic list (built once, then frozen)
+## 3. The topic list and the coverage dial (revised 2026-10-05)
 
-1. Collect each venue's official submission areas / subject areas /
-   keywords from its 2024 call for papers. The ML venues list ~20-40 areas
-   each; AAAI's keyword list is fine-grained (~200); ACL, CVPR and ICCV list
-   their tracks or topics.
-2. One consolidation pass (the tagger model, §4) merges and deduplicates them
-   into **exactly 128 topics**. Each topic gets a name, a one-sentence
-   definition and its provenance (which venues' areas it came from). Coarse
-   areas are split along the finer keyword lists, and granularity is evened
-   out.
-3. The user reviews the list. It is then frozen as
-   `configs/p2_forum/topics-v2.yaml` and never regenerated. Topic ids are the
-   list positions 0-127.
+**The dial is coverage, not a topic count.** Experiments set each agent's
+**coverage c** = the share of a reference paper sample its topics can read.
+Topics may be of very different sizes; coverage measures the reading world
+directly. (This replaces the earlier "exactly 128 topics, capacity-balanced"
+design; that pipeline is retired.)
+
+**3.1 Topic list.** The 428 official submission areas of the seven venues
+(configs/p2_forum/venue_areas.yaml) are deduplicated **only for synonyms**
+(e.g. "Reinforcement learning" at several venues). Umbrella areas and fine
+areas both stay ("Deep Learning" next to "Graph Neural Networks"), as in real
+researchers' interest lists. Expected size: about 300-400 topics, each with a
+name, one-sentence definition and provenance. The user reviews it; it is then
+frozen as `configs/p2_forum/topics-v3.yaml` (ids = list positions; no fixed
+count).
+
+**3.2 Reference sample.** Papers of the seven venues (AAAI, NeurIPS, ACL, CVPR,
+ICCV, ICML, ICLR) published in **2023 and 2024** (ICCV only in 2023), fetched
+from Semantic Scholar by venue and year, **stratified-sampled to ~4,000
+papers** in proportion to each venue-year's size. Each paper is labeled with
+exactly the experiment's tagger settings (§4). The result is a paper→labels
+table; the coverage of any topic set S is the share of sample papers with at
+least one label in S (the gate's "any label" rule).
+
+**3.3 Assigning topics for a target coverage c (seed expansion).**
+1. Precompute each topic's own coverage on the sample.
+2. Seed: random among topics whose own coverage < c.
+3. Expand: at each step the candidates are the topics whose **own coverage <
+   the remaining budget** (c minus the current coverage). Among them, pick at
+   random from the few most related to the current set. Relatedness is the
+   co-labeling rate on the sample, with name+definition embedding similarity
+   as a tie-breaker. Because a topic's added coverage never exceeds its own
+   coverage, the set's coverage never exceeds c.
+4. Stop when coverage ≥ c − max(0.5 percentage points, 10% of c).
+5. Nesting: an agent's sets are built for increasing c, each continuing from
+   the previous one, so a smaller-c set is a subset of a larger-c set.
+6. If the candidates run out before the stop condition holds, retry with a new
+   seed (up to 10 times), then keep the closest result and flag it.
+7. run_meta.json records, per agent and target, the topic ids, the seed, the
+   achieved coverage and any flag.
 
 ## 4. Labels and the tagger
 
 Every paper, every board post and every search query carries topic labels:
-**1-5 topics**, ranked by relevance (first = primary).
+the **1-3 most specific matching topics plus every broader (umbrella) topic
+that contains them, at most 8**, most specific first.
 
-**Tagger: an independent LLM.** Claude Sonnet 5 (`claude-sonnet-5`), a
+**Tagger: an independent LLM.** Claude Sonnet 5 (`claude-sonnet-5`) with **medium thinking effort** (user decision: moderate thinking), a
 different model family from the agents (gpt-5) and the quality judge
 (gpt-5-mini). Agents never label their own work. One call per item: the
 frozen list (names + definitions) as a fixed, cacheable prefix, then the
 item's text (a paper's title + abstract, a post's text, or a query). It returns
-a JSON list of 1-5 topic ids and is told to pick only topics that genuinely
-apply, never padding to five. Replies that do not parse to 1-5 valid distinct
+a JSON list of 1-8 topic ids following the rule above, never padding. A refusal (stop_reason=refusal) is retried, then the item is unlabeled and the refusal logged. Replies that do not parse to 1-8 valid distinct
 ids are retried up to 3 times; after that the item counts as unlabeled, which
 means unreadable and, for a post, not published.
 
@@ -163,14 +190,15 @@ abstracts (~180 words, with results) but write proposals, which have no
 results yet. The judge compares idea paragraphs with realizing papers'
 abstracts.
 
-## 7. Topic draws and the prompt
+## 7. Topic assignment and the prompt
 
-- Topic sets stay nested (`topic_draw: nested`): an agent's k-topic set is
-  the first k of its per-agent permutation.
-- The display order in the system prompt is shuffled independently, with its
-  own per-agent seed, which removes the first-listed bias.
+- Topic sets come from the coverage algorithm (§3.3); `topic_draw: coverage`.
+- The display order in the system prompt is shuffled with its own per-agent
+  seed (no first-listed bias).
 - The prompt says the agent can only search, read and publish within its
-  topics, and shows each topic's name and definition.
+  topics, and lists them (name + definition). An agent whose set is every topic
+  (c = 100%) is told it may work on any AI topic instead of receiving the full
+  list.
 
 ## 8. Configuration
 
@@ -182,17 +210,17 @@ abstracts.
   `online.min_citations_any_venue` are removed and a config that still sets
   them is refused
 - `online.cache_dir: data/online_cache`
-- `topics_file: configs/p2_forum/topics-v2.yaml`
+- `topics_file: configs/p2_forum/topics-v3.yaml`; `coverage_sample: data/p2_forum/coverage_sample/` (papers + labels)
 - `gating: topics` (default `none`)
-- `models.tagger: claude-sonnet-5`
+- `models.tagger: claude-sonnet-5:medium` (medium thinking effort)
 - `models.judge: claude-opus-5-5`
 - `models.agent: openai:gpt-5:medium` (written out explicitly; it is the API default)
 
 ## 9. Experiment
 
-- Rerun the nested sweep: k ∈ {1, 16, 32, 48, 64, 80, 96, 112, 128}, **one
-  seed (seed 0) per k**, N = 10 agents, 40 rounds (400 steps), resumable for
-  extension. More seeds can be added later as new configs.
+- Sweep the coverage dial: c ∈ {1%, 2%, 5%, 10%, 20%, 35%, 50%, 75%, 100%},
+  **one seed (seed 0) per c**, N = 10 agents, 40 rounds (400 steps),
+  resumable for extension. Analysis uses each agent's achieved coverage.
 - **Paper 2 is a standalone study.** Its evaluation is reported on its own
   terms, with no comparison line to paper 1 and no shared judge.
 - **Judge: Claude Opus 5.5** (`claude-opus-5-5`), independent of the agents
