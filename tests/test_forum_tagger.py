@@ -12,7 +12,8 @@ TOPICS = [Topic(i, f"T{i}", f"def {i}") for i in range(10)]
     ("labels: [0]", [0]),
     ("[2, 2, 5]", [2, 5]),           # duplicates collapse, order kept
     ("[]", None),                    # at least one
-    ("[1,2,3,4,5,6]", None),         # at most five
+    ("[0,1,2,3,4,5,6,7]", [0,1,2,3,4,5,6,7]),   # eight is allowed
+    ("[0,1,2,3,4,5,6,7,8]", None),  # at most eight
     ("[10]", None),                  # out of range
     ("no list", None),
     ('["0", "3"]', [0, 3]),          # ids given as digit strings
@@ -106,3 +107,19 @@ def test_other_no_text_replies_and_errors_propagate():
     with pytest.raises(RuntimeError):
         t.label_many(["x"])
     assert t.refusals == 0
+
+
+def test_system_prompt_has_umbrella_rule_and_cap_8():
+    t = TopicTagger(llm=FakeLLM(), model="m", topics=TOPICS)
+    assert t.max_labels == 8
+    assert "1-3 most specific topics" in t.system
+    assert "umbrella area" in t.system
+    assert "At most 8 ids, most specific first. Never pad." in t.system
+
+
+def test_parse_follows_instance_cap():
+    llm = FakeLLM(default="[0,1,2]")
+    t = TopicTagger(llm=llm, model="m", topics=TOPICS, max_labels=2, attempts=1)
+    with pytest.raises(UnlabeledError):
+        t.label("x")
+    assert "At most 2 ids" in t.system

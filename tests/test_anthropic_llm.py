@@ -122,3 +122,24 @@ def test_system_prompt_is_sent_as_cacheable_block():
     _llm(c).complete(model="m", system="big prompt", user="u")
     assert c.calls[0]["system"] == [
         {"type": "text", "text": "big prompt", "cache_control": {"type": "ephemeral"}}]
+
+
+def test_effort_suffix_sets_output_config_and_strips_model():
+    c = _Client([_reply(NS(type="text", text="ok"))])
+    _llm(c).complete(model="claude-sonnet-5:medium", system="s", user="u")
+    assert c.calls[0]["model"] == "claude-sonnet-5"
+    assert c.calls[0]["output_config"] == {"effort": "medium"}
+
+
+def test_plain_model_has_no_output_config():
+    c = _Client([_reply(NS(type="text", text="ok"))])
+    _llm(c).complete(model="claude-sonnet-5", system="s", user="u")
+    assert c.calls[0]["model"] == "claude-sonnet-5"
+    assert "output_config" not in c.calls[0]
+
+
+def test_invalid_effort_raises_before_any_call():
+    c = _Client([_reply(NS(type="text", text="ok"))])
+    with pytest.raises(ValueError, match="effort"):
+        _llm(c).complete(model="claude-sonnet-5:turbo", system="s", user="u")
+    assert c.calls == []

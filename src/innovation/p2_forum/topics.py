@@ -16,9 +16,12 @@ class Topic:
     sources: list[str] = field(default_factory=list)
 
 
-def load_topics(path, expected: int = 128) -> list[Topic]:
+def load_topics(path, expected: int | None = 128) -> list[Topic]:
     raw = yaml.safe_load(Path(path).read_text())["topics"]
-    if len(raw) != expected:
+    if expected is None:
+        if not raw:
+            raise ValueError(f"{path}: no topics")
+    elif len(raw) != expected:
         raise ValueError(f"{path}: expected {expected} topics, found {len(raw)}")
     names = [t["name"] for t in raw]
     if len(set(names)) != len(names):

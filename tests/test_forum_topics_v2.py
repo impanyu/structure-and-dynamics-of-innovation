@@ -60,3 +60,18 @@ def test_load_topics_refuses_wrong_count(tmp_path):
     f.write_text(yaml.safe_dump({"topics": _topics(3)}))
     with pytest.raises(ValueError, match="128"):
         load_topics(f)
+
+
+def test_load_topics_expected_none_accepts_any_count(tmp_path):
+    f = tmp_path / "t.yaml"
+    f.write_text(yaml.safe_dump({"topics": _topics(5)}))
+    assert len(load_topics(f, expected=None)) == 5
+    f.write_text(yaml.safe_dump({"topics": _topics(1)}))
+    assert len(load_topics(f, expected=None)) == 1
+
+
+def test_load_topics_expected_none_still_requires_unique_names(tmp_path):
+    f = tmp_path / "t.yaml"
+    f.write_text(yaml.safe_dump({"topics": _topics(2) + _topics(1)}))
+    with pytest.raises(ValueError, match="duplicate"):
+        load_topics(f, expected=None)

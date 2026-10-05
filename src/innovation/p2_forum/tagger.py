@@ -23,7 +23,7 @@ def is_refusal(e: Exception) -> bool:
             and "stop_reason=refusal" in msg)
 
 
-def parse_labels(reply: str, n_topics: int, max_labels: int = 5) -> list[int] | None:
+def parse_labels(reply: str, n_topics: int, max_labels: int = 8) -> list[int] | None:
     m = re.search(r"\[[^\[\]]*\]", reply)
     if not m:
         return None
@@ -46,7 +46,7 @@ def parse_labels(reply: str, n_topics: int, max_labels: int = 5) -> list[int] | 
 
 class TopicTagger:
     def __init__(self, *, llm, model: str, topics: list[Topic],
-                 max_labels: int = 5, attempts: int = 3,
+                 max_labels: int = 8, attempts: int = 3,
                  refusal_log: Path | None = None):
         self.llm, self.model, self.topics = llm, model, topics
         self.max_labels, self.attempts = max_labels, attempts
@@ -59,9 +59,11 @@ class TopicTagger:
         self.system = (
             "You label AI research texts with topics from a fixed list.\n\n"
             f"TOPICS (id: name — definition):\n{listing}\n\n"
-            f"Reply with ONLY a JSON list of 1 to {max_labels} topic ids, most "
-            "relevant first. Include a topic only if the text genuinely belongs "
-            f"to it; never pad the list to {max_labels}.")
+            "Choose the 1-3 most specific topics that genuinely apply, then add "
+            "every broader topic in the list that contains them (an umbrella area "
+            "such as 'Deep Learning' for a graph-neural-network paper). "
+            f"At most {max_labels} ids, most specific first. Never pad.\n\n"
+            "Reply with ONLY a JSON list of topic ids.")
 
     def label(self, text: str) -> list[int]:
         for attempt in range(self.attempts):

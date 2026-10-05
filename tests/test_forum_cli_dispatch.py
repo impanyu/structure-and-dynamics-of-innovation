@@ -273,7 +273,7 @@ def test_online_configs_load_and_are_nested():
     cfg = load_config(files[0])
     assert cfg["literature"] == "online" and cfg["gating"] == "topics"
     assert cfg["run"]["topic_draw"] == "nested" and cfg["run"]["total_steps"] == 400
-    assert cfg["models"]["tagger"] == "claude-sonnet-5"
+    assert cfg["models"]["tagger"] == "claude-sonnet-5:medium"
     assert cfg["models"]["judge"] == "claude-opus-5-5"
     assert cfg["online"]["max_pub_date"] == "2024-09-30"
     assert cfg["models"]["agent"] == "openai:gpt-5:medium"

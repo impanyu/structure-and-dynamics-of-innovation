@@ -57,6 +57,19 @@ class CachedLLM:
         return response
 
 
+CLAUDE_EFFORTS = ("low", "medium", "high")
+
+
+def parse_claude_model(model: str) -> tuple[str, str | None]:
+    """'claude-sonnet-5:medium' -> ('claude-sonnet-5', 'medium'). The optional
+    suffix sets output_config effort; no suffix leaves the request unchanged."""
+    name, _, effort = model.partition(":")
+    if effort and effort not in CLAUDE_EFFORTS:
+        raise ValueError(f"unknown Claude effort {effort!r} in {model!r}; "
+                         f"expected one of {CLAUDE_EFFORTS}")
+    return name, (effort or None)
+
+
 class AnthropicLLM:
     """Real client. Needs ANTHROPIC_API_KEY in the environment.
 
@@ -89,6 +102,10 @@ class AnthropicLLM:
         return isinstance(e, a.APIStatusError) and e.status_code == 200
 
     def complete(self, *, model: str, system: str, user: str, max_tokens: int = 1024) -> str:
+        model, effort = parse_claude_model(model)
+        extra = dict(self._extra)
+        if effort:
+            extra["output_config"] = {"effort": effort}
         for delay in [*self.RETRY_DELAYS, None]:
             try:
                 # Streaming: the SDK refuses non-streaming calls with large max_tokens.
@@ -98,7 +115,7 @@ class AnthropicLLM:
                         system=[{"type": "text", "text": system,
                                  "cache_control": {"type": "ephemeral"}}],
                         messages=[{"role": "user", "content": user}],
-                        **self._extra) as stream:
+                        **extra) as stream:
                     msg = stream.get_final_message()
                 break
             except Exception as e:
