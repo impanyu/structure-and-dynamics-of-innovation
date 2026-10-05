@@ -36,3 +36,11 @@ def make_workspace():
     """Factory, not a single instance: several tests need two independent
     workspaces (e.g. to replay an event log into a fresh one)."""
     return _make_workspace
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_api_keys(monkeypatch):
+    """Tests must not depend on the developer's shell (e.g. a sourced .env).
+    Tests that need a key set it explicitly with monkeypatch.setenv."""
+    for k in ("OPENALEX_API_KEY", "S2_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+        monkeypatch.delenv(k, raising=False)
