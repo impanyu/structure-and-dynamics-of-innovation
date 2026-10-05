@@ -85,9 +85,12 @@ least one label in S (the gate's "any label" rule).
 4. Nesting: an agent's targets are processed from smallest to largest c. Each
    larger target starts from the previous target's set and scans the same
    order again, so a smaller-c set is a subset of a larger-c set.
-5. No tolerance parameter: coverage never exceeds c, and the achieved coverage
-   is recorded and used in the analysis.
-6. run_meta.json records, per agent and target, the seed, the topic ids and
+5. No tolerance parameter: the target c is only an upper bound. Coverage
+   never exceeds c.
+6. Analysis: a run's x-value is the **mean achieved coverage of its agents**
+   (not the nominal c). Figures also show each run's min-max range across
+   agents.
+7. run_meta.json records, per agent and target, the seed, the topic ids and
    the achieved coverage.
 
 ## 4. Labels and the tagger
@@ -218,7 +221,8 @@ abstracts.
 
 - Sweep the coverage dial: c ∈ {1%, 2%, 5%, 10%, 20%, 35%, 50%, 75%, 100%},
   **one seed (seed 0) per c**, N = 10 agents, 40 rounds (400 steps),
-  resumable for extension. Analysis uses each agent's achieved coverage.
+  resumable for extension. Figures plot outcomes against each run's mean
+  achieved coverage, with the across-agent range.
 - **Paper 2 is a standalone study.** Its evaluation is reported on its own
   terms, with no comparison line to paper 1 and no shared judge.
 - **Judge: Claude Opus 5.5** (`claude-opus-5-5`), independent of the agents
