@@ -352,3 +352,95 @@ def test_online_stale_scope_keys_are_refused(key, val):
     from innovation import cli
     with pytest.raises(SystemExit, match=f"online.{key}"):
         cli._load_online_world(_online_cfg(**{key: val}))
+
+
+def _region(forum_cfg, coverage):
+    forum_cfg.update(gating="region", literature="corpus")
+    del forum_cfg["topics_file"]          # region mode draws no topics
+    for a in forum_cfg["run"]["agents"]:
+        del a["k_topics"]
+        a["coverage"] = coverage
+    return forum_cfg
+
+
+def test_region_mode_dispatches_with_the_corpus_world(forum_cfg, monkeypatch):
+    """cmd_run in region mode builds the balls from the frozen corpus and its
+    embeddings, runs, and replays the log into board_metrics.json."""
+    cfg = _region(forum_cfg, 0.5)
+    llm = FakeLLM(default=POST)
+    _use_llm(monkeypatch, llm)
+
+    cli.cmd_run(cfg)
+
+    run_dir = Path(cfg["out_dir"]) / "f1"
+    meta = json.loads((run_dir / "run_meta.json").read_text())
+    assert meta["gating"] == "region" and meta["corpus_size"] == 4
+    assert {r["n_members"] for r in meta["regions"].values()} == {2}
+    assert {r["achieved_coverage"] for r in meta["regions"].values()} == {0.5}
+    assert "within your own research area" in llm.calls[0]["system"]
+    events = load_events(run_dir / "events.jsonl")
+    posted = [e for e in events if "node_id" in e["result"]]
+    final = json.loads((run_dir / "board_metrics.json").read_text())["final"]
+    assert final["n_posts"] == len(posted)
+
+
+def test_region_runs_evaluate_on_the_corpus_path(forum_cfg, monkeypatch):
+    """cmd_evaluate for a region run: contamination guard = corpus titles,
+    duplicates checked against the corpus embeddings, models.judge,
+    eval.exclude_workshops."""
+    from innovation.core.eval.search_verify import Verdict
+    cfg = _region(forum_cfg, 1.0)             # full coverage: every post is published
+    _use_llm(monkeypatch, FakeLLM(default=POST))
+    cli.cmd_run(cfg)
+    cfg.update(cutoff_date="2024-09-30", mailto="x@y",
+               recognized_venues=[{"name": "ICML", "aliases": ["icml"]}])
+    cfg["models"]["judge"] = "claude-opus-5-5"
+    cfg["eval"] = {"n_queries": 1, "top_k": 1, "dup_ceiling": 0.95,
+                   "exclude_workshops": True}
+    seen = []
+
+    def fake_verify(llm, **kw):
+        seen.append(kw)
+        return Verdict(idea_id=kw["idea_id"])
+
+    monkeypatch.setattr(cli, "verify_idea", fake_verify)
+    monkeypatch.setattr(cli, "_eval_reference",
+                        lambda c: pytest.fail("region runs use the corpus path"))
+    cli.cmd_evaluate(cfg)
+
+    assert len(seen) == 4
+    assert all(kw["model"] == "claude-opus-5-5" and kw["exclude_workshops"] is True
+               and kw["corpus_titles"] == {"t0", "t1", "t2", "t3"} for kw in seen)
+    verdicts = json.loads((Path(cfg["out_dir"]) / "f1" / "verdicts.json").read_text())
+    assert len(verdicts) == 4 and all("dup_flag" in v for v in verdicts)
+
+
+def test_region_configs_load():
+    from innovation.core.config import load_config
+    files = sorted(Path("configs/p2_forum/experiments/region").glob("*.yaml"))
+    pcts = [1, 5, 10, 20, 30, 40, 50, 100]
+    assert sorted(f.stem for f in files) == sorted(f"c{p}-s0" for p in pcts)
+    for p in pcts:
+        cfg = load_config(f"configs/p2_forum/experiments/region/c{p}-s0.yaml")
+        r = cfg["run"]
+        assert r["run_id"] == f"forum-region-c{p}-s0" and r["seed"] == 0
+        assert r["total_steps"] == 400
+        assert [a["agent_id"] for a in r["agents"]] == [f"a{i}" for i in range(10)]
+        assert all(a["coverage"] == p / 100 and set(a) == {"agent_id", "coverage"}
+                   for a in r["agents"])
+        assert cfg["arch"] == "p2_forum" and cfg["data_dir"] == "data/p2_corpus"
+        assert cfg["literature"] == "corpus" and cfg["gating"] == "region"
+        assert cfg["models"]["agent"] == "openai:gpt-5:medium"
+        assert cfg["models"]["judge"] == "claude-opus-5-5"
+        assert cfg["eval"]["exclude_workshops"] is True
+        assert cfg["eval"]["recognized_min_citations"] == 50   # inherited
+        assert cfg["eval"]["realized_min_date"] == "2025-06-01"
+        assert len(cfg["recognized_venues"]) > 50
+        assert cfg["embedding_model"] == "BAAI/bge-small-en-v1.5"
+        assert cfg["corpus"]["idea_text"] == "abstract"
+        assert cfg["out_dir"] == "runs/p2_forum"
+        # Building the run config validates the mode and every coverage.
+        from innovation.p2_forum.runner import ForumRunConfig
+        ForumRunConfig(run_id=r["run_id"], seed=r["seed"], total_steps=r["total_steps"],
+                       agents=r["agents"], literature=cfg["literature"],
+                       gating=cfg["gating"])

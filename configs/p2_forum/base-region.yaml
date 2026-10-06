@@ -1,0 +1,39 @@
+# Paper 2, frozen corpus + semantic-region gating (spec REVISION 2026-10-06,
+# docs/superpowers/specs/2026-09-30-online-literature-topic-gating-design.md).
+# Each agent's readable world is the coverage x N corpus papers nearest to a
+# seeded seed paper (src/innovation/p2_forum/region.py); per-agent `coverage`
+# is set in run.agents. Inherits recognized_venues, ccf_b_aliases and the
+# evaluation settings from base.yaml (paper 1's stage1.yaml).
+extends: base.yaml
+literature: corpus
+gating: region
+# The corpus (copied from corpus-v2.yaml, which built data/p2_corpus): 7 CCF-A
+# AI venues, 2020-2024, >= 50 citations, original abstracts.
+data_dir: data/p2_corpus
+corpus:
+  mode: s2_venues
+  venues:
+    - "AAAI Conference on Artificial Intelligence"
+    - "Neural Information Processing Systems"
+    - "Annual Meeting of the Association for Computational Linguistics"
+    - "Computer Vision and Pattern Recognition"
+    - "IEEE International Conference on Computer Vision"
+    - "International Conference on Machine Learning"
+    - "International Conference on Learning Representations"
+  min_citations: 50
+  idea_text: abstract
+year_from: 2020
+cutoff_year: 2024
+cutoff_date: "2024-09-30"
+embedding_model: BAAI/bge-small-en-v1.5
+models:
+  agent: openai:gpt-5:medium
+  judge: claude-opus-5-5
+eval:
+  exclude_workshops: true
+run:
+  run_id: forum-region-pilot
+  seed: 0
+  total_steps: 400
+  agents:
+    - {agent_id: a0, coverage: 0.1}

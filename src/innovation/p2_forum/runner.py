@@ -4,6 +4,10 @@ Each agent draws k topics uniformly at random from the pool. Draws are seeded
 and recorded in run_meta.json. Agents may share topics — with N agents and a
 128-topic pool that is unavoidable above a certain N, and it is the substrate
 collaboration needs, not a defect.
+
+Region mode (gating: region) draws no topics: each agent gets a seeded seed
+paper and a nearest-neighbour ball at its coverage (region.py), recorded in
+run_meta.json and rebuilt from there on resume.
 """
 import json
 from dataclasses import asdict, dataclass, field
@@ -15,20 +19,26 @@ from innovation.core.events import EventLog, load_events
 from innovation.core.network.graph import IdeaGraph
 from innovation.core.network.index import VectorIndex
 from innovation.p2_forum.agent import (GATED_ACTIONS_DOC, GATED_SYSTEM,
+                                       REGION_ACTIONS_DOC, REGION_SYSTEM,
                                        ForumAgentPolicy)
 from innovation.p2_forum.env import ForumEnvironment, Navigation
 from innovation.p2_forum.gated_env import GatedForumEnvironment
+from innovation.p2_forum.region import Region, build_region, draw_seeds
+from innovation.p2_forum.region_env import RegionGatedEnvironment
 from innovation.p2_forum.workspace import Workspace
 
 
 TOPIC_DRAWS = ("independent", "nested")
 # "corpus"/"none" is the original mode (frozen corpus, soft specialization);
-# "online"/"topics" is online literature behind a hard topic gate. The two
-# axes are not independent: the gate needs labelled literature, and the online
-# literature is only in scope through the gate.
+# "online"/"topics" is online literature behind a hard topic gate;
+# "corpus"/"region" is the frozen corpus behind a semantic-region gate (spec,
+# REVISION 2026-10-06). The two axes are not independent: the topic gate needs
+# labelled literature, the online literature is only in scope through it, and
+# regions are balls over the corpus embeddings.
 LITERATURES = ("corpus", "online")
-GATINGS = ("none", "topics")
-# Online mode: how much of an agent's newest result its prompt shows in full
+GATINGS = ("none", "topics", "region")
+MODES = (("corpus", "none"), ("online", "topics"), ("corpus", "region"))
+# Online and region modes: how much of an agent's newest result its prompt shows in full
 # (older results stay in the history at 1500 characters each).
 LATEST_RESULT_CHARS = 20000
 
@@ -60,6 +70,10 @@ class ForumRunConfig:
     def online(self) -> bool:
         return self.literature == "online"
 
+    @property
+    def region(self) -> bool:
+        return self.gating == "region"
+
     def __post_init__(self):
         if self.topic_draw not in TOPIC_DRAWS:
             raise ValueError(f"topic_draw must be one of {TOPIC_DRAWS}, "
@@ -70,10 +84,26 @@ class ForumRunConfig:
         if self.gating not in GATINGS:
             raise ValueError(f"gating must be one of {GATINGS}, "
                              f"got {self.gating!r}")
-        if (self.literature == "online") != (self.gating == "topics"):
+        if (self.literature, self.gating) not in MODES:
             raise ValueError(
-                "literature: online requires gating: topics and vice versa; "
-                f"got literature={self.literature!r}, gating={self.gating!r}")
+                "literature/gating must be one of "
+                + ", ".join(f"{lit}/{g}" for lit, g in MODES)
+                + f"; got literature={self.literature!r}, gating={self.gating!r}")
+        # Region mode reads each agent's coverage; elsewhere the key would be
+        # silently ignored, so refuse it there.
+        for a in self.agents:
+            if not self.region:
+                if "coverage" in a:
+                    raise ValueError(
+                        f"agent {a.get('agent_id')}: coverage applies only to "
+                        "gating: region")
+                continue
+            c = a.get("coverage")
+            if (isinstance(c, bool) or not isinstance(c, (int, float))
+                    or not 0 < c <= 1):
+                raise ValueError(
+                    f"gating: region needs each agent's coverage in (0, 1]; "
+                    f"agent {a.get('agent_id')} has {c!r}")
         # Per-agent allow_jump/allow_search used to be collapsed with all(...)
         # into one env-wide flag, so one agent opting out silently disabled the
         # channel for every agent. Refuse the key rather than mean something
@@ -148,9 +178,37 @@ def draw_topics(agents: list[dict], pool: list[str], rng, *,
     return out
 
 
+def _regions(cfg: ForumRunConfig, corpus_index, seeds: list[str]) -> dict[str, Region]:
+    """Each agent's ball at its own coverage, over the corpus index's rows
+    (ids and vectors in index order, which fixes build_region's tie-break)."""
+    return {a["agent_id"]: build_region(seed, corpus_index.ids, corpus_index.vecs,
+                                        float(a["coverage"]))
+            for a, seed in zip(cfg.agents, seeds)}
+
+
+def _region_meta(cfg: ForumRunConfig, regions: dict[str, Region], corpus,
+                 n_papers: int) -> dict:
+    """run_meta's region fields: per agent, the seed paper, the coverage target,
+    the achieved coverage (members / corpus size), the radius and the member
+    count."""
+    recs = {}
+    for a in cfg.agents:
+        r = regions[a["agent_id"]]
+        recs[a["agent_id"]] = {
+            "seed_id": r.seed_id,
+            "seed_title": corpus.node(r.seed_id).text.partition("\n\n")[0],
+            "coverage": float(a["coverage"]),
+            "achieved_coverage": len(r.members) / n_papers,
+            "radius": r.radius,
+            "n_members": len(r.members)}
+    mean = sum(v["achieved_coverage"] for v in recs.values()) / len(recs) if recs else 0.0
+    return {"corpus_size": n_papers, "regions": recs, "mean_achieved_coverage": mean}
+
+
 def _build_env(cfg: ForumRunConfig, *, run_dir, corpus, corpus_index, embedder,
                rng, literature=None, tagger=None,
-               topic_ids: dict | None = None) -> ForumEnvironment:
+               topic_ids: dict | None = None,
+               regions: dict | None = None) -> ForumEnvironment:
     if cfg.online:
         if literature is None or tagger is None:
             raise ValueError("literature: online needs a literature and a tagger")
@@ -169,6 +227,15 @@ def _build_env(cfg: ForumRunConfig, *, run_dir, corpus, corpus_index, embedder,
             literature=literature, tagger=tagger,
             agent_topics={a: set(t) for a, t in topic_ids.items()},
             topic_names=cfg.topic_pool)
+    if cfg.region:
+        ws = Workspace(corpus=corpus, corpus_index=corpus_index,
+                       board_index=VectorIndex(corpus_index.dim),
+                       embedder=embedder, run_id=cfg.run_id)
+        return RegionGatedEnvironment(
+            run_id=cfg.run_id, workspace=ws,
+            event_log=EventLog(run_dir / "events.jsonl"), rng=rng,
+            generation_budget=cfg.generation_budget, navigation=cfg.navigation,
+            regions=regions)
     ws = Workspace(corpus=corpus, corpus_index=corpus_index,
                    board_index=VectorIndex(corpus_index.dim),
                    embedder=embedder, run_id=cfg.run_id)
@@ -191,6 +258,18 @@ def _build_policies(cfg: ForumRunConfig, *, llm, model, assignments: dict,
                 identity=f"{cfg.run_id}:{a['agent_id']}",
                 total_steps=cfg.total_steps,
                 system_template=GATED_SYSTEM, actions_doc=GATED_ACTIONS_DOC,
+                latest_result_chars=LATEST_RESULT_CHARS)
+            for a in cfg.agents}
+    if cfg.region:
+        # The prompt states the rule but never the agent's area (user decision
+        # 2026-10-06): no topics.
+        return {
+            a["agent_id"]: ForumAgentPolicy(
+                llm=llm, model=model, topics=[],
+                memory_size=a.get("memory_size", 20),
+                identity=f"{cfg.run_id}:{a['agent_id']}",
+                total_steps=cfg.total_steps,
+                system_template=REGION_SYSTEM, actions_doc=REGION_ACTIONS_DOC,
                 latest_result_chars=LATEST_RESULT_CHARS)
             for a in cfg.agents}
     return {
@@ -218,6 +297,10 @@ def run_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None, embedder,
     rng = np.random.default_rng(cfg.seed)
     run_dir = Path(out_dir) / cfg.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
+    if cfg.region:
+        return _run_region(cfg, rng=rng, run_dir=run_dir, corpus=corpus,
+                           corpus_index=corpus_index, embedder=embedder,
+                           llm=llm, model=model)
 
     assignments = draw_topics(cfg.agents, cfg.topic_pool, rng,
                               scheme=cfg.topic_draw, seed=cfg.seed)
@@ -252,6 +335,52 @@ def run_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None, embedder,
     return out
 
 
+def _run_region(cfg: ForumRunConfig, *, rng, run_dir, corpus, corpus_index,
+                embedder, llm, model) -> dict:
+    """Region mode has no topics: seeds are drawn from the corpus (seeded, one
+    distinct paper per agent) and each agent's ball is built at its coverage."""
+    seeds = draw_seeds(len(cfg.agents), corpus_index.ids, cfg.seed)
+    regions = _regions(cfg, corpus_index, seeds)
+    meta = {"run_id": cfg.run_id, "seed": cfg.seed, "arch": "p2_forum",
+            "total_steps": cfg.total_steps,
+            "navigation": asdict(cfg.navigation),
+            "literature": cfg.literature, "gating": cfg.gating,
+            **_region_meta(cfg, regions, corpus, len(corpus_index.ids))}
+    # Written BEFORE driving, as in run_forum: resume rebuilds the regions
+    # from these seeds instead of re-drawing them.
+    (run_dir / "run_meta.json").write_text(json.dumps(meta, indent=1))
+    env = _build_env(cfg, run_dir=run_dir, corpus=corpus,
+                     corpus_index=corpus_index, embedder=embedder, rng=rng,
+                     regions=regions)
+    policies = _build_policies(cfg, llm=llm, model=model, assignments={})
+    order = [a["agent_id"] for a in cfg.agents]
+    return _drive(cfg, env, policies, order, {aid: {} for aid in order}, 0)
+
+
+def _recorded_regions(cfg: ForumRunConfig, meta: dict, corpus_index,
+                      run_dir) -> dict[str, Region]:
+    """Rebuild each agent's region from the seed and coverage run_meta
+    recorded (never re-drawn), refusing if the config or corpus changed."""
+    recorded = meta.get("regions") or {}
+    missing = [a["agent_id"] for a in cfg.agents if a["agent_id"] not in recorded]
+    if missing:
+        raise SystemExit(f"cannot resume {run_dir}: no recorded region for {missing}")
+    changed = [a["agent_id"] for a in cfg.agents
+               if float(a["coverage"]) != recorded[a["agent_id"]]["coverage"]]
+    if changed:
+        raise SystemExit(
+            f"cannot resume {run_dir}: the config changes the coverage of {changed}")
+    regions = _regions(cfg, corpus_index,
+                       [recorded[a["agent_id"]]["seed_id"] for a in cfg.agents])
+    drift = [aid for aid, r in regions.items()
+             if len(r.members) != recorded[aid]["n_members"]]
+    if drift:
+        raise SystemExit(
+            f"cannot resume {run_dir}: rebuilt regions of {drift} have a different "
+            "number of members than recorded; the corpus has changed")
+    return regions
+
+
 def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
                  embedder, llm, model, out_dir, literature=None,
                  tagger=None) -> dict:
@@ -276,10 +405,15 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
             f"cannot resume {run_dir}: run_meta.json is missing, so the "
             "recorded topic draws are gone and resuming would re-sample them")
     meta = json.loads(meta_path.read_text())
+    recorded_gating = meta.get("gating", "none")
+    if recorded_gating != cfg.gating:
+        raise SystemExit(
+            f"cannot resume {run_dir}: it was run with gating: {recorded_gating}, "
+            f"the config says {cfg.gating}")
     assignments = meta.get("topic_assignments") or {}
     missing = [a["agent_id"] for a in cfg.agents
                if a["agent_id"] not in assignments]
-    if missing:
+    if missing and not cfg.region:
         raise SystemExit(
             f"cannot resume {run_dir}: no recorded topic draw for {missing}")
     recorded = meta.get("literature", "corpus")
@@ -287,7 +421,9 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
         raise SystemExit(
             f"cannot resume {run_dir}: it was run with literature: {recorded}, "
             f"the config says {cfg.literature}")
-    topic_ids = display_orders = None
+    topic_ids = display_orders = regions = None
+    if cfg.region:
+        regions = _recorded_regions(cfg, meta, corpus_index, run_dir)
     if cfg.online:
         # Reuse what the run recorded; never re-derive the gate's topic sets.
         topic_ids = meta["topic_ids"]
@@ -300,7 +436,8 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
     rng = np.random.default_rng((cfg.seed, start_step))
     env = _build_env(cfg, run_dir=run_dir, corpus=corpus,
                      corpus_index=corpus_index, embedder=embedder, rng=rng,
-                     literature=literature, tagger=tagger, topic_ids=topic_ids)
+                     literature=literature, tagger=tagger, topic_ids=topic_ids,
+                     regions=regions)
     env.restore(events)
 
     policies = _build_policies(cfg, llm=llm, model=model,
@@ -332,6 +469,7 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
          "resumed_from": meta.get("resumed_from", []) + [start_step]}, indent=1))
 
     out = _drive(cfg, env, policies, order, last_result, start_step)
-    out["topic_assignments"] = assignments
+    if not cfg.region:
+        out["topic_assignments"] = assignments
     out["resumed_from_step"] = start_step
     return out

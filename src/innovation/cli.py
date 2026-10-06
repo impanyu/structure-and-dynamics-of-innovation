@@ -301,11 +301,15 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
                         llm=_llm(cfg), model=cfg["models"]["agent"],
                         out_dir=cfg["out_dir"], literature=lit, tagger=tagger)
         else:
+            # Corpus mode, soft or region-gated. Region mode builds each
+            # agent's ball from the corpus index's ids and embedding matrix
+            # and draws no topics.
             corpus, index, emb = _load_forum_world(cfg)
+            region = cfg.get("gating") == "region"
             # a typo such as `literature: onlne` is refused here, not run as corpus
             run_cfg = ForumRunConfig(**common,
                                      literature=cfg.get("literature", "corpus"),
-                                     topic_pool=_topic_pool(cfg))
+                                     topic_pool=[] if region else _topic_pool(cfg))
             out = forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
                         llm=_llm(cfg), model=cfg["models"]["agent"],
                         out_dir=cfg["out_dir"])
