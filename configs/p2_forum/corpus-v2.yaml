@@ -1,0 +1,22 @@
+# Paper 2 frozen literature corpus (spec revision 2026-10-06): 7 CCF-A AI
+# venues, 2020-2024, >= 50 citations, original abstracts (no LLM summaries).
+# Built with the shared s2_venues pipeline; lives in its own data_dir and never
+# touches data/stage1.
+mailto: impanyu@gmail.com
+data_dir: data/p2_corpus
+corpus:
+  mode: s2_venues
+  venues:
+    - "AAAI Conference on Artificial Intelligence"
+    - "Neural Information Processing Systems"
+    - "Annual Meeting of the Association for Computational Linguistics"
+    - "Computer Vision and Pattern Recognition"
+    - "IEEE International Conference on Computer Vision"
+    - "International Conference on Machine Learning"
+    - "International Conference on Learning Representations"
+  min_citations: 50
+  idea_text: abstract
+year_from: 2020
+cutoff_year: 2024
+cutoff_date: "2024-09-30"
+embedding_model: BAAI/bge-small-en-v1.5

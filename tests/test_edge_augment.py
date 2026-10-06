@@ -66,3 +66,48 @@ def test_augment_edges_unions_openalex_refs(tmp_path):
     got = {(r.src, r.dst) for r in edges.itertuples()}
     # s2->s1 exists in both sources (deduped); s3->s2 comes only from OpenAlex
     assert got == {("s2", "s1"), ("s3", "s2")}
+
+
+def _one_paper():
+    return pd.DataFrame([{"paper_id": "s1", "title": "A", "abstract": "a",
+                          "year": 2020, "venue": "V"}])
+
+
+def _post(url, params=None, json=None, headers=None):
+    return FakeResponse([{"paperId": pid, "externalIds": {"DOI": "10.1/x"}}
+                         for pid in json["ids"]])
+
+
+def test_openalex_key_sent_but_not_cached(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENALEX_API_KEY", "SECRETKEY")
+    seen = []
+
+    def fake_get(url, params=None, headers=None):
+        seen.append(dict(params))
+        return FakeResponse({"results": []})
+
+    augment_edges(_one_paper(), pd.DataFrame(columns=["src", "dst"]),
+                  cache_dir=tmp_path, mailto="t@t", http_get=fake_get,
+                  http_post=_post, delay=0)
+    assert seen and all(p["api_key"] == "SECRETKEY" for p in seen)
+    assert not any("SECRETKEY" in f.name or "SECRETKEY" in f.read_text()
+                   for f in tmp_path.iterdir())
+
+
+def test_openalex_key_redacted_in_errors(tmp_path, monkeypatch):
+    import pytest
+    import requests
+    monkeypatch.setenv("OPENALEX_API_KEY", "SECRETKEY")
+
+    class Bad:
+        status_code = 403
+
+        def raise_for_status(self):
+            raise requests.HTTPError("403 for url: https://x?api_key=SECRETKEY")
+
+    with pytest.raises(requests.RequestException) as ei:
+        augment_edges(_one_paper(), pd.DataFrame(columns=["src", "dst"]),
+                      cache_dir=tmp_path, mailto="t@t",
+                      http_get=lambda url, params=None, **k: Bad(),
+                      http_post=_post, delay=0)
+    assert "SECRETKEY" not in str(ei.value)

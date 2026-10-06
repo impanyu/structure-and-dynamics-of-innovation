@@ -55,6 +55,12 @@ def cmd_fetch(cfg):
         # training-cutoff month (first day of cutoff_date's month).
         before_date = cfg["cutoff_date"][:8] + "01"
         admitted, _ = build_s2_corpus(raw, {}, before_date=before_date)
+        # Abstract-less papers are dropped by build_s2_corpus; count them.
+        dated, _ = build_s2_corpus(
+            [{**r, "abstract": r.get("abstract") or "x"} for r in raw], {},
+            before_date=before_date)
+        print(f"raw={len(raw)} date_admitted={len(dated)} "
+              f"dropped_no_abstract={len(dated) - len(admitted)}")
         ids = sorted(admitted["paper_id"])
         refs = s2_fetch_references(ids, cache_dir=cache)
         papers, edges = build_s2_corpus(raw, refs, before_date=before_date)
@@ -99,8 +105,35 @@ def cmd_fetch(cfg):
     print(f"papers={len(papers)} edges={len(edges)}")
 
 
+def _abstract_ideas(papers: pd.DataFrame) -> pd.DataFrame:
+    """idea_text = title + blank line + original abstract; no LLM. Papers
+    without an abstract are dropped (the caller prunes their edges)."""
+    papers = papers[papers["abstract"].fillna("").str.strip() != ""]
+    text = (papers["title"].fillna("").str.strip() + "\n\n"
+            + papers["abstract"].str.strip())
+    return pd.DataFrame({"paper_id": papers["paper_id"].values,
+                         "idea_text": text.values,
+                         "year": papers["year"].values,
+                         "venue": papers["venue"].values})
+
+
 def cmd_summarize(cfg):
-    papers, _ = load_corpus(cfg["data_dir"])
+    papers, edges = load_corpus(cfg["data_dir"])
+    if cfg.get("corpus", {}).get("idea_text") == "abstract":
+        ideas = _abstract_ideas(papers)
+        dropped = len(papers) - len(ideas)
+        if dropped:
+            keep = set(ideas["paper_id"])
+            edges = edges[edges["src"].isin(keep) & edges["dst"].isin(keep)]
+            save_corpus(papers[papers["paper_id"].isin(keep)], edges,
+                        cfg["data_dir"])
+        print(f"dropped_no_abstract={dropped}")
+        save_ideas(ideas, cfg["data_dir"])
+        emb = Embedder(cfg["embedding_model"])
+        vecs = emb.encode(list(ideas["idea_text"]))
+        save_embeddings(list(ideas["paper_id"]), vecs, cfg["data_dir"])
+        print(f"ideas={len(ideas)} dim={emb.dim}")
+        return
     ideas = summarize_corpus(_llm(cfg), papers, model=cfg["models"]["summarizer"],
                              workers=int(cfg.get("summarize_workers", 12)))
     save_ideas(ideas, cfg["data_dir"])

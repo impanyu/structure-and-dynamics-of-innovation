@@ -11,13 +11,16 @@ into OpenAlex by identifier and take referenced_works from there:
 
 Edges from both sources are unioned. All calls disk-cached (spec §3.2 rules).
 """
+import functools
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 import requests
 
+from innovation.core.data.openalex import redacted_error
 from innovation.core.data.s2 import S2_BATCH, _cached_call, s2_headers
 
 OPENALEX_WORKS = "https://api.openalex.org/works"
@@ -70,7 +73,16 @@ def augment_edges(papers: pd.DataFrame, s2_edges: pd.DataFrame, *,
                   cache_dir, mailto: str, http_get=None, http_post=None,
                   delay: float = 1.0, chunk: int = 50) -> pd.DataFrame:
     """Union of S2 edges and OpenAlex-derived edges over the same paper set."""
-    http_get = http_get or requests.get
+    http_get = http_get or functools.partial(requests.get, timeout=60)
+    api_key = os.environ.get("OPENALEX_API_KEY", "").strip()
+    if api_key:
+        # Key goes on the wire only: _fetch_openalex_chunk builds the cache key
+        # from the filter, and any request error (whose URL carries the key,
+        # including raise_for_status in the retry loop) is redacted.
+        plain_get = http_get
+
+        def http_get(url, params=None, **kw):
+            return plain_get(url, params={**(params or {}), "api_key": api_key}, **kw)
     ids = list(papers["paper_id"])
     ext = s2_fetch_external_ids(ids, cache_dir=cache_dir, http_post=http_post,
                                 delay=delay)
@@ -89,9 +101,13 @@ def augment_edges(papers: pd.DataFrame, s2_edges: pd.DataFrame, *,
     for fkey, mapping in by_filter.items():
         values = list(mapping)
         for i in range(0, len(values), chunk):
-            for work in _fetch_openalex_chunk(fkey, values[i:i + chunk],
+            try:
+                works = _fetch_openalex_chunk(fkey, values[i:i + chunk],
                                               mailto=mailto, cache_dir=cache_dir,
-                                              http_get=http_get, delay=delay):
+                                              http_get=http_get, delay=delay)
+            except requests.RequestException as exc:
+                raise redacted_error(exc, api_key) from None
+            for work in works:
                 wid = (work.get("id") or "").rsplit("/", 1)[-1]
                 doi = (work.get("doi") or "").removeprefix("https://doi.org/").lower()
                 pid = oa2s2.get(wid) or mapping.get(doi) or mapping.get(wid)
