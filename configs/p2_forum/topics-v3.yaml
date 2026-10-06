@@ -1,0 +1,2151 @@
+# FROZEN 2026-10-06 (user-reviewed). Synonym-only dedupe of configs/p2_forum/venue_areas.yaml; umbrellas and fine areas kept. Built by scripts/p2_forum/build_topics_v3.py, edited by scripts/p2_forum/freeze_topics_v3.py. ids = list positions; never edit.
+# Dropped catch-all bins (15):
+#   AAAI: APP: Other Applications
+#   AAAI: CMS: Other Foundations of Cognitive Modeling & Syste
+#   AAAI: CV: Other Foundations of Computer Vision
+#   AAAI: CSO: Other Foundations of Constraint Satisfaction
+#   AAAI: DMKM: Other Foundations of Data Mining & Knowledge Mana
+#   AAAI: GTEP: Other Foundations of Game Theory & Economic Parad
+#   AAAI: HAI: Other Foundations of Human Computation & AI
+#   AAAI: ROB: Other Foundations and Applications
+#   AAAI: KRR: Other Foundations of Knowledge Representation &
+#   AAAI: ML: Other Foundations of Machine Learning
+#   AAAI: MAS: Other Foundations of Multi Agent Systems
+#   AAAI: PRS: Other Foundations of Planning, Routing & Scheduling
+#   AAAI: RU: Other Foundations of Reasoning under Uncertainty
+#   AAAI: SO: Other Foundations of Search & Optimization
+#   AAAI: NLP: Other
+topics:
+- name: Machine Learning Applications
+  definition: Applied machine learning in specific or general domains (e.g., vision, language, speech,
+    biology, healthcare, sciences), excluding work whose main contribution is a new learning algorithm.
+  sources:
+  - venue: NeurIPS
+    area: Applications (e.g., vision, language, speech and audio, Creative AI)
+  - venue: ICML
+    area: Applications (computational biology, crowdsourcing, healthcare, neuroscience, social good, climate
+      science, etc.)
+  - venue: AAAI
+    area: 'ML: Applications'
+- name: Deep Learning
+  definition: Covers deep network architectures, generative models, optimization for deep networks, foundation
+    models, LLMs, and deep reinforcement learning, excluding classical (non-deep) general ML methods.
+  sources:
+  - venue: NeurIPS
+    area: Deep learning (e.g., architectures, generative models, optimization for deep networks, foundation
+      models, LLMs)
+  - venue: ICML
+    area: Deep Learning (architectures, generative models, deep reinforcement learning, etc.)
+  - venue: AAAI
+    area: 'ML: Deep Learning Algorithms'
+- name: Evaluation and Analysis of ML Methods
+  definition: Covers methodology for evaluating ML systems, meta studies, replicability, validity, and
+    human-in-the-loop evaluation, excluding the development of new learning algorithms themselves.
+  sources:
+  - venue: NeurIPS
+    area: Evaluation (e.g., methodology, meta studies, replicability and validity, human-in-the-loop)
+  - venue: AAAI
+    area: 'ML: Evaluation and Analysis'
+- name: General Machine Learning
+  definition: Covers broad core ML paradigms such as supervised, unsupervised, active, online, semi- and
+    self-supervised learning, clustering, ranking, and time series analysis not covered by more specific
+    topics like Deep Learning or Reinforcement Learning.
+  sources:
+  - venue: NeurIPS
+    area: General machine learning (supervised, unsupervised, online, active, etc.)
+  - venue: ICML
+    area: General Machine Learning (active learning, clustering, online learning, ranking, reinforcement
+      learning, supervised, semi- and self-supervised learning, time series analysis, etc.)
+  - venue: ICLR
+    area: general machine learning (i.e., none of the above)
+- name: ML Infrastructure and Software
+  definition: Covers libraries, improved implementations, scalability, distributed solutions, and hardware
+    for machine learning, excluding algorithmic contributions themselves.
+  sources:
+  - venue: NeurIPS
+    area: Infrastructure (e.g., libraries, improved implementation and scalability, distributed solutions)
+  - venue: ICLR
+    area: infrastructure, software libraries, hardware, etc.
+- name: Machine Learning for Sciences
+  definition: Covers ML applications to climate, health, life sciences, physics, and social sciences,
+    excluding general applications like vision or language covered elsewhere.
+  sources:
+  - venue: NeurIPS
+    area: Machine learning for sciences (e.g. climate, health, life sciences, physics, social sciences)
+- name: Neuroscience and Cognitive Science in ML
+  definition: Covers ML topics like neural coding and brain-computer interfaces connecting machine learning
+    with neuroscience and cognitive science, excluding general healthcare applications.
+  sources:
+  - venue: NeurIPS
+    area: Neuroscience and cognitive science (e.g., neural coding, brain-computer interfaces)
+- name: Optimization for Machine Learning
+  definition: Covers convex and non-convex optimization, stochastic, robust, online, non-smooth, and composite
+    optimization methods and matrix/tensor methods, excluding learning theory analysis of such methods.
+  sources:
+  - venue: NeurIPS
+    area: Optimization (e.g., convex and non-convex, stochastic, robust)
+  - venue: ICML
+    area: Optimization (convex and non-convex optimization, matrix/tensor methods, stochastic, online,
+      non-smooth, composite, etc.)
+  - venue: ICLR
+    area: optimization
+  - venue: AAAI
+    area: 'ML: Optimization'
+- name: Probabilistic Methods and Inference
+  definition: Covers variational inference, causal inference, Gaussian processes, Bayesian methods, graphical
+    models, Monte Carlo methods, and uncertainty quantification, excluding dedicated causal reasoning
+    topics focused purely on causal discovery.
+  sources:
+  - venue: NeurIPS
+    area: Probabilistic methods (e.g., variational inference, causal inference, Gaussian processes)
+  - venue: ICML
+    area: Probabilistic Inference (Bayesian methods, graphical models, Monte Carlo methods, etc.)
+  - venue: ICLR
+    area: probabilistic methods (Bayesian methods, variational inference, sampling, UQ, etc.)
+- name: Reinforcement Learning
+  definition: Covers decision and control, planning, hierarchical RL, robotics-related RL, and general
+    reinforcement learning algorithms, excluding deep RL architectures classified under Deep Learning.
+  sources:
+  - venue: NeurIPS
+    area: Reinforcement learning (e.g., decision and control, planning, hierarchical RL, robotics)
+  - venue: ICLR
+    area: reinforcement learning
+  - venue: AAAI
+    area: 'ML: Reinforcement Learning'
+- name: Social and Economic Aspects of Machine Learning
+  definition: Societal, economic and ethical impacts of machine learning and their social context (fairness,
+    safety and privacy as social questions).
+  sources:
+  - venue: NeurIPS
+    area: Social and economic aspects of machine learning (e.g., fairness, interpretability, human-AI
+      interaction, privacy, safety, strategic behavior)
+  - venue: ICLR
+    area: societal considerations including fairness, safety, privacy
+- name: Trustworthy Machine Learning
+  definition: 'Technical methods that make ML systems trustworthy: robustness, privacy, fairness, safety,
+    accountability and causal reliability.'
+  sources:
+  - venue: ICML
+    area: Trustworthy Machine Learning (accountability, causality, fairness, privacy, robustness, etc.)
+- name: Learning Theory
+  definition: Covers control theory, statistical learning theory, bandits, algorithmic game theory, and
+    theoretical foundations of learning, excluding applied optimization methods themselves.
+  sources:
+  - venue: NeurIPS
+    area: Theory (e.g., control theory, learning theory, algorithmic game theory)
+  - venue: ICML
+    area: Learning Theory (bandits, game theory, statistical learning theory, etc.)
+  - venue: ICLR
+    area: learning theory
+  - venue: AAAI
+    area: 'ML: Learning Theory'
+- name: Representation Learning
+  definition: Covers unsupervised, self-supervised, semi-supervised, and supervised representation learning
+    techniques in general, excluding modality-specific representation learning for vision, audio, or language
+    covered separately.
+  sources:
+  - venue: ICLR
+    area: unsupervised, self-supervised, semi-supervised, and supervised representation learning
+  - venue: AAAI
+    area: 'ML: Representation Learning'
+- name: Transfer, Meta, and Lifelong Learning
+  definition: Covers transfer learning, meta learning, and lifelong (continual) learning methods, excluding
+    general representation learning not focused on adaptation across tasks.
+  sources:
+  - venue: ICLR
+    area: transfer learning, meta learning, and lifelong learning
+- name: Representation Learning for Specific Modalities
+  definition: Covers representation learning tailored to computer vision, audio, language, and other specific
+    modalities, excluding generic modality-agnostic representation learning.
+  sources:
+  - venue: ICLR
+    area: representation learning for computer vision, audio, language, and other modalities
+- name: Metric, Kernel, and Sparse Coding Learning
+  definition: Covers metric learning, kernel learning, and sparse coding methods, excluding broader general
+    representation learning techniques.
+  sources:
+  - venue: ICLR
+    area: metric learning, kernel learning, and sparse coding
+- name: Deep Generative Models and Autoencoders
+  definition: Covers generative models including deep generative models and autoencoders, excluding probabilistic
+    inference methods not focused on generation.
+  sources:
+  - venue: ICLR
+    area: generative models
+  - venue: AAAI
+    area: 'ML: Deep Generative Models & Autoencoders'
+- name: Causal Reasoning and Learning
+  definition: Covers causal reasoning, causal learning, and causality under uncertainty, excluding general
+    probabilistic inference methods not centered on causality.
+  sources:
+  - venue: ICLR
+    area: causal reasoning
+  - venue: AAAI
+    area: 'ML: Causal Learning'
+  - venue: AAAI
+    area: 'RU: Causality'
+- name: Graph-based Machine Learning
+  definition: Covers learning on graphs and other geometries and topologies, including graph-based ML
+    methods, excluding generic representation learning for non-graph modalities.
+  sources:
+  - venue: ICLR
+    area: learning on graphs and other geometries & topologies
+  - venue: AAAI
+    area: 'ML: Graph-based Machine Learning'
+- name: Visualization and Interpretation of Representations
+  definition: Covers methods for visualizing or interpreting learned representations, excluding broader
+    interpretability work classified under social/trustworthy ML aspects.
+  sources:
+  - venue: ICLR
+    area: visualization or interpretation of learned representations
+- name: Datasets and Benchmarks
+  definition: Covers the creation, curation, and analysis of datasets and benchmarks for ML research,
+    excluding evaluation methodology topics focused on meta-analysis.
+  sources:
+  - venue: ICLR
+    area: datasets and benchmarks
+- name: Neurosymbolic and Hybrid AI Systems
+  definition: Covers physics-informed models, logic and formal reasoning integration, and other hybrid
+    neurosymbolic AI systems, excluding purely statistical deep learning architectures.
+  sources:
+  - venue: ICLR
+    area: neurosymbolic & hybrid AI systems (physics-informed, logic & formal reasoning, etc.)
+- name: Applications to Robotics, Autonomy, and Planning
+  definition: Covers ML applications specifically targeting robotics, autonomous systems, and planning,
+    excluding general reinforcement learning methodology not tied to application domains.
+  sources:
+  - venue: ICLR
+    area: applications to robotics, autonomy, planning
+- name: Applications to Neuroscience and Cognitive Science
+  definition: Covers ML applications addressing neuroscience and cognitive science problems, excluding
+    core methodological neuroscience-inspired learning topics listed elsewhere.
+  sources:
+  - venue: ICLR
+    area: applications to neuroscience & cognitive science
+- name: Applications to Physical Sciences
+  definition: Covers ML applications to physics, chemistry, biology, and related physical sciences, excluding
+    general machine-learning-for-science topics covering health and social science independently categorized
+    elsewhere.
+  sources:
+  - venue: ICLR
+    area: applications to physical sciences (physics, chemistry, biology, etc.)
+- name: Humanities and Computational Social Science
+  definition: Covers AI/ML applications to humanities and computational social science research, excluding
+    general social good applications listed under Applications.
+  sources:
+  - venue: AAAI
+    area: 'APP: Humanities & Computational Social Science'
+- name: Internet of Things, Sensor Networks, and Smart Cities
+  definition: Covers AI applications to IoT, sensor networks, and smart city systems, excluding generic
+    infrastructure topics about ML systems themselves.
+  sources:
+  - venue: AAAI
+    area: 'APP: Internet of Things, Sensor Networks & Smart Cities'
+- name: Misinformation and Fake News
+  definition: Covers detection and analysis of misinformation and fake news, excluding general social
+    network analysis not focused on false information.
+  sources:
+  - venue: AAAI
+    area: 'APP: Misinformation & Fake News'
+- name: Mobility, Driving, and Flight
+  definition: Covers AI applications to mobility, autonomous driving, and flight systems, excluding broader
+    transportation logistics topics.
+  sources:
+  - venue: AAAI
+    area: 'APP: Mobility, Driving & Flight'
+- name: Natural Sciences Applications
+  definition: Covers AI applications to natural sciences broadly, excluding specific physical science
+    applications under dedicated ML venues like ICLR's physical sciences topic.
+  sources:
+  - venue: AAAI
+    area: 'APP: Natural Sciences'
+- name: Security Applications
+  definition: Covers AI applications to security problems such as cybersecurity and threat detection,
+    excluding misinformation-specific topics.
+  sources:
+  - venue: AAAI
+    area: 'APP: Security'
+- name: Social Networks Applications
+  definition: Covers AI applications analyzing or operating on social networks, excluding misinformation-specific
+    analysis covered separately.
+  sources:
+  - venue: AAAI
+    area: 'APP: Social Networks'
+- name: Software Engineering Applications
+  definition: Covers AI applications to software engineering tasks such as code generation and analysis,
+    excluding general infrastructure/libraries topics for ML systems.
+  sources:
+  - venue: AAAI
+    area: 'APP: Software Engineering'
+- name: Transportation Applications
+  definition: Covers AI applications to transportation systems broadly, excluding the more specific mobility,
+    driving, and flight topic.
+  sources:
+  - venue: AAAI
+    area: 'APP: Transportation'
+- name: Web Applications and Mining
+  definition: Covers AI and data mining applications centered on the web, excluding social network-specific
+    or misinformation-specific applications.
+  sources:
+  - venue: AAAI
+    area: 'APP: Web'
+  - venue: AAAI
+    area: 'DMKM: Web'
+- name: Adaptive Behavior
+  definition: Covers cognitive modeling of adaptive behavior in agents, excluding agent architecture design
+    topics.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Adaptive Behavior'
+- name: Affective Computing and Emotional Intelligence
+  definition: Computational modeling, recognition and generation of human emotion and affect, and AI systems
+    that respond to it.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Affective Computing'
+  - venue: AAAI
+    area: 'HAI: Emotional Intelligence'
+- name: Agent Architectures
+  definition: Covers the design of cognitive and intelligent agent architectures, excluding adaptive behavior
+    modeling specifically.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Agent Architectures'
+- name: Analogy
+  definition: Covers computational models of analogy-making and analogical reasoning, excluding general
+    cognitive architecture topics.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Analogy'
+- name: Cognitive Systems Applications
+  definition: Covers applied work in cognitive modeling and cognitive systems research, excluding the
+    specific sub-areas of adaptive behavior, affective computing, agent architectures, and analogy.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Applications'
+- name: Computational Cognitive Architectures
+  definition: Covers the design and study of integrated computational architectures modeling human cognitive
+    processes, excluding narrower topics like Symbolic Representations or Agent Architectures.
+  sources:
+  - venue: AAAI
+    area: 'CMS: (Computational) Cognitive Architectures'
+- name: Computational Creativity
+  definition: Covers computational models and systems that generate or evaluate creative artifacts and
+    processes, excluding general Deep Generative Models unrelated to creativity framing.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Computational Creativity'
+- name: Conceptual Inference and Reasoning
+  definition: Covers reasoning over concepts and conceptual structures for inference tasks, excluding
+    symbolic-only representation work covered under Symbolic Representations.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Conceptual Inference and Reasoning'
+- name: Neural Spike Coding
+  definition: Covers computational modeling and analysis of neural spike-based coding mechanisms, excluding
+    broader Neuroscience and Cognitive Science in ML topics not focused on spike coding.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Neural Spike Coding'
+- name: Simulating Human Behavior
+  definition: Covers computational simulation of human behavioral patterns and decision processes, excluding
+    social-interaction-specific modeling covered under Social Cognition and Interaction.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Simulating Human Behavior'
+- name: Social Cognition and Interaction
+  definition: Covers computational modeling of social cognitive processes and interactive social behavior,
+    excluding general behavior simulation covered under Simulating Human Behavior.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Social Cognition And Interaction'
+- name: Symbolic Representations in Cognitive Systems
+  definition: Covers symbolic knowledge representation approaches within cognitive modeling, excluding
+    architecture-level design covered under Computational Cognitive Architectures.
+  sources:
+  - venue: AAAI
+    area: 'CMS: Symbolic Representations'
+- name: Representation Learning for Vision
+  definition: Covers learning visual feature representations for computer vision tasks, excluding modality-general
+    representation learning methods not specific to vision.
+  sources:
+  - venue: AAAI
+    area: 'CV: Representation Learning for Vision'
+  - venue: CVPR
+    area: Representation learning
+  - venue: ICCV
+    area: Representation learning
+- name: Large Vision Models
+  definition: Covers development and study of large-scale pretrained vision models, excluding general
+    representation learning methods not focused on model scale.
+  sources:
+  - venue: AAAI
+    area: 'CV: Large Vision Models'
+- name: 3D Computer Vision
+  definition: Covers 3D scene reconstruction, geometry, and related vision tasks, excluding 2D-only scene
+    analysis covered under Scene Analysis and Understanding in Vision.
+  sources:
+  - venue: AAAI
+    area: 'CV: 3D Computer Vision'
+- name: Adversarial Attacks and Robustness in Vision
+  definition: Covers adversarial attack, defense, and robustness methods specific to vision systems, excluding
+    general ML robustness covered under Social and Trustworthy Aspects of Machine Learning.
+  sources:
+  - venue: AAAI
+    area: 'CV: Adversarial Attacks & Robustness'
+  - venue: CVPR
+    area: Adversarial attack and defense
+  - venue: ICCV
+    area: Adversarial attack and defense
+- name: Computer Vision Applications
+  definition: Covers applied uses of computer vision techniques across domains, excluding domain-specific
+    vision areas like Medical and Biological Imaging or Vision for Robotics and Autonomous Driving.
+  sources:
+  - venue: AAAI
+    area: 'CV: Applications'
+- name: Medical and Biological Imaging
+  definition: Covers computer vision methods applied to medical and biological imagery including cell
+    microscopy, excluding general Computer Vision Applications in other domains.
+  sources:
+  - venue: AAAI
+    area: 'CV: Medical and Biological Imaging'
+  - venue: CVPR
+    area: Medical and biological vision, cell microscopy
+  - venue: ICCV
+    area: Medical and biological vision; cell microscopy
+- name: Biometrics, Face, Gesture and Pose
+  definition: Covers recognition and analysis of biometric signals including faces, gestures, and body
+    pose, excluding general object detection covered under Object Detection and Categorization.
+  sources:
+  - venue: AAAI
+    area: 'CV: Biometrics, Face, Gesture & Pose'
+- name: Computational Photography and Visual Synthesis
+  definition: Covers image and video synthesis and computational photography techniques, excluding Deep
+    Generative Models and Autoencoders not specific to vision synthesis.
+  sources:
+  - venue: AAAI
+    area: 'CV: Computational Photography, Image & Video Synthesis'
+- name: Fairness, Privacy and Ethics in Vision
+  definition: Bias, fairness, privacy, accountability, transparency and ethical issues specific to computer
+    vision systems.
+  sources:
+  - venue: AAAI
+    area: 'CV: Bias, Fairness & Privacy'
+  - venue: CVPR
+    area: Transparency, fairness, accountability, privacy and ethics in vision
+  - venue: ICCV
+    area: Fairness, privacy, ethics, social-good, transparency, accountability in vision
+- name: Interpretability and Explainability in Vision
+  definition: Covers methods for explaining and interpreting vision model decisions, excluding general
+    Visualization and Interpretation of Representations not specific to vision.
+  sources:
+  - venue: AAAI
+    area: 'CV: Interpretability, Explainability, and Transparency'
+  - venue: CVPR
+    area: Explainable computer vision
+  - venue: ICCV
+    area: Explainable AI for CV
+- name: Image and Video Retrieval
+  definition: Covers retrieval of images and videos based on content or query, excluding general Datasets
+    and Benchmarks topics not focused on retrieval methods.
+  sources:
+  - venue: AAAI
+    area: 'CV: Image and Video Retrieval'
+  - venue: ICCV
+    area: 'Recognition: Retrieval'
+- name: Vision and Language
+  definition: Covers joint modeling of visual and linguistic information such as captioning and visual
+    question answering, excluding pure Natural Language modality work outside vision context.
+  sources:
+  - venue: AAAI
+    area: 'CV: Language and Vision'
+  - venue: ICCV
+    area: Vision and language
+- name: Learning and Optimization for Computer Vision
+  definition: Covers learning algorithms and optimization techniques tailored to computer vision problems,
+    excluding general Optimization for Machine Learning not vision-specific.
+  sources:
+  - venue: AAAI
+    area: 'CV: Learning & Optimization for CV'
+- name: Low-Level and Physics-Based Vision
+  definition: Covers low-level image processing and physics-based vision modeling such as reflectance
+    and illumination, excluding high-level Scene Analysis and Understanding in Vision.
+  sources:
+  - venue: AAAI
+    area: 'CV: Low Level & Physics-based Vision'
+  - venue: ICCV
+    area: Low-level and physics-based vision
+- name: Motion and Tracking in Vision
+  definition: Covers motion estimation, matching, and object tracking in video, excluding broader Video
+    Understanding and Activity Analysis focused on action recognition.
+  sources:
+  - venue: AAAI
+    area: 'CV: Motion & Tracking'
+  - venue: CVPR
+    area: 'Video: Low-level analysis, motion, and tracking'
+  - venue: ICCV
+    area: Motion estimation, matching and tracking
+- name: Multimodal Learning in Vision
+  definition: Vision methods that learn from or fuse multiple modalities (e.g., images with text, audio,
+    depth or other sensors).
+  sources:
+  - venue: AAAI
+    area: 'CV: Multi-modal Vision'
+  - venue: CVPR
+    area: Multimodal learning
+  - venue: ICCV
+    area: Multimodal learning
+- name: Object Detection and Categorization
+  definition: Covers detecting and classifying objects within images, excluding segmentation-level pixel
+    labeling covered under Segmentation.
+  sources:
+  - venue: AAAI
+    area: 'CV: Object Detection & Categorization'
+- name: Scene Analysis and Understanding in Vision
+  definition: Covers holistic interpretation of visual scenes including context and layout, excluding
+    3D geometric reconstruction covered under 3D Computer Vision.
+  sources:
+  - venue: AAAI
+    area: 'CV: Scene Analysis & Understanding'
+  - venue: CVPR
+    area: Scene analysis and understanding
+  - venue: ICCV
+    area: Scene analysis and understanding
+- name: Segmentation, Grouping and Shape Analysis
+  definition: Pixel- and region-level segmentation, perceptual grouping and shape analysis in images and
+    video.
+  sources:
+  - venue: AAAI
+    area: 'CV: Segmentation'
+  - venue: CVPR
+    area: Segmentation, grouping and shape analysis
+  - venue: ICCV
+    area: Segmentation, grouping and shape analysis
+- name: Video Understanding and Activity Analysis
+  definition: Covers recognition and understanding of actions and events in video, excluding low-level
+    motion tracking covered under Motion and Tracking in Vision.
+  sources:
+  - venue: AAAI
+    area: 'CV: Video Understanding & Activity Analysis'
+  - venue: CVPR
+    area: 'Video: Action and event understanding'
+  - venue: ICCV
+    area: Action and event understanding
+- name: Vision for Robotics and Autonomous Driving
+  definition: Covers computer vision techniques applied to robotic perception and autonomous vehicles,
+    excluding general Mobility, Driving, and Flight applications outside vision methods.
+  sources:
+  - venue: AAAI
+    area: 'CV: Vision for Robotics & Autonomous Driving'
+- name: Visual Reasoning and Symbolic Representations
+  definition: Covers reasoning over visual data using symbolic or structured representations, excluding
+    general Neurosymbolic and Hybrid AI Systems not specific to vision.
+  sources:
+  - venue: AAAI
+    area: 'CV: Visual Reasoning & Symbolic Representations'
+- name: Constraint Satisfaction and Optimization Applications
+  definition: Covers applied uses of constraint satisfaction and optimization techniques in real-world
+    problems, excluding the general solving methods covered under Constraint Optimization or Constraint
+    Programming.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Applications'
+- name: Constraint Learning and Acquisition
+  definition: Covers automatic learning or acquisition of constraints from data or examples, excluding
+    manual Constraint Programming formulation.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Constraint Learning and Acquisition'
+- name: Constraint Optimization
+  definition: Covers optimization problems formulated with constraints seeking optimal solutions, excluding
+    feasibility-only Constraint Satisfaction problems.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Constraint Optimization'
+- name: Constraint Programming
+  definition: Covers languages, frameworks, and techniques for modeling and solving problems via constraint
+    programming paradigms, excluding satisfiability-specific methods under Satisfiability.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Constraint Programming'
+- name: Constraint Satisfaction
+  definition: Covers algorithms and theory for solving constraint satisfaction problems seeking feasible
+    assignments, excluding optimization-focused Constraint Optimization.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Constraint Satisfaction'
+- name: Distributed Constraint Satisfaction and Optimization
+  definition: Covers distributed algorithms for solving constraint satisfaction and optimization problems
+    across multiple agents, excluding centralized Constraint Optimization approaches.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Distributed CSP/Optimization'
+- name: Mixed Discrete/Continuous Optimization
+  definition: Covers optimization problems involving both discrete and continuous variables, excluding
+    purely discrete Constraint Satisfaction or purely continuous Optimization for Machine Learning.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Mixed Discrete/Continuous Optimization'
+- name: Satisfiability
+  definition: Covers Boolean satisfiability (SAT) solving algorithms and theory, excluding extended theory-based
+    solving under Satisfiability Modulo Theories.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Satisfiability'
+- name: Satisfiability Modulo Theories
+  definition: Covers solving satisfiability problems combined with background theories such as arithmetic,
+    excluding pure propositional Satisfiability.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Satisfiability Modulo Theories'
+- name: Search Algorithms for Constraint Solving
+  definition: Covers search strategies and algorithms used in solving constraint and combinatorial problems,
+    excluding dedicated Satisfiability or Satisfiability Modulo Theories solvers.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Search'
+- name: Solvers and Tools for Constraint Problems
+  definition: Covers software systems and toolkits implementing constraint and optimization solving, excluding
+    theoretical Search Algorithms for Constraint Solving not tied to tool implementation.
+  sources:
+  - venue: AAAI
+    area: 'CSO: Solvers and Tools'
+- name: Anomaly and Outlier Detection
+  definition: Covers methods for identifying rare, novel, or anomalous instances in data, excluding general
+    data stream mining which focuses on continuous data processing.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Anomaly/Outlier Detection'
+- name: Data Mining Applications
+  definition: Covers applied uses of data mining techniques to real-world problems and domains, excluding
+    core algorithmic contributions covered by other data mining topics like rule mining.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Applications'
+- name: Conversational Recommendation and Retrieval
+  definition: Covers interactive, dialogue-based systems for recommending items or retrieving information,
+    excluding static recommender systems without conversational interaction.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Conversational Systems for Recommendation & Retri'
+- name: Data Compression
+  definition: Covers techniques for reducing data size for storage or transmission, excluding data stream
+    mining which addresses processing of continuous data flows.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Data Compression'
+- name: Data Stream Mining
+  definition: Covers algorithms and methods for mining continuous, high-velocity data streams, excluding
+    static or batch data mining tasks.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Data Stream Mining'
+- name: Data Visualization and Summarization
+  definition: Covers techniques for visually representing and condensing data to reveal structure or insights,
+    excluding interpretability methods for ML models found in vision-specific topics.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Data Visualization & Summarization'
+- name: Graph Mining and Social Network Analysis
+  definition: Covers community detection, graph mining algorithms, and social network analysis, excluding
+    graph-based machine learning model architectures covered elsewhere.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Graph Mining, Social Network Analysis & Community'
+- name: Intelligent Query Processing
+  definition: Covers techniques for enhancing database query processing with intelligence and optimization,
+    excluding semantic web topics focused on linked data representation.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Intelligent Query Processing'
+- name: Knowledge Acquisition from the Web
+  definition: Covers extracting structured knowledge and information from web sources, excluding linked
+    open data and knowledge graph completion methods.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Knowledge Acquisition from  the Web'
+- name: Linked Open Data, Knowledge Graphs and Knowledge Base Completion
+  definition: Covers construction, linking, and completion of knowledge graphs and open data resources,
+    excluding web-based knowledge acquisition as a distinct extraction-focused topic.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Linked Open Data, Knowledge Graphs & KB Completio'
+- name: Spatial, Temporal and Spatio-Temporal Data Mining
+  definition: Covers mining patterns from spatial, temporal, or spatio-temporal datasets, excluding mining
+    of visual or multimedia data covered separately.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Mining of Spatial, Temporal or Spatio-Temporal Da'
+- name: Mining of Visual, Multimedia and Multimodal Data
+  definition: Covers mining techniques applied to images, video, and multimodal datasets, excluding spatio-temporal
+    data mining focused on location/time patterns.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Mining of Visual, Multimedia & Multimodal Data'
+- name: Recommender Systems
+  definition: Covers algorithms and systems for generating personalized recommendations, excluding conversational
+    recommendation systems which involve interactive dialogue.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Recommender Systems'
+- name: Provenance, Trust and Reputation Reasoning
+  definition: Covers representing and reasoning about data provenance, trust, and reputation, excluding
+    semantic web topics focused on ontologies and linked data structures.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Representing, Reasoning, and Using Provenance, Tr'
+- name: Rule Mining and Pattern Mining
+  definition: Covers discovery of association rules and frequent patterns in data, excluding anomaly detection
+    which targets rare or unusual instances.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Rule Mining & Pattern Mining'
+- name: Scalability, Parallel and Distributed Data Systems
+  definition: Covers scalable, parallel, and distributed architectures for data mining and knowledge management,
+    excluding data stream mining focused on continuous data arrival.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Scalability, Parallel & Distributed Systems'
+- name: Semantic Web
+  definition: Covers ontologies, semantic annotation, and web-based knowledge representation standards,
+    excluding linked open data and knowledge graph completion as a distinct topic.
+  sources:
+  - venue: AAAI
+    area: 'DMKM: Semantic Web'
+- name: Adversarial Learning in Game Theory
+  definition: Covers adversarial learning scenarios framed within game-theoretic and economic paradigms,
+    excluding general adversarial robustness methods in vision or ML.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Adversarial Learning'
+- name: Game Theory and Economic Paradigm Applications
+  definition: Covers applied uses of game-theoretic and economic models to real-world problems, excluding
+    core theoretical contributions to game theory itself.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Applications'
+- name: Auctions and Market-Based Systems
+  definition: Covers design and analysis of auctions and market mechanisms, excluding general mechanism
+    design which covers broader incentive structures.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Auctions and Market-Based Systems'
+- name: Behavioral Game Theory
+  definition: Covers models of strategic behavior incorporating human psychological and behavioral factors,
+    excluding classical equilibrium analysis of fully rational agents.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Behavioral Game Theory'
+- name: Cooperative Game Theory
+  definition: Covers analysis of coalition formation, value distribution, and cooperation among agents
+    in games, excluding non-cooperative equilibrium concepts.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Cooperative Game Theory'
+- name: Coordination and Collaboration in Multiagent Systems
+  definition: Covers mechanisms enabling multiple agents to coordinate and collaborate toward shared or
+    individual goals, excluding mechanism design which focuses on incentive structures.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Coordination and Collaboration'
+  - venue: AAAI
+    area: 'MAS: Coordination and Collaboration'
+- name: Equilibrium Concepts in Game Theory
+  definition: Covers computation and analysis of equilibria such as Nash equilibrium in strategic games,
+    excluding cooperative game theory's coalition-based analysis.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Equilibrium'
+- name: Fair Division
+  definition: Covers algorithms and theory for fairly allocating resources among agents, excluding social
+    choice and voting which concerns aggregating preferences.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Fair Division'
+- name: Game Theory
+  definition: Covers foundational theory of strategic interaction among rational agents, excluding behavioral
+    game theory's focus on psychological deviations from rationality.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Game Theory'
+- name: Imperfect Information Games
+  definition: Covers strategic reasoning and algorithms for games with hidden or incomplete information,
+    excluding equilibrium computation in perfect-information settings.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Imperfect Information'
+- name: Mechanism Design
+  definition: Covers designing rules and incentives for multiagent systems to achieve desired outcomes,
+    excluding auctions and market-based systems as a specialized subtopic.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Mechanism Design'
+  - venue: AAAI
+    area: 'MAS: Mechanism Design'
+- name: Social Choice and Voting
+  definition: Covers theory and algorithms for aggregating individual preferences into collective decisions,
+    excluding fair division which focuses on resource allocation.
+  sources:
+  - venue: AAAI
+    area: 'GTEP: Social Choice / Voting'
+  - venue: AAAI
+    area: 'HAI: Voting'
+- name: Human-AI Interaction Applications
+  definition: Covers applied systems combining humans and AI in practical contexts, excluding core human-computer
+    interaction interface design topics.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Applications'
+- name: Brain-Sensing and Analysis
+  definition: Covers techniques for sensing and analyzing brain signals for human-AI interaction, excluding
+    broader neuroscience applications in machine learning contexts.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Brain-Sensing and Analysis'
+- name: Crowdsourcing and Human Computation
+  definition: Covers methods leveraging human effort and crowds to solve computational tasks, excluding
+    human-in-the-loop machine learning which integrates humans into model training loops.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Crowd Sourcing and Human Computation'
+- name: Procedural Content Generation and Storytelling in Games
+  definition: Covers automated generation of game content and narrative storytelling, excluding virtual
+    humans and NPC character design.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Game Design — Procedural Content Generation & Storytelling'
+- name: Virtual Humans, NPCs and Autonomous Characters
+  definition: Covers design and behavior of virtual humans and non-player characters in games, excluding
+    procedural content and storytelling generation.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Game Design — Virtual Humans, NPCs and Autonomous Characters'
+- name: Human-Aware Planning and Behavior Prediction
+  definition: Covers planning algorithms and predictive models that account for human behavior and preferences,
+    excluding general robotics planning without human-awareness focus.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Human-Aware Planning and Behavior Prediction'
+- name: Human-Computer Interaction
+  definition: Covers design and study of interfaces and interaction between humans and computers, excluding
+    intelligent user interfaces which focus on AI-driven adaptivity.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Human-Computer Interaction'
+- name: Human-in-the-Loop Machine Learning
+  definition: Covers machine learning approaches that incorporate human feedback or guidance into the
+    training loop, excluding crowdsourcing which focuses on outsourcing tasks to humans.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Human-in-the-loop Machine Learning'
+- name: Intelligent User Interfaces
+  definition: Covers AI-driven adaptive and intelligent interface design, excluding general human-computer
+    interaction studies without AI-driven adaptivity.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Intelligent User Interfaces'
+- name: Interaction Techniques and Devices
+  definition: Covers novel input/output methods and hardware devices for human-AI interaction, excluding
+    intelligent user interfaces which focus on software-level adaptivity.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Interaction Techniques and Devices'
+- name: Learning Human Values and Preferences
+  definition: Covers methods for eliciting, modeling, and learning human values and preferences to guide
+    AI systems, excluding general Human-in-the-Loop Machine Learning techniques.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Learning Human Values and Preferences'
+- name: Planning and Decision Support for Human-Machine Teams
+  definition: Covers planning algorithms and decision-support systems designed to assist mixed human-machine
+    teams, distinct from pure Human-Aware Planning and Behavior Prediction which focuses on predicting
+    human behavior.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Planning and Decision Support for Human-Machine Teams'
+- name: Teamwork and Team Formation
+  definition: Covers mechanisms for forming effective teams and coordinating teamwork among agents or
+    humans, excluding general Coordination and Collaboration in Multiagent Systems which covers broader
+    coordination protocols.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Teamwork, Team formation'
+  - venue: AAAI
+    area: 'MAS: Teamwork'
+- name: 'Understanding People: Theories, Concepts and Methods'
+  definition: Covers theoretical frameworks and methodologies for modeling and understanding human cognition
+    and behavior, excluding applied Simulating Human Behavior which focuses on behavior replication rather
+    than theory.
+  sources:
+  - venue: AAAI
+    area: 'HAI: Understanding People, Theories, Concepts and Methods'
+- name: User Experience and Usability
+  definition: Covers evaluation and design of user experience and usability of AI systems, excluding the
+    design of Intelligent User Interfaces themselves.
+  sources:
+  - venue: AAAI
+    area: 'HAI: User Experience and Usability'
+- name: Robot Behavior Learning and Control
+  definition: Covers learning-based approaches to robot behavior generation and control, excluding Learning
+    and Optimization for Robotics which covers broader optimization techniques not specific to behavior
+    control.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Behavior Learning & Control'
+- name: Cognitive Robotics
+  definition: Covers robots that integrate cognitive architectures and reasoning for complex task execution,
+    excluding general Human-Robot Interaction which focuses on interaction rather than internal cognition.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Cognitive Robotics'
+- name: Human-Robot Interaction
+  definition: Covers interaction, communication, and collaboration between humans and robots, excluding
+    general Human-Computer Interaction which is not robot-specific.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Human-Robot Interaction'
+- name: Learning and Optimization for Robotics
+  definition: Covers learning-based and optimization methods applied broadly to robotics problems, excluding
+    behavior-specific Robot Behavior Learning and Control.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Learning & Optimization for ROB'
+- name: Robot Localization, Mapping, and Navigation
+  definition: Covers robot localization, SLAM, and navigation techniques, excluding robot State Estimation
+    which focuses on broader internal/external state inference beyond position and maps.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Localization, Mapping, and Navigation'
+- name: Robot Manipulation
+  definition: Covers algorithms and control strategies for robotic manipulation of objects, excluding
+    Motion and Path Planning in Robotics which covers broader movement planning.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Manipulation'
+- name: Robot Motion and Path Planning
+  definition: Covers algorithms for planning robot motion and paths through environments, excluding Robot
+    Manipulation which focuses on object interaction.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Motion and Path Planning'
+- name: Multi-Robot Systems
+  definition: Covers coordination, control, and planning for systems involving multiple robots, excluding
+    single-robot Cognitive Robotics approaches.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Multi-Robot Systems'
+- name: Robot Multimodal Perception and Sensor Fusion
+  definition: Covers combining multiple sensor modalities for robot perception, excluding robot State
+    Estimation which focuses on inferring internal/external states rather than raw sensor fusion.
+  sources:
+  - venue: AAAI
+    area: 'ROB: Multimodal Perception & Sensor Fusion'
+- name: Robot State Estimation
+  definition: Covers techniques for estimating robot or environment states from sensor data, excluding
+    Localization, Mapping, and Navigation which focuses specifically on spatial positioning and mapping.
+  sources:
+  - venue: AAAI
+    area: 'ROB: State Estimation'
+- name: Action, Change, and Causality in Knowledge Representation
+  definition: Covers formal representation and reasoning about actions, change, and causal relationships,
+    excluding general Causal Reasoning and Learning which is a broader ML-oriented topic.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Action, Change, and Causality'
+- name: Knowledge Representation and Reasoning Applications
+  definition: Covers applied uses of KR&R techniques in real-world domains, excluding foundational topics
+    like Knowledge Representation Languages which focus on formalism design.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Applications'
+- name: Argumentation in Knowledge Representation
+  definition: Covers formal models and reasoning methods for argumentation, excluding Nonmonotonic Reasoning
+    which covers belief revision without formal argument structures.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Argumentation'
+- name: Automated Reasoning and Theorem Proving
+  definition: Covers algorithms and systems for automated logical deduction and theorem proving, excluding
+    Logic Programming which focuses on declarative programming paradigms.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Automated Reasoning and Theorem Proving'
+- name: Common-Sense Reasoning
+  definition: Covers reasoning methods that capture everyday human knowledge and inference, excluding
+    Conceptual Inference and Reasoning which is a cognitive-systems-level topic.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Common-Sense Reasoning'
+- name: Computational Complexity of Reasoning
+  definition: Covers theoretical analysis of the computational complexity of reasoning tasks, excluding
+    Automated Reasoning and Theorem Proving which focuses on algorithms rather than complexity analysis.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Computational Complexity of Reasoning'
+- name: Description Logics
+  definition: Covers formalisms and reasoning techniques specific to description logics, excluding broader
+    Knowledge Representation Languages covering other formalisms.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Description Logics'
+- name: Diagnosis and Abductive Reasoning
+  definition: Covers reasoning techniques for fault diagnosis and abductive inference, excluding Common-Sense
+    Reasoning which covers general everyday inference.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Diagnosis and Abductive Reasoning'
+- name: Geometric, Spatial, and Temporal Reasoning
+  definition: Covers reasoning about space, geometry, and time, excluding Spatial, Temporal and Spatio-Temporal
+    Data Mining which is data-driven rather than logic-based.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Geometric, Spatial, and Temporal Reasoning'
+- name: Knowledge Acquisition in Knowledge Representation
+  definition: Covers methods for acquiring structured knowledge for KR systems, excluding Knowledge Acquisition
+    from the Web which is specific to web-based sources.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Knowledge Acquisition'
+- name: Knowledge Engineering
+  definition: Covers methodologies and tools for building and maintaining knowledge bases, excluding Ontologies
+    which focuses specifically on ontology construction and use.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Knowledge Engineering'
+- name: Knowledge Representation Languages
+  definition: Covers the design and semantics of formal languages for representing knowledge, excluding
+    Description Logics which is a specific subclass of such languages.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Knowledge Representation Languages'
+- name: Logic Programming
+  definition: Covers declarative programming paradigms based on formal logic, excluding Automated Reasoning
+    and Theorem Proving which focuses on proof search rather than programming paradigms.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Logic Programming'
+- name: Nonmonotonic Reasoning
+  definition: Covers reasoning formalisms that allow retraction of conclusions given new information,
+    excluding Reasoning with Beliefs which focuses specifically on belief representation.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Nonmonotonic Reasoning'
+- name: Ontologies
+  definition: Covers the design, use, and reasoning over ontologies, excluding general Knowledge Engineering
+    which covers broader knowledge base construction.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Ontologies'
+- name: Preferences in Knowledge Representation
+  definition: Covers formal representation and reasoning about preferences, excluding Learning Human Values
+    and Preferences which is a learning-based, human-centered topic.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Preferences'
+- name: Qualitative Reasoning
+  definition: Covers reasoning about physical and other systems using qualitative rather than quantitative
+    models, excluding Geometric, Spatial, and Temporal Reasoning which focuses on specific spatial/temporal
+    domains.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Qualitative Reasoning'
+- name: Reasoning with Beliefs
+  definition: Covers formal frameworks for representing and reasoning about agents' beliefs, excluding
+    Nonmonotonic Reasoning which covers general defeasible inference.
+  sources:
+  - venue: AAAI
+    area: 'KRR: Reasoning with Beliefs'
+- name: Deep Neural Architectures and Foundation Models
+  definition: Covers the design of deep neural network architectures and large-scale foundation models,
+    excluding Deep Learning Theory which covers theoretical analysis rather than architecture design.
+  sources:
+  - venue: AAAI
+    area: 'ML: Deep Neural Architectures and Foundation Models'
+- name: Deep Learning Theory
+  definition: Covers theoretical analysis of deep learning methods, such as generalization and expressivity,
+    excluding architecture design covered in Deep Neural Architectures and Foundation Models.
+  sources:
+  - venue: AAAI
+    area: 'ML: Deep Learning Theory'
+- name: Active Learning
+  definition: Covers methods for selecting informative data points to query labels for efficient learning,
+    excluding general Human-in-the-Loop Machine Learning which covers broader human involvement in ML.
+  sources:
+  - venue: AAAI
+    area: 'ML: Active Learning'
+- name: Adversarial Learning and Robustness in ML
+  definition: Covers adversarial attack and defense methods and robustness analysis for general machine
+    learning models, excluding vision-specific Adversarial Attacks and Robustness in Vision.
+  sources:
+  - venue: AAAI
+    area: 'ML: Adversarial Learning & Robustness'
+- name: Bayesian Learning
+  definition: Covers Bayesian approaches to machine learning including Bayesian inference and modeling,
+    excluding general Probabilistic Methods and Inference which covers broader probabilistic techniques.
+  sources:
+  - venue: AAAI
+    area: 'ML: Bayesian Learning'
+- name: Bio-inspired Learning
+  definition: Covers machine learning methods inspired by biological processes such as evolutionary or
+    neural-inspired computation, excluding Neuroscience and Cognitive Science in ML which focuses on cognitive
+    modeling rather than bio-inspired algorithms.
+  sources:
+  - venue: AAAI
+    area: 'ML: Bio-inspired Learning'
+- name: Calibration and Uncertainty Quantification
+  definition: Covers methods for estimating and calibrating predictive uncertainty in ML models, excluding
+    general probabilistic graphical modeling covered under Probabilistic Methods and Inference.
+  sources:
+  - venue: AAAI
+    area: 'ML: Calibration & Uncertainty Quantification'
+- name: Classification and Regression
+  definition: Covers core supervised learning methods for predicting discrete labels or continuous values,
+    excluding structured output prediction covered under Structured Learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Classification and Regression'
+- name: Clustering
+  definition: Covers unsupervised grouping of data points into clusters based on similarity, excluding
+    dimensionality reduction techniques covered separately.
+  sources:
+  - venue: AAAI
+    area: 'ML: Clustering'
+- name: Dimensionality Reduction and Feature Selection
+  definition: Covers techniques for reducing the number of input variables or selecting relevant features,
+    excluding feature construction covered under Feature Construction/Reformulation.
+  sources:
+  - venue: AAAI
+    area: 'ML: Dimensionality Reduction/Feature Selection'
+- name: Distributed and Federated Machine Learning
+  definition: Covers training ML models across distributed or decentralized data sources including federated
+    learning, excluding general scalability of ML systems infrastructure.
+  sources:
+  - venue: AAAI
+    area: 'ML: Distributed Machine Learning & Federated Learning'
+- name: Ensemble Methods
+  definition: Covers techniques combining multiple models such as bagging, boosting, and stacking to improve
+    predictive performance, excluding single-model classification methods.
+  sources:
+  - venue: AAAI
+    area: 'ML: Ensemble Methods'
+- name: Ethics, Bias, and Fairness in Machine Learning
+  definition: Covers the study and mitigation of bias and ethical concerns in ML models and their societal
+    impact, excluding privacy-specific techniques covered separately.
+  sources:
+  - venue: AAAI
+    area: 'ML: Ethics, Bias, and Fairness'
+- name: Privacy in Machine Learning
+  definition: Covers techniques for preserving data and model privacy such as differential privacy, excluding
+    fairness and bias topics covered elsewhere.
+  sources:
+  - venue: AAAI
+    area: 'ML: Privacy'
+- name: Transparent, Interpretable, and Explainable ML
+  definition: Covers methods for making ML models' decisions understandable and interpretable to humans,
+    excluding visualization-focused interpretation covered under Visualization and Interpretation of Representations.
+  sources:
+  - venue: AAAI
+    area: 'ML: Transparent, Interpretable, Explainable ML'
+- name: Evolutionary Learning
+  definition: Covers learning methods based on evolutionary computation and genetic algorithms, excluding
+    general bio-inspired learning approaches not based on evolution.
+  sources:
+  - venue: AAAI
+    area: 'ML: Evolutionary Learning'
+- name: Feature Construction and Reformulation
+  definition: Covers techniques for generating or transforming features to improve model performance,
+    excluding feature selection and dimensionality reduction covered separately.
+  sources:
+  - venue: AAAI
+    area: 'ML: Feature Construction/Reformulation'
+- name: AutoML and Hyperparameter Tuning
+  definition: Covers automated machine learning pipelines and hyperparameter optimization techniques,
+    excluding general optimization for ML covered under Optimization for Machine Learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Auto ML and Hyperparameter Tuning'
+- name: Imitation Learning and Inverse Reinforcement Learning
+  definition: Covers learning policies from expert demonstrations and inferring reward functions, excluding
+    standard reinforcement learning covered under Reinforcement Learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Imitation Learning & Inverse Reinforcement Learning'
+- name: Kernel Methods
+  definition: Covers kernel-based learning algorithms such as support vector machines and kernel regression,
+    excluding general metric and sparse coding learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Kernel Methods'
+- name: Learning on the Edge and Model Compression
+  definition: Covers techniques for compressing models and enabling efficient learning/inference on edge
+    devices, excluding general scalability of ML systems for distributed computing.
+  sources:
+  - venue: AAAI
+    area: 'ML: Learning on the Edge & Model Compression'
+- name: Learning Preferences or Rankings
+  definition: Covers methods for learning from or predicting preference orderings and rankings, excluding
+    general classification and regression tasks.
+  sources:
+  - venue: AAAI
+    area: 'ML: Learning Preferences or Rankings'
+- name: Learning with Manifolds
+  definition: Covers manifold learning techniques for modeling low-dimensional structure in high-dimensional
+    data, excluding generic dimensionality reduction methods like PCA.
+  sources:
+  - venue: AAAI
+    area: 'ML: Learning with Manifolds'
+- name: Matrix and Tensor Methods
+  definition: Covers learning algorithms based on matrix and tensor factorization and decomposition, excluding
+    general kernel methods.
+  sources:
+  - venue: AAAI
+    area: 'ML: Matrix & Tensor Methods'
+- name: Multi-class, Multi-label Learning and Extreme Classification
+  definition: Covers classification problems involving multiple classes or labels including extreme-scale
+    label spaces, excluding standard binary classification covered under Classification and Regression.
+  sources:
+  - venue: AAAI
+    area: 'ML: Multi-class/Multi-label Learning & Extreme Classification'
+- name: Multi-instance and Multi-view Learning
+  definition: Covers learning from data represented as bags of instances or multiple views/sources, excluding
+    multimodal learning across different data modalities.
+  sources:
+  - venue: AAAI
+    area: 'ML: Multi-instance/Multi-view Learning'
+- name: Multimodal Learning
+  definition: Covers general ML methods for jointly learning from multiple data modalities, excluding
+    vision-specific multi-modal work covered under Multi-modal Computer Vision.
+  sources:
+  - venue: AAAI
+    area: 'ML: Multimodal Learning'
+- name: Neuro-Symbolic Learning
+  definition: Covers learning methods that integrate neural networks with symbolic reasoning, excluding
+    general neurosymbolic hybrid AI systems covered elsewhere.
+  sources:
+  - venue: AAAI
+    area: 'ML: Neuro-Symbolic Learning'
+- name: Online Learning and Bandits
+  definition: Covers sequential decision-making algorithms including online learning and multi-armed/contextual
+    bandits, excluding full reinforcement learning with long-horizon environments.
+  sources:
+  - venue: AAAI
+    area: 'ML: Online Learning & Bandits'
+- name: Information Theory in Machine Learning
+  definition: Covers application of information-theoretic principles and measures to machine learning
+    problems, excluding general probabilistic inference methods.
+  sources:
+  - venue: AAAI
+    area: 'ML: Information Theory'
+- name: Probabilistic Circuits and Graphical Models
+  definition: Covers tractable probabilistic models including probabilistic circuits and graphical models
+    for structured probabilistic inference, excluding general Bayesian learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Probabilistic Circuits and Graphical Models'
+- name: Quantum Machine Learning
+  definition: Covers machine learning algorithms that leverage quantum computing techniques, excluding
+    classical ML optimization methods.
+  sources:
+  - venue: AAAI
+    area: 'ML: Quantum Machine Learning'
+- name: Statistical Relational and Logic Learning
+  definition: Covers learning methods that combine statistical and relational/logical representations,
+    excluding purely symbolic knowledge representation covered under Knowledge Representation Languages.
+  sources:
+  - venue: AAAI
+    area: 'ML: Statistical Relational/Logic Learning'
+- name: Scalability of ML Systems
+  definition: Covers techniques for scaling machine learning algorithms and systems to large data and
+    compute, excluding federated/distributed learning specifically covered under Distributed and Federated
+    Machine Learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Scalability of ML Systems'
+- name: Semi-Supervised Learning
+  definition: Covers learning from a combination of labeled and unlabeled data, excluding fully unsupervised
+    and self-supervised learning covered under Unsupervised and Self-Supervised Learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Semi-Supervised Learning'
+- name: Structured Learning
+  definition: Covers prediction of structured outputs such as sequences, trees, or graphs, excluding simple
+    classification and regression tasks.
+  sources:
+  - venue: AAAI
+    area: 'ML: Structured Learning'
+- name: Time-Series and Data Stream Learning
+  definition: Covers ML methods for modeling and predicting sequential or streaming data, excluding general
+    data stream mining covered under Data Stream Mining.
+  sources:
+  - venue: AAAI
+    area: 'ML: Time-Series/Data Streams'
+- name: Transfer, Domain Adaptation, and Multi-Task Learning
+  definition: Covers methods for transferring knowledge across tasks or domains and jointly learning multiple
+    tasks, excluding lifelong/continual learning covered separately.
+  sources:
+  - venue: AAAI
+    area: 'ML: Transfer, Domain Adaptation, Multi-Task Learning'
+- name: Life-Long and Continual Learning
+  definition: Covers learning methods that continuously acquire knowledge over time without catastrophic
+    forgetting, excluding one-shot transfer learning covered under Transfer, Domain Adaptation, and Multi-Task
+    Learning.
+  sources:
+  - venue: AAAI
+    area: 'ML: Life-Long and Continual Learning'
+- name: Unsupervised and Self-Supervised Learning
+  definition: Covers learning representations or patterns from unlabeled data including self-supervised
+    pretext tasks, excluding semi-supervised learning that uses some labeled data.
+  sources:
+  - venue: AAAI
+    area: 'ML: Unsupervised & Self-Supervised Learning'
+- name: Adversarial Agents in Multiagent Systems
+  definition: Covers the study of adversarial behavior and strategies among agents in multiagent systems,
+    excluding general game-theoretic adversarial learning covered under Adversarial Learning in Game Theory.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Adversarial Agents'
+- name: Agent Communication
+  definition: Covers protocols and methods for communication between autonomous agents, excluding negotiation
+    and argumentation covered under Agreement, Argumentation & Negotiation.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Agent Communication'
+- name: Agent-Based Simulation and Emergent Behavior
+  definition: Covers simulation of multiagent systems to study emergent collective behavior, excluding
+    human behavior simulation covered under Simulating Human Behavior.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Agent-Based Simulation and Emergent Behavior'
+- name: Agent and AI Theories and Architectures
+  definition: Covers theoretical models and architectural frameworks underlying autonomous agents, excluding
+    cognitive architecture work covered under Computational Cognitive Architectures.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Agent/AI Theories and Architectures'
+- name: Agreement, Argumentation, and Negotiation
+  definition: Covers mechanisms for reaching agreement among agents including argumentation and negotiation
+    protocols, excluding mechanism design covered under Mechanism Design.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Agreement, Argumentation & Negotiation'
+- name: Multiagent Systems Applications
+  definition: Covers applied uses of multiagent system techniques across domains, excluding general machine
+    learning applications covered under Machine Learning Applications.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Applications'
+- name: Distributed Problem Solving in Multiagent Systems
+  definition: Covers techniques for decomposing and solving problems cooperatively across multiple agents,
+    excluding single-agent planning approaches.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Distributed Problem Solving'
+- name: Modeling Other Agents
+  definition: Covers methods for agents to represent, infer, and reason about the beliefs, intentions,
+    or behaviors of other agents, distinct from multiagent learning techniques.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Modeling other Agents'
+- name: Multiagent Learning
+  definition: Covers learning algorithms specifically designed for multiple interacting agents, excluding
+    single-agent reinforcement learning covered elsewhere.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Multiagent Learning'
+- name: Multiagent Planning
+  definition: Covers planning methods involving coordination among multiple agents, excluding single-agent
+    deterministic or temporal planning topics.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Multiagent Planning'
+- name: Multiagent Systems Under Uncertainty
+  definition: Covers multiagent decision-making and coordination under uncertainty, distinct from single-agent
+    planning under uncertainty.
+  sources:
+  - venue: AAAI
+    area: 'MAS: Multiagent Systems under Uncertainty'
+- name: Accountability, Interpretability and Explainability in AI Ethics
+  definition: Covers philosophical and ethical analysis of making AI systems accountable and explainable,
+    excluding technical interpretability methods covered under ML interpretability topics.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Accountability, Interpretability & Explainability'
+- name: AI and Epistemology
+  definition: Covers philosophical inquiry into knowledge, belief, and justification as they relate to
+    AI systems, excluding general philosophical foundations of AI.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: AI & Epistemology'
+- name: AI and Jobs and Labor
+  definition: Covers the societal and economic impact of AI on employment and labor markets, excluding
+    broader societal impact topics.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: AI & Jobs/Labor'
+- name: AI and Law, Justice, Regulation and Governance
+  definition: Covers legal, regulatory, and governance issues arising from AI deployment, excluding general
+    societal impact of AI.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: AI & Law, Justice, Regulation & Governance'
+- name: Philosophy and Ethics of AI Applications
+  definition: Covers applied case studies and applications of philosophical and ethical AI analysis, excluding
+    theoretical philosophical foundations.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Applications'
+- name: Artificial General Intelligence
+  definition: Covers philosophical and technical discussions of general-purpose, human-level AI, excluding
+    narrow AI ethics topics.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Artificial General Intelligence'
+- name: Bias, Fairness and Equity in AI Ethics
+  definition: Covers philosophical and ethical treatment of bias and fairness in AI systems, excluding
+    the technical ML fairness methods topic.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Bias, Fairness & Equity'
+- name: Morality and Value-based AI
+  definition: Covers embedding moral reasoning and value alignment into AI systems, excluding the technical
+    topic of learning human values and preferences.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Morality & Value-based AI'
+- name: Philosophical Foundations of AI
+  definition: Covers foundational philosophical questions about the nature and possibility of AI, excluding
+    applied ethics topics like bias or law.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Philosophical Foundations of AI'
+- name: Privacy and Security in AI Ethics
+  definition: Covers philosophical and ethical considerations of privacy and security in AI systems, excluding
+    technical privacy-in-ML methods.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Privacy & Security'
+- name: Safety, Robustness and Trustworthiness in AI Ethics
+  definition: Covers philosophical and ethical perspectives on ensuring AI systems are safe and trustworthy,
+    excluding technical adversarial robustness methods.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Safety, Robustness & Trustworthiness'
+- name: Societal Impact of AI
+  definition: Covers broad social consequences of AI deployment beyond specific labor, law, or bias topics.
+  sources:
+  - venue: AAAI
+    area: 'PEAI: Societal Impact of AI'
+- name: Activity and Plan Recognition
+  definition: Covers inferring agents' goals and plans from observed actions, excluding plan execution
+    and monitoring.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Activity and Plan Recognition'
+- name: Planning, Routing and Scheduling Applications
+  definition: Covers applied uses of planning, routing, and scheduling techniques in real-world domains,
+    excluding core algorithmic topics like deterministic planning.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Applications'
+- name: Deterministic Planning
+  definition: Covers classical planning with fully known, deterministic action effects, excluding planning
+    under uncertainty or with Markov models.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Deterministic Planning'
+- name: Learning for Planning and Scheduling
+  definition: Covers using machine learning to improve planning and scheduling processes, excluding general
+    planning/scheduling and learning integration topic.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Learning for Planning and Scheduling'
+- name: Mixed Discrete/Continuous Planning
+  definition: Covers planning problems involving both discrete and continuous variables, excluding purely
+    discrete deterministic planning.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Mixed Discrete/Continuous Planning'
+- name: Model-Based Reasoning for Planning
+  definition: Covers reasoning using explicit models of systems for diagnosis or planning support, excluding
+    qualitative reasoning in KR.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Model-Based Reasoning'
+- name: Optimization of Spatio-Temporal Systems
+  definition: Covers optimization techniques for systems with spatial and temporal dynamics, excluding
+    general spatio-temporal data mining.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Optimization of Spatio-temporal Systems'
+- name: Plan Execution and Monitoring
+  definition: Covers tracking and managing plan execution in dynamic environments, excluding replanning
+    and plan repair specifically.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Plan Execution and Monitoring'
+- name: Planning Under Uncertainty
+  definition: Covers planning methods that explicitly account for uncertainty, excluding Markov-model-specific
+    planning approaches.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Planning under Uncertainty'
+- name: Planning with Language Models
+  definition: Covers using large language models to support or perform planning tasks, excluding traditional
+    deterministic or Markov planning methods.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Planning with Language Models'
+- name: Planning with Markov Models
+  definition: Covers planning formulated as MDPs or POMDPs, excluding general planning under uncertainty
+    approaches not based on Markov models.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Planning with Markov Models (MDPs, POMDPs)'
+- name: Planning, Scheduling and Learning Integration
+  definition: Covers combined approaches integrating learning with planning and scheduling, excluding
+    learning-for-planning-only topic focused solely on improving planners.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Planning/Scheduling and Learning'
+- name: Replanning and Plan Repair
+  definition: Covers methods for adapting existing plans after failures or changes, excluding initial
+    plan execution monitoring.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Replanning and Plan Repair'
+- name: Routing
+  definition: Covers algorithms and methods for finding optimal routes or paths, excluding scheduling-specific
+    problems.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Routing'
+- name: Scheduling
+  definition: Covers assigning tasks to resources over time under deterministic conditions, excluding
+    scheduling under uncertainty.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Scheduling'
+- name: Scheduling Under Uncertainty
+  definition: Covers scheduling methods that explicitly handle uncertain task durations or resource availability,
+    excluding deterministic scheduling.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Scheduling under Uncertainty'
+- name: Temporal Planning
+  definition: Covers planning with explicit temporal constraints and durations, excluding mixed discrete/continuous
+    planning.
+  sources:
+  - venue: AAAI
+    area: 'PRS: Temporal Planning'
+- name: Reasoning Under Uncertainty Applications
+  definition: Covers applied uses of probabilistic and uncertain reasoning methods in real-world domains,
+    excluding core theoretical topics like graphical models.
+  sources:
+  - venue: AAAI
+    area: 'RU: Applications'
+- name: Decision and Utility Theory
+  definition: Covers formal theories of rational decision-making and utility, excluding sequential decision
+    making specifically.
+  sources:
+  - venue: AAAI
+    area: 'RU: Decision/Utility Theory'
+- name: Graphical Models for Uncertain Reasoning
+  definition: Covers Bayesian networks, Markov networks, and related probabilistic graphical model reasoning,
+    excluding probabilistic programming.
+  sources:
+  - venue: AAAI
+    area: 'RU: Graphical Models'
+- name: Probabilistic Programming
+  definition: Covers programming languages and systems for specifying and performing probabilistic inference,
+    excluding general graphical model reasoning.
+  sources:
+  - venue: AAAI
+    area: 'RU: Probabilistic Programming'
+- name: Relational Probabilistic Models
+  definition: Covers probabilistic models that incorporate relational structure among entities, excluding
+    purely propositional graphical models.
+  sources:
+  - venue: AAAI
+    area: 'RU: Relational Probabilistic Models'
+- name: Sequential Decision Making
+  definition: Covers decision processes involving sequences of actions under uncertainty over time, excluding
+    static decision/utility theory.
+  sources:
+  - venue: AAAI
+    area: 'RU: Sequential Decision Making'
+- name: Probabilistic Inference in Reasoning Under Uncertainty
+  definition: Covers algorithms and theory for computing or approximating probabilities in uncertain reasoning
+    systems, excluding stochastic optimization methods.
+  sources:
+  - venue: AAAI
+    area: 'RU: Probabilistic Inference'
+- name: Stochastic Optimization Under Uncertainty
+  definition: Covers optimization methods that explicitly handle randomness or uncertainty in objectives/constraints,
+    excluding deterministic probabilistic inference.
+  sources:
+  - venue: AAAI
+    area: 'RU: Stochastic Optimization'
+- name: Uncertainty Representations in Reasoning
+  definition: Covers formalisms and models for representing uncertainty (beyond pure probability), excluding
+    inference algorithms themselves.
+  sources:
+  - venue: AAAI
+    area: 'RU: Uncertainty Representations'
+- name: Adversarial Search in Games
+  definition: Covers search techniques for adversarial, multi-agent game settings such as minimax and
+    game-tree search, excluding single-agent heuristic search.
+  sources:
+  - venue: AAAI
+    area: 'SO: Adversarial Search'
+- name: Algorithm Configuration for Search and Optimization
+  definition: Covers automatic tuning and selection of algorithm parameters/configurations for search
+    and optimization methods, excluding general AutoML/hyperparameter tuning for ML models.
+  sources:
+  - venue: AAAI
+    area: 'SO: Algorithm Configuration'
+- name: Search and Optimization Applications
+  definition: Covers applied uses of search and optimization algorithms in real-world domains, excluding
+    theoretical or algorithmic contributions without application focus.
+  sources:
+  - venue: AAAI
+    area: 'SO: Applications'
+- name: Combinatorial Optimization Methods
+  definition: Covers algorithms for solving discrete combinatorial optimization problems, excluding continuous
+    or mixed discrete/continuous search.
+  sources:
+  - venue: AAAI
+    area: 'SO: Combinatorial Optimization'
+- name: Distributed Search Algorithms
+  definition: Covers search methods executed across distributed computing resources or agents, excluding
+    single-machine local or heuristic search.
+  sources:
+  - venue: AAAI
+    area: 'SO: Distributed Search'
+- name: Evaluation and Analysis of Search and Optimization
+  definition: Covers benchmarking, empirical evaluation, and theoretical analysis of search and optimization
+    algorithms, excluding the algorithms' design itself.
+  sources:
+  - venue: AAAI
+    area: 'SO: Evaluation and Analysis'
+- name: Evolutionary Computation for Search and Optimization
+  definition: Covers evolutionary and genetic algorithms applied to search and optimization problems,
+    excluding non-evolutionary heuristic search.
+  sources:
+  - venue: AAAI
+    area: 'SO: Evolutionary Computation'
+- name: Heuristic Search Algorithms
+  definition: Covers heuristic-guided search techniques like A* and its variants, excluding adversarial
+    or local search methods.
+  sources:
+  - venue: AAAI
+    area: 'SO: Heuristic Search'
+- name: Learning to Search
+  definition: Covers methods that learn search strategies or heuristics from data, excluding hand-crafted
+    heuristic search design.
+  sources:
+  - venue: AAAI
+    area: 'SO: Learning to Search'
+- name: Local Search Methods
+  definition: Covers search techniques that iteratively improve a candidate solution within its neighborhood,
+    excluding global heuristic or distributed search.
+  sources:
+  - venue: AAAI
+    area: 'SO: Local Search'
+- name: Metareasoning and Metaheuristics in Search
+  definition: Covers reasoning about search/computation strategies and generic metaheuristic frameworks,
+    excluding specific algorithm configuration tuning.
+  sources:
+  - venue: AAAI
+    area: 'SO: Metareasoning and Metaheuristics'
+- name: Mixed Discrete/Continuous Search
+  definition: Covers search methods operating over combined discrete and continuous variable spaces, excluding
+    purely combinatorial or purely continuous optimization.
+  sources:
+  - venue: AAAI
+    area: 'SO: Mixed Discrete/Continuous Search'
+- name: Non-convex Optimization Methods
+  definition: Covers optimization algorithms for non-convex objective functions, excluding convex or purely
+    combinatorial optimization.
+  sources:
+  - venue: AAAI
+    area: 'SO: Non-convex Optimization'
+- name: Sampling and Simulation-based Search
+  definition: Covers search methods relying on sampling or simulation (e.g., Monte Carlo tree search),
+    excluding deterministic heuristic search.
+  sources:
+  - venue: AAAI
+    area: 'SO: Sampling/Simulation-based Search'
+- name: Safety and Robustness in NLP
+  definition: Covers methods ensuring safe and robust behavior of NLP systems against errors or attacks,
+    excluding general ethics/bias/fairness topics.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Safety and Robustness'
+- name: NLP Applications
+  definition: Covers applied uses of NLP techniques to solve real-world tasks, excluding core methodological
+    contributions like generation or parsing.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Applications'
+  - venue: ACL
+    area: NLP Applications
+- name: Dialogue and Conversational AI Systems
+  definition: Covers development of conversational agents and dialogue systems, excluding general NLP
+    applications.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Conversational AI/Dialog Systems'
+  - venue: ACL
+    area: Dialogue and Interactive Systems
+- name: Discourse, Pragmatics and Argument Mining
+  definition: Discourse structure, pragmatic meaning and argumentation in language.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Discourse, Pragmatics & Argument Mining'
+  - venue: ACL
+    area: Discourse and Pragmatics
+- name: Ethics, Bias, Fairness, Transparency and Privacy in NLP
+  definition: Covers fairness, bias mitigation, transparency, and privacy issues specific to NLP systems,
+    excluding general AI ethics topics.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Ethics — Bias, Fairness, Transparency & Privacy'
+  - venue: ACL
+    area: Ethics, Bias, and Fairness
+- name: Natural Language Generation
+  definition: Covers methods for generating natural language text, excluding summarization-specific techniques.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Generation'
+  - venue: ACL
+    area: Generation
+- name: Text Summarization
+  definition: Covers methods for condensing text into summaries, excluding general text generation.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Summarization'
+  - venue: ACL
+    area: Summarization
+- name: Information Extraction from Text
+  definition: Covers extracting structured information such as entities and relations from text, excluding
+    question answering.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Information Extraction'
+  - venue: ACL
+    area: Information Extraction
+- name: Interpretability, Analysis and Evaluation of NLP Models
+  definition: Covers methods for analyzing and interpreting NLP model behavior and evaluating their performance,
+    excluding general ML interpretability topics.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Interpretability, Analysis, and Evaluation of NLP Models'
+  - venue: ACL
+    area: Interpretability and Analysis of Models for NLP
+- name: Language Grounding and Multimodal NLP
+  definition: Covers connecting language to vision, robotics, or other modalities, excluding purely textual
+    NLP tasks.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Language Grounding & Multi-modal NLP'
+  - venue: ACL
+    area: Multimodality and Language Grounding to Vision, Robotics and Beyond
+- name: Large Language Models in NLP
+  definition: Covers research specifically on (large) language models including their design and use in
+    NLP, excluding general deep learning architectures.
+  sources:
+  - venue: AAAI
+    area: 'NLP: (Large) Language Models'
+- name: Learning and Optimization for NLP
+  definition: Covers machine learning and optimization techniques tailored for NLP tasks, excluding general
+    ML optimization methods.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Learning & Optimization for NLP'
+  - venue: ACL
+    area: Machine Learning for NLP
+- name: Machine Translation and Multilinguality
+  definition: Translating text or speech between languages, and multilingual or cross-lingual NLP.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Machine Translation, Multilinguality, Cross-Lingual NLP'
+  - venue: ACL
+    area: Machine Translation
+- name: Lexical Semantics and Morphology
+  definition: Word-level meaning, lexical relations and morphological structure.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Lexical Semantics and Morphology'
+  - venue: ACL
+    area: 'Semantics: Lexical'
+- name: Sentence-level Semantics and Textual Inference
+  definition: Covers semantic representation and inference at the sentence level, excluding lexical semantics.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Sentence-level Semantics, Textual Inference, etc.'
+  - venue: ACL
+    area: 'Semantics: Sentence-level Semantics, Textual Inference and Other areas'
+- name: Question Answering
+  definition: Covers systems and methods for answering questions posed in natural language, excluding
+    general information extraction.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Question Answering'
+  - venue: ACL
+    area: Question Answering
+- name: Sentiment Analysis, Stylistic Analysis and Argument Mining
+  definition: Covers detection of sentiment, style, and argumentative structure in text, excluding discourse/pragmatics-focused
+    analysis.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Sentiment Analysis, Stylistic Analysis, and Argument Mining'
+  - venue: ACL
+    area: Sentiment Analysis, Stylistic Analysis, and Argument Mining
+- name: Text Classification and Sentiment Analysis
+  definition: Covers categorization of text including sentiment labeling, excluding stylistic or argument
+    mining analysis.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Text Classification & Sentiment Analysis'
+- name: 'Syntax: Tagging, Chunking and Parsing'
+  definition: Covers syntactic analysis tasks like part-of-speech tagging, chunking, and parsing, excluding
+    semantic-level tasks.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Syntax — Tagging, Chunking & Parsing'
+  - venue: ACL
+    area: 'Syntax: Tagging, Chunking and Parsing'
+- name: Speech Recognition and Spoken Language Processing
+  definition: Covers speech recognition, text-to-speech, and spoken language understanding, excluding
+    purely text-based NLP tasks.
+  sources:
+  - venue: AAAI
+    area: 'NLP: Speech'
+  - venue: ACL
+    area: Speech recognition, text-to-speech and spoken language understanding
+- name: Computational Social Science and Cultural Analytics
+  definition: Covers NLP applications to study social and cultural phenomena, excluding general NLP applications
+    without social science focus.
+  sources:
+  - venue: ACL
+    area: Computational Social Science and Cultural Analytics
+- name: Efficient and Low-Resource NLP Methods
+  definition: Covers methods for NLP under limited computational or data resources, excluding standard
+    large-scale NLP methods.
+  sources:
+  - venue: ACL
+    area: Efficient/Low-Resource Methods for NLP
+- name: Information Retrieval and Text Mining in NLP
+  definition: Covers retrieval, ranking, and text mining methods within NLP research, excluding question
+    answering which is treated as a separate topic.
+  sources:
+  - venue: ACL
+    area: Information Retrieval and Text Mining
+- name: Linguistic Theories, Cognitive Modeling and Psycholinguistics
+  definition: Covers theoretical linguistics, cognitive modeling, and psycholinguistic studies of language,
+    excluding computational semantics or syntax parsing topics.
+  sources:
+  - venue: ACL
+    area: Linguistic theories, Cognitive Modeling and Psycholinguistics
+- name: Multilinguality and Language Diversity
+  definition: Covers research addressing multiple languages, low-resource languages, and linguistic diversity,
+    excluding machine translation itself.
+  sources:
+  - venue: ACL
+    area: Multilinguality and Language Diversity
+- name: Phonology, Morphology and Word Segmentation
+  definition: Covers sound systems, word-formation, and segmentation tasks in language processing, excluding
+    syntactic parsing or tagging.
+  sources:
+  - venue: ACL
+    area: Phonology, Morphology and Word Segmentation
+- name: Resources and Evaluation in NLP
+  definition: Covers the creation of datasets, corpora, and evaluation methodologies for NLP systems,
+    excluding model interpretability analysis.
+  sources:
+  - venue: ACL
+    area: Resources and Evaluation
+- name: Open Science and Reproducibility in NLP
+  definition: Covers open data, open models, and reproducibility practices for NLP research, excluding
+    general resource/evaluation dataset creation.
+  sources:
+  - venue: ACL
+    area: Open science, open data, and open models for reproducible NLP research
+- name: 3D from Multi-View and Sensors
+  definition: Covers 3D reconstruction using multiple views or sensor inputs, excluding 3D inference from
+    a single image.
+  sources:
+  - venue: CVPR
+    area: 3D from multi-view and sensors
+  - venue: ICCV
+    area: 3D from multi-view and sensors
+- name: 3D from a Single Image
+  definition: Recovering 3D shape or scene structure from a single image, including shape-from-X cues.
+  sources:
+  - venue: CVPR
+    area: 3D from single images
+  - venue: ICCV
+    area: 3D from a single image and shape-from-x
+- name: Autonomous Driving in Computer Vision
+  definition: Covers vision techniques specifically for self-driving vehicle perception, excluding general
+    robotics vision applications.
+  sources:
+  - venue: CVPR
+    area: Autonomous driving
+- name: Biometrics in Computer Vision
+  definition: Covers biometric recognition such as face, iris, or fingerprint methods in vision, excluding
+    general human pose or gesture analysis.
+  sources:
+  - venue: CVPR
+    area: Biometrics
+  - venue: ICCV
+    area: Biometrics
+- name: Computational Imaging
+  definition: Covers computational techniques for image formation and sensing such as novel camera pipelines,
+    excluding standard low-level vision processing.
+  sources:
+  - venue: CVPR
+    area: Computational imaging
+  - venue: ICCV
+    area: Computational imaging
+- name: Computer Vision for Social Good
+  definition: Covers vision applications aimed at societal benefit, excluding fairness/ethics-focused
+    vision topics.
+  sources:
+  - venue: CVPR
+    area: Computer vision for social good
+- name: Computer Vision Theory
+  definition: Covers theoretical foundations and formal analysis of vision algorithms, excluding applied
+    vision systems.
+  sources:
+  - venue: CVPR
+    area: Computer vision theory
+  - venue: ICCV
+    area: Computer vision theory
+- name: Vision Datasets and Evaluation
+  definition: Covers the creation and evaluation of computer vision datasets and benchmarking protocols,
+    excluding general datasets and benchmarks for other ML fields.
+  sources:
+  - venue: CVPR
+    area: Datasets and evaluation
+  - venue: ICCV
+    area: Datasets and evaluation
+- name: Deep Learning Architectures for Vision
+  definition: Design of deep network architectures and training techniques for vision tasks.
+  sources:
+  - venue: CVPR
+    area: Deep learning architectures and techniques
+  - venue: ICCV
+    area: Deep learning architectures
+- name: Document Analysis and Understanding in Vision
+  definition: Covers visual document parsing, layout analysis and OCR-related vision tasks, excluding
+    general text extraction in NLP.
+  sources:
+  - venue: CVPR
+    area: Document analysis and understanding
+  - venue: ICCV
+    area: Document analysis and understanding
+- name: Efficient and Scalable Vision
+  definition: Covers methods for computational efficiency and scalability in vision models, excluding
+    general model compression topics outside vision.
+  sources:
+  - venue: CVPR
+    area: Efficient and scalable vision
+  - venue: ICCV
+    area: Efficient and scalable vision
+- name: 'Embodied Vision: Active Agents and Simulation'
+  definition: Covers vision for embodied agents acting and simulated within environments, excluding robotics
+    applications not vision-focused.
+  sources:
+  - venue: CVPR
+    area: 'Embodied vision: Active agents, simulation'
+  - venue: ICCV
+    area: 'Embodied vision: Active agents; simulation'
+- name: 'Humans: Face, Body, Pose, Gesture, Movement'
+  definition: Covers detection and analysis of human faces, bodies, poses, gestures and movement, excluding
+    biometrics identification tasks.
+  sources:
+  - venue: CVPR
+    area: 'Humans: Face, body, pose, gesture, movement'
+- name: Image and Video Synthesis and Generation
+  definition: Covers generative methods for producing images and videos, excluding general deep generative
+    model theory outside vision.
+  sources:
+  - venue: CVPR
+    area: Image and video synthesis and generation
+  - venue: ICCV
+    area: Image and video synthesis
+- name: Low-Level Vision
+  definition: Covers pixel-level and early vision tasks such as denoising, super-resolution, and optical
+    flow, excluding high-level recognition tasks.
+  sources:
+  - venue: CVPR
+    area: Low-level vision
+- name: Non-Deep Machine Learning for Vision
+  definition: Covers classical, non-deep-learning machine learning methods applied to vision problems,
+    excluding deep architecture-based vision methods.
+  sources:
+  - venue: CVPR
+    area: Machine learning (other than deep learning)
+  - venue: ICCV
+    area: Machine learning (other than deep learning)
+- name: Non-Deep Optimization Methods for Vision
+  definition: Covers optimization techniques not based on deep learning applied to vision problems, excluding
+    deep learning training optimization.
+  sources:
+  - venue: CVPR
+    area: Optimization methods (other than deep learning)
+  - venue: ICCV
+    area: Optimization methods (other than deep learning)
+- name: Photogrammetry and Remote Sensing
+  definition: Covers imaging and 3D measurement techniques for remote sensing and photogrammetric applications,
+    excluding general 3D reconstruction from multi-view sensors.
+  sources:
+  - venue: CVPR
+    area: Photogrammetry and remote sensing
+  - venue: ICCV
+    area: Photogrammetry and remote sensing
+- name: Physics-Based Vision and Shape-from-X
+  definition: Covers physical modeling of light and shape-recovery techniques like shape-from-shading,
+    excluding single-image 3D reconstruction not based on physical modeling.
+  sources:
+  - venue: CVPR
+    area: Physics-based vision and shape-from-X
+- name: 'Recognition: Categorization, Detection, Retrieval'
+  definition: Covers visual recognition tasks including classification, detection and retrieval, excluding
+    segmentation-focused tasks.
+  sources:
+  - venue: CVPR
+    area: 'Recognition: Categorization, detection, retrieval'
+- name: Vision and Robotics
+  definition: Visual perception for robotic tasks such as manipulation, navigation and robot control.
+  sources:
+  - venue: CVPR
+    area: Robotics
+  - venue: ICCV
+    area: Vision and robotics
+- name: Self-, Semi-, Meta-, Unsupervised Learning in Vision
+  definition: Covers vision-specific self-supervised, semi-supervised, meta-, and unsupervised learning
+    methods, excluding supervised recognition approaches.
+  sources:
+  - venue: CVPR
+    area: Self-& semi-& meta-& unsupervised learning
+  - venue: ICCV
+    area: Self-, semi-, meta-, unsupervised learning
+- name: Transfer, Low-Shot, Continual, Long-Tail Learning in Vision
+  definition: Covers vision-specific transfer learning, few-shot, continual, and long-tail recognition
+    methods, excluding general transfer learning theory outside vision.
+  sources:
+  - venue: CVPR
+    area: Transfer/ low-shot/ continual/ long-tail learning
+  - venue: ICCV
+    area: Transfer, low-shot, continual, long-tail learning
+- name: Vision and Graphics
+  definition: Covers the intersection of computer vision and computer graphics, excluding pure image/video
+    synthesis and generation tasks.
+  sources:
+  - venue: CVPR
+    area: Vision + graphics
+  - venue: ICCV
+    area: Vision and graphics
+- name: Vision, Language, and Reasoning
+  definition: Covers reasoning tasks combining visual and linguistic information, excluding generic multimodal
+    learning not focused on reasoning.
+  sources:
+  - venue: CVPR
+    area: Vision, language, and reasoning
+- name: Vision Applications and Systems
+  definition: Covers end-to-end vision system applications and deployment, excluding theoretical vision
+    research.
+  sources:
+  - venue: CVPR
+    area: Vision applications and systems
+  - venue: ICCV
+    area: Vision applications and systems
+- name: 3D Shape Modeling and Processing
+  definition: Covers representation, modeling, and processing of 3D shapes, excluding reconstruction techniques
+    from images or sensors.
+  sources:
+  - venue: ICCV
+    area: 3D shape modeling and processing
+- name: Faces and Gestures in Vision
+  definition: Covers computer vision methods for analyzing faces and gestures (e.g., facial analysis,
+    hand/body gesture recognition), excluding broader full-body pose/shape estimation covered under Human
+    pose/shape estimation.
+  sources:
+  - venue: ICCV
+    area: Faces and gestures
+- name: Egocentric Vision
+  definition: Covers first-person/egocentric video and image understanding including wearable camera analysis,
+    excluding third-person video understanding covered under Video analysis and understanding.
+  sources:
+  - venue: ICCV
+    area: First person (egocentric) vision
+- name: Geometric Deep Learning in Vision
+  definition: Covers deep learning methods operating on non-Euclidean structures such as graphs, meshes,
+    and manifolds for vision tasks, excluding standard CNN/Transformer architectures covered under Deep
+    Learning Architectures for Vision.
+  sources:
+  - venue: ICCV
+    area: Geometric deep learning
+- name: Human-in-the-Loop Vision Systems
+  definition: Covers computer vision systems that incorporate human feedback or interaction in the perception
+    loop, excluding general crowdsourcing methods covered under Crowdsourcing and Human Computation.
+  sources:
+  - venue: ICCV
+    area: Human-in-the-loop computer vision
+- name: Human Pose and Shape Estimation
+  definition: Covers estimating 2D/3D human body pose and shape from images or video, excluding object
+    pose estimation covered under Object pose estimation and tracking.
+  sources:
+  - venue: ICCV
+    area: Human pose/shape estimation
+- name: Image and Video Forensics
+  definition: Covers detection of manipulated, forged, or synthetically generated images and videos, excluding
+    generative model design itself covered under Neural generative models.
+  sources:
+  - venue: ICCV
+    area: Image and video forensics
+- name: Navigation and Autonomous Driving in Vision
+  definition: Covers vision-based navigation and self-driving perception tasks, excluding general robotic
+    manipulation and planning covered under Vision and robotics.
+  sources:
+  - venue: ICCV
+    area: Navigation and autonomous driving
+- name: Neural Generative Models in Vision
+  definition: Covers neural network-based generative modeling for images/video such as GANs, VAEs, and
+    diffusion models, excluding forensic detection of generated content covered under Image and video
+    forensics.
+  sources:
+  - venue: ICCV
+    area: Neural generative models
+- name: Object Pose Estimation and Tracking
+  definition: Covers estimating and tracking the 3D pose of rigid or articulated objects over time, excluding
+    human-specific pose estimation covered under Human pose/shape estimation.
+  sources:
+  - venue: ICCV
+    area: Object pose estimation and tracking
+- name: Visual Categorization
+  definition: 'Covers classifying images or objects into categories, excluding localization-based detection
+    tasks covered under Recognition: Detection.'
+  sources:
+  - venue: ICCV
+    area: 'Recognition: Categorization'
+- name: Visual Detection
+  definition: 'Covers localizing and identifying objects within images, excluding whole-image categorization
+    covered under Recognition: Categorization.'
+  sources:
+  - venue: ICCV
+    area: 'Recognition: Detection'
+- name: Video Analysis and Understanding
+  definition: Covers general video content analysis including temporal modeling and event understanding,
+    excluding egocentric-specific video analysis covered under First person (egocentric) vision.
+  sources:
+  - venue: ICCV
+    area: Video analysis and understanding
+- name: Vision and Audio
+  definition: Covers multimodal tasks integrating visual and audio signals, excluding text-based multimodal
+    tasks covered under Vision and Language.
+  sources:
+  - venue: ICCV
+    area: Vision and audio
