@@ -1,11 +1,13 @@
 """Paper 2's agent: the same JSON tool-calling loop as paper 1, over two
 stores instead of one.
 
-Specialization is soft in corpus mode and hard in online mode (gated_env.py).
+Specialization is soft in corpus mode and hard in online mode (gated_env.py)
+and region mode (region_env.py).
 In soft mode, the agent's topics appear only in its system prompt. Nothing in
 the environment enforces them: the agent sees every result and decides for
 itself what is worth following. In hard mode, the environment gates all results
-(papers and posts) to those matching the agent's topics.
+(papers and posts): in online mode to those matching the agent's topics, in
+region mode to the agent's semantic region, which its prompt never describes.
 """
 import json
 from collections import deque
@@ -76,6 +78,40 @@ GATED_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, no
 {"action": "browse", "args": {"node_id": "<paper id>"}} -- open a paper by its id (from a search result or a reference list) to read its abstract, its full reference list and the papers citing it
 {"action": "related", "args": {"node_id": "<paper id>", "k": 10}} -- list papers related to a paper (like "Related articles" in Google Scholar)
 {"action": "sample_frontier", "args": {}} -- jump to a random paper in one of your topics
+{"action": "search_board", "args": {"query": "<text>", "k": 5}} -- semantic search over the board
+{"action": "browse_board", "args": {"node_id": "<post id>"}} -- read a post and its reference neighbors
+{"action": "sample_board", "args": {}} -- jump to a random post
+{"action": "generate", "args": {"text": "<3-4 sentence new idea paragraph>", "cited_ids": ["<id>", ...]}} -- publish your new idea to the board, citing what it builds on (papers or posts)
+{"action": "add_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- add reference links from a post to what it builds on
+{"action": "remove_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- remove reference links from a post that do not actually support it"""
+
+# Region mode (region_env.py): the agent is told the rule but never its area,
+# which it discovers by reading. No {topics} placeholder: format() leaves the
+# text unchanged.
+REGION_SYSTEM = """You are a research agent. Two things are in front of you.
+
+The LITERATURE is a fixed collection of published papers from top AI venues \
+(2020-2024), each citing the papers it builds on. You can read it but never \
+change it. Search results show each paper's title, an abstract snippet, year and \
+venue. Opening a paper (browse) shows its abstract, full reference list and the \
+papers citing it.
+
+The BOARD is a shared space where you and other agents publish new ideas. Anyone \
+may adjust the reference links on any post. It starts empty.
+
+Your goal is to find promising unexplored directions and publish genuinely new \
+ideas to the board. Ground them: cite the papers they build on, and cite other \
+agents' posts when your idea builds on theirs.
+
+You can only find, read, cite and publish within your own research area; papers \
+and posts outside it are hidden from you and an idea outside it will not be \
+published."""
+
+REGION_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
+{"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "k": 5}} -- semantic search over the literature (do not paste lists of keywords)
+{"action": "browse", "args": {"node_id": "<paper id>"}} -- open a paper by its id (from a search result or a reference list) to read its abstract, its full reference list and the papers citing it
+{"action": "related", "args": {"node_id": "<paper id>", "k": 10}} -- list the papers most similar to a paper
+{"action": "sample_frontier", "args": {}} -- jump to a random paper
 {"action": "search_board", "args": {"query": "<text>", "k": 5}} -- semantic search over the board
 {"action": "browse_board", "args": {"node_id": "<post id>"}} -- read a post and its reference neighbors
 {"action": "sample_board", "args": {}} -- jump to a random post

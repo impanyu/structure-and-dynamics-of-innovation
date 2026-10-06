@@ -1,4 +1,5 @@
 import json
+import re
 
 from innovation.p2_forum.agent import VALID_ACTIONS, ForumAgentPolicy
 
@@ -139,3 +140,40 @@ def test_gated_doc_offers_related_after_browse_and_old_mode_does_not():
     assert lines[3] == ('{"action": "related", "args": {"node_id": "<paper id>", "k": 10}} -- '
                         'list papers related to a paper (like "Related articles" in Google Scholar)')
     assert "related" in VALID_ACTIONS and "related" not in ACTIONS_DOC
+
+
+def test_region_prompt_states_the_hard_rule_without_describing_the_area():
+    from innovation.p2_forum.agent import REGION_ACTIONS_DOC, REGION_SYSTEM
+    llm = ScriptedLLM(['{"action": "related", "args": {"node_id": "p1"}}'])
+    pol = ForumAgentPolicy(llm=llm, model="m", topics=[], system_template=REGION_SYSTEM,
+                           actions_doc=REGION_ACTIONS_DOC)
+    flat = " ".join(pol.system.split())
+    assert pol.system == REGION_SYSTEM                       # nothing is filled in
+    assert ("LITERATURE is a fixed collection of published papers from top AI venues "
+            "(2020-2024)") in flat
+    assert ("You can only find, read, cite and publish within your own research area; papers "
+            "and posts outside it are hidden from you and an idea outside it will not be "
+            "published.") in flat
+    for leak in ("topic", "{", "seed", "radius", "coverage", "Your area"):
+        assert leak not in pol.system
+    assert pol.act({"step": 0, "last_result": {}}).name == "related"
+    assert REGION_ACTIONS_DOC in llm.prompts[0][1]
+
+
+def test_region_actions_doc_lists_every_action_once():
+    from innovation.p2_forum.agent import REGION_ACTIONS_DOC
+    lines = REGION_ACTIONS_DOC.splitlines()
+    names = [re.match(r'\{"action": "(\w+)"', l).group(1) for l in lines[1:]]
+    assert sorted(names) == sorted(VALID_ACTIONS) and len(names) == len(set(names))
+    assert '"query": "<a paper title or a short meaningful phrase>"' in lines[1]
+    browse = next(l for l in lines if '"browse"' in l)
+    assert "full reference list" in browse and "citing" in browse
+    generate = next(l for l in lines if '"generate"' in l)
+    assert "3-4 sentence" in generate
+    assert "topic" not in REGION_ACTIONS_DOC
+
+
+def test_old_prompts_do_not_mention_regions():
+    from innovation.p2_forum.agent import ACTIONS_DOC, FORUM_SYSTEM, GATED_ACTIONS_DOC, GATED_SYSTEM
+    for p in (ACTIONS_DOC, FORUM_SYSTEM, GATED_ACTIONS_DOC, GATED_SYSTEM):
+        assert "research area" not in p
