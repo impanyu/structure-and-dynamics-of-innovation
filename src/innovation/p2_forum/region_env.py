@@ -77,7 +77,7 @@ class RegionGatedEnvironment(ForumEnvironment):
             return {"error": f"{node_id} is outside your research area", "gate": "result"}
         view = self._paper_full(node_id)
         if not self.nav.corpus_edges:
-            return {**view, "cites": [], "cited_by": []}
+            return {**view, "cites": [], "cited_by": [], "filtered": {"region": 0}}
         out_ids, in_ids = self.ws.corpus_neighbors(node_id)
         cites = [n for n in out_ids if self.readable(agent_id, n)]
         cited_by = [n for n in in_ids if self.readable(agent_id, n)]
@@ -108,7 +108,9 @@ class RegionGatedEnvironment(ForumEnvironment):
     def _post_view(self, nid) -> dict:
         if self.ws.store_of(nid) == "board":
             return {"node_id": nid, "store": "board", "text": self.ws.node(nid).text[:200]}
-        return {"node_id": nid, "store": "corpus", "title": _split(self.ws.node(nid).text)[0]}
+        node = self.ws.node(nid)
+        return {"node_id": nid, "store": "corpus", "title": _split(node.text)[0],
+                "year": node.year}
 
     def _readable_posts(self, agent_id) -> list[str]:
         return [n for n in self.ws.board_post_ids() if self.readable(agent_id, n)]
@@ -162,6 +164,11 @@ class RegionGatedEnvironment(ForumEnvironment):
         return out
 
     def _links_gate(self, agent_id, src_id, dst_ids):
+        # An id that names nothing is a mistake, not a gate refusal: only
+        # existing-but-unreadable ids count towards gate activity.
+        for n in [src_id, *dst_ids]:
+            if not self.ws.has_node(n):
+                return {"error": f"{n} is not a known paper or post"}
         blocked = [n for n in [src_id, *dst_ids] if not self.readable(agent_id, n)]
         if blocked:
             return {"error": f"outside your research area: {blocked}", "gate": "link"}

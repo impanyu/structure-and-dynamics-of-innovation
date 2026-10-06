@@ -1,4 +1,5 @@
 # tests/test_forum_region_env.py
+import json
 import math
 import re
 
@@ -127,6 +128,7 @@ def test_browse_with_closed_edges_shows_no_neighbours(tmp_path):
     env.nav = Navigation(corpus_edges=False)
     v = env.execute("a", 0, Action("browse", {"node_id": "c0"}))
     assert v["cites"] == [] and v["cited_by"] == [] and v["title"] == "Title c0"
+    assert v["filtered"] == {"region": 0}                     # same keys as the open path
 
 
 def test_sample_frontier_stays_in_the_region_and_covers_it(tmp_path):
@@ -187,7 +189,8 @@ def test_board_reads_are_gated_by_vector(tmp_path):
                for k in range(5))
     v = env.execute("a", 3, Action("browse_board", {"node_id": pa}))
     assert v["text"] == "idea @5"
-    assert v["cites"] == [{"node_id": "c0", "store": "corpus", "title": "Title c0"}]
+    assert v["cites"] == [{"node_id": "c0", "store": "corpus", "title": "Title c0",
+                           "year": 2020}]
 
 
 def test_browse_board_hides_unreadable_neighbours(tmp_path):
@@ -218,6 +221,41 @@ def test_links_need_both_ends_readable(tmp_path):
     assert env.execute("b", 3, Action("remove_links", {"src_id": pa, "dst_ids": ["c1"]}))["gate"] == "link"
     gone = env.execute("a", 4, Action("remove_links", {"src_id": pa, "dst_ids": ["c1"]}))
     assert "gate" not in gone and gone["removed"]
+
+
+def test_links_to_unknown_ids_are_a_plain_error_not_a_gate(tmp_path):
+    env = make(tmp_path)
+    pa = post(env, "a", "idea @5")["node_id"]
+    for args in ({"src_id": pa, "dst_ids": ["c1", "nope"]},
+                 {"src_id": "gen:t:99", "dst_ids": ["c1"]}):
+        for name in ("add_links", "remove_links"):
+            out = env.execute("a", 1, Action(name, args))
+            bad = "nope" if "nope" in args["dst_ids"] else "gen:t:99"
+            assert out == {"error": f"{bad} is not a known paper or post"}
+    # an existing but unreadable id is still a gate refusal
+    assert env.execute("a", 2, Action("add_links", {"src_id": pa, "dst_ids": ["c7"]}))["gate"] == "link"
+
+
+def test_a_shared_post_never_shows_a_cited_paper_outside_the_readers_region(tmp_path):
+    """b can read the post (@25 is in both balls), but c2 (cited at post time)
+    and c3 (linked later by a) lie outside b's region and stay hidden from b."""
+    env = make(tmp_path)
+    shared = post(env, "a", "idea @25", ["c2", "c1"])["node_id"]
+    assert env.readable("b", shared) and not env.readable("b", "c2")
+    env.execute("a", 1, Action("add_links", {"src_id": shared, "dst_ids": ["c3"]}))
+    assert sorted(env.ws.board_neighbors(shared)[0]) == ["c1", "c2", "c3"]
+
+    seen = json.dumps([
+        env.execute("b", 2, Action("browse_board", {"node_id": shared})),
+        env.execute("b", 3, Action("search_board", {"query": "@25"})),
+        env.execute("b", 4, Action("sample_board", {})),
+        env.execute("b", 5, Action("browse", {"node_id": "c1"})),
+    ])
+    assert "c2" not in seen and "c3" not in seen
+    v = env.execute("b", 6, Action("browse_board", {"node_id": shared}))
+    assert [c["node_id"] for c in v["cites"]] == ["c1"]
+    a_view = env.execute("a", 7, Action("browse_board", {"node_id": shared}))
+    assert sorted(c["node_id"] for c in a_view["cites"]) == ["c1", "c2", "c3"]
 
 
 def test_restore_round_trip(tmp_path):
