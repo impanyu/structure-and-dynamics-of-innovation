@@ -10,6 +10,23 @@ Date: 2026-09-30, revised 2026-10-01. Supersedes two parts of
 The shared board, wiki link semantics, the action set and the evaluation
 (acc@≥2, the paper-1 protocol) are unchanged.
 
+> **REVISION 2026-10-06 (supersedes §3-§5 and the topic labels/tagger).**
+> The user dropped LLM topic labeling and online search for cost reasons and returned to paper 1's design:
+> - **Literature = a frozen corpus**: the seven CCF-A AI venues (AAAI, NeurIPS, ACL, CVPR, ICCV, ICML, ICLR), 2020-2024,
+>   **citations >= 50**, built with paper 1's Semantic Scholar pipeline (cmd_fetch `mode: s2_venues`, same date rule:
+>   published before the agent model's cutoff month), citation edges from S2 references + citations + OpenAlex augmentation.
+> - **Paper text = the original abstract** (no LLM idea compression); embeddings (BAAI/bge-small-en-v1.5) of title + abstract.
+> - **Specialization = paper 1's semantic-region mechanism, as a nearest-neighbour ball**: each agent gets a seed corpus paper
+>   (seeded random); its readable region at coverage c is the c x N corpus papers most similar to the seed (exact coverage,
+>   nested across c). A board post is readable by an agent iff its cosine similarity to that agent's seed is >= the agent's
+>   ball radius (the similarity of its (cN)-th nearest corpus paper); a post may be published only inside its author's ball.
+> - Every action stays gated (search = local semantic search over the agent's readable papers; browse lists only readable
+>   references/citations; random jumps and `related` stay within the ball; links need readable ends). No query gate.
+> - **Coverage grid: c in {1, 5, 10, 20, 30, 40, 50, 100}%**, one seed, N = 10 agents, 40 rounds; more values later if needed.
+>   Figures use each run's mean achieved coverage (exact here).
+> - Unchanged: shared board, wiki links, post format, evaluation (Opus 5.5 judge, tier rules, exclude_workshops), standalone framing.
+> - Retired (code kept, unused): online Semantic Scholar/OpenAlex literature, topic lists v2/v3, the tagger, coverage sample.
+
 ## 1. Why
 
 **Soft specialization failed as a dial.** Measured on the 27-run nested sweep
