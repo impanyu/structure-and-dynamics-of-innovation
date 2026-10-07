@@ -96,8 +96,8 @@ _REGION_INTRO = """You are a research agent. Two things are in front of you.
 The LITERATURE is a fixed collection of published papers from top AI venues \
 (2020-2024), each citing the papers it builds on. You can read it but never \
 change it. Search results show each paper's title, an abstract snippet, year and \
-venue. Opening a paper (browse) shows its abstract, full reference list and the \
-papers citing it.
+venue. Opening a paper (browse) shows its abstract, its references and the \
+papers citing it, most relevant first.
 
 The BOARD is a shared space where you and other agents publish new ideas. Anyone \
 may adjust the reference links on any post. It starts empty.
