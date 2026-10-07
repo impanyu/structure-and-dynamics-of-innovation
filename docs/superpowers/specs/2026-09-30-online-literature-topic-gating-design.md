@@ -18,8 +18,10 @@ The shared board, wiki link semantics, the action set and the evaluation
 > - **Paper text = the original abstract** (no LLM idea compression); embeddings (BAAI/bge-small-en-v1.5) of title + abstract.
 > - **Specialization = paper 1's semantic-region mechanism, as a nearest-neighbour ball**: each agent gets a seed corpus paper
 >   (seeded random); its readable region at coverage c is the c x N corpus papers most similar to the seed (exact coverage,
->   nested across c). A board post is readable by an agent iff its cosine similarity to that agent's seed is >= the agent's
->   ball radius (the similarity of its (cN)-th nearest corpus paper); a post may be published only inside its author's ball.
+>   nested across c). A board post is in an agent's region iff at least 3 of its 5 nearest corpus papers (cosine, K=5, M=3) are
+>   members of that region (nearest-neighbour majority), and is readable by that agent iff so; a post may be published only inside
+>   its author's region. Why: posts are idea paragraphs and papers are abstracts, so seed similarity wrongly refused posts
+>   whose nearest papers lay inside the region (live smoke, coverage 1%).
 > - Every action stays gated (search = local semantic search over the agent's readable papers; browse lists only readable
 >   references/citations; random jumps and `related` stay within the ball; links need readable ends). No query gate.
 > - **Coverage grid: c in {1, 5, 10, 20, 30, 40, 50, 100}%**, one seed, N = 10 agents, 40 rounds; more values later if needed.

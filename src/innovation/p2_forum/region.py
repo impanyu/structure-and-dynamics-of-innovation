@@ -3,8 +3,9 @@ around a seed corpus paper (spec, REVISION 2026-10-06).
 
 At coverage c over an N-paper corpus, an agent's region is the round(c*N)
 corpus papers most similar (cosine) to its seed, the seed itself first. The
-ball's radius is the similarity of its farthest member; a board post belongs to
-the region iff its cosine similarity to the seed is >= that radius.
+ball's radius is the similarity of its farthest member. A board post belongs
+to a region by nearest-neighbour majority: iff at least NN_MAJORITY of its
+NN_K nearest corpus papers are members (post_in_region).
 
 Pure: numpy only, no I/O, no environment.
 """
@@ -17,10 +18,14 @@ import numpy as np
 # environment's rng, which is seeded from the bare run seed.
 _SEED_SALT = 0x5EEDBA11
 
-# Float guard for contains_vec: a post whose vector equals a boundary member's
-# must not fall outside because a matrix product and a single dot product
-# round differently.
-_EPS = 1e-6
+# A post is in a region iff at least NN_MAJORITY of its NN_K nearest corpus
+# papers (cosine, over the vectors the regions are built from) are members.
+# Posts are idea paragraphs and papers are abstracts, so a post is rarely as
+# close to a seed as a paper is; with small, sharp balls a seed-similarity test
+# refused posts whose neighbourhood lay inside the region. Judging a post by
+# where its nearest papers fall does not depend on the ball's radius.
+NN_K = 5
+NN_MAJORITY = 3
 
 
 @dataclass(frozen=True, eq=False)
@@ -65,9 +70,10 @@ def build_region(seed_id: str, ids: list[str], vecs: np.ndarray,
                   members=frozenset(ids[i] for i in top))
 
 
-def contains_vec(region: Region, v: np.ndarray) -> bool:
-    """Is a vector (e.g. a board post's embedding) inside the ball?"""
-    return float(_unit(v) @ region.seed_vec) >= region.radius - _EPS
+def post_in_region(region: Region, nearest_ids) -> bool:
+    """Nearest-neighbour majority: are at least NN_MAJORITY of a post's NN_K
+    nearest corpus paper ids members of the region?"""
+    return sum(n in region.members for n in nearest_ids) >= NN_MAJORITY
 
 
 def draw_seeds(n_agents: int, ids: list[str], seed: int) -> list[str]:

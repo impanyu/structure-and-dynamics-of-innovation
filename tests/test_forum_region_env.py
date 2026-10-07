@@ -33,10 +33,12 @@ class AngleEmbedder:
 
 
 # Corpus papers on the unit circle (degrees). At coverage 0.5 (4 of 8):
-#   agent a, seed c0:  {c0, c1, c2, c3}, radius cos 30 -> posts in [-30, 30] degrees
-#   agent b, seed c4:  {c4, c5, c1, c6}, radius cos 35 -> posts in [15, 85] degrees
-# c1 is shared and on neither boundary; c7 is nobody's. Posts at @5 are a-only,
-# @25 both, @60 b-only.
+#   agent a, seed c0:  {c0, c1, c2, c3}
+#   agent b, seed c4:  {c4, c5, c1, c6}
+# c1 is shared; c7 is nobody's. A post is in a region iff >= 3 of its 5 nearest
+# papers are members. @5 -> c0 c1 c2 c3 c4: a has 4, b has 2 (a-only).
+# @25 -> c1 c0 c4 c5 c2: a has 3, b has 3 (both). @60 -> c4 c5 c6 c1 c0: b has 4,
+# a has 2 (b-only).
 ANGLES = {"c0": 0, "c1": 20, "c2": -28, "c3": -30, "c4": 50, "c5": 75, "c6": 85, "c7": 180}
 CITES = {"c0": ["c2", "c4", "c1"], "c5": ["c0"]}
 VENUES = {"c0": "ICML", "c1": "NeurIPS", "c2": "ACL", "c3": "CVPR", "c4": "ICLR",
@@ -272,3 +274,34 @@ def test_restore_round_trip(tmp_path):
     assert fresh.generation_budget == 3
     assert fresh.readable("a", pa) and not fresh.readable("a", pb)
     assert post(fresh, "a", "idea @7")["node_id"] not in (pa, pb)
+
+
+def test_post_membership_counts_the_five_nearest_papers(tmp_path):
+    env = make(tmp_path)
+    only_a = post(env, "a", "idea @5")["node_id"]
+    assert env._post_nn[only_a] == ("c0", "c1", "c2", "c3", "c4")      # stored at creation
+    assert env.readable("a", only_a) and not env.readable("b", only_a)  # 4 vs 2 in region
+    both = post(env, "a", "idea @25")["node_id"]
+    assert sum(n in env.regions["a"].members for n in env._post_nn[both]) == 3
+    assert env.readable("a", both) and env.readable("b", both)          # exactly 3 passes
+    refused = post(env, "a", "idea @60")                                # 2 of 5 for a
+    assert refused["gate"] == "post"
+    assert post(env, "b", "idea @60")["node_id"]                        # 4 of 5 for b
+
+
+def test_restore_recomputes_post_neighbours(tmp_path):
+    env = make(tmp_path)
+    pa = post(env, "a", "idea @5")["node_id"]
+    pb = post(env, "b", "idea @60")["node_id"]
+    fresh = make(tmp_path / "x")
+    fresh.restore(env.event_log.read_all())
+    assert fresh.readable("a", pa) and not fresh.readable("b", pa)
+    assert fresh.readable("b", pb) and not fresh.readable("a", pb)
+    assert fresh._post_nearest(pa) == env._post_nn[pa]
+    assert fresh._post_nearest(pb) == env._post_nn[pb]
+
+
+def test_full_coverage_publishes_and_reads_anything(tmp_path):
+    env = make(tmp_path, coverage=1.0)
+    out = post(env, "a", "no angle here")                               # 270 degrees
+    assert "node_id" in out and env.readable("b", out["node_id"])
