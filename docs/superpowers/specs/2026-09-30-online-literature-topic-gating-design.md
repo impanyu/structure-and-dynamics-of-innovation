@@ -28,6 +28,20 @@ The shared board, wiki link semantics, the action set and the evaluation
 >   Figures use each run's mean achieved coverage (exact here).
 > - Unchanged: shared board, wiki links, post format, evaluation (Opus 5.5 judge, tier rules, exclude_workshops), standalone framing.
 > - Retired (code kept, unused): online Semantic Scholar/OpenAlex literature, topic lists v2/v3, the tagger, coverage sample.
+>
+> **2026-10-07 R5 (soft topics + hard gate; ranked listings).** In run forum-region-c20-s0 agents were never told their area,
+> and search silently returned the best in-region papers however irrelevant, so agents kept searching out-of-area titles and
+> their posts were refused. Now:
+> - **Soft topic list plus the hard gate.** Each region's members are clustered with k-means (bge-small embeddings,
+>   n = clamp(round(N_members / 150), 3, 30), seeded) and each cluster is named from its 8 most central papers by one
+>   `models.topic_namer` call (gpt-5-mini, low effort; cached, so identical regions share names). The agent's prompt lists
+>   the topics (name, one-sentence description) and states that it can only find, read, cite and publish within them.
+>   Topics are recorded in run_meta and reused on resume. The region gate is unchanged.
+> - **Ranked, tiered, paginated listings.** search, related, search_board and the reference/cited-by lists of browse and
+>   browse_board are ranked by cosine, 10 per page (`page`, or `ref_page`/`cited_by_page`), each item tagged high/medium/low
+>   relevance instead of a raw score (query tiers 0.80/0.72, paper tiers 0.85/0.78, calibrated on data/p2_corpus).
+> - **Search notice.** Every search (and related) result says the results are restricted to the agent's topics, and that
+>   only low-relevance hits mean the target is outside them: rephrase toward the topics rather than repeat the search.
 
 ## 1. Why
 

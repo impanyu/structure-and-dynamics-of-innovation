@@ -97,8 +97,10 @@ def test_search_returns_only_readable_papers_ranked_with_paper_fields(tmp_path):
     assert h["text"].startswith("Abstract of c1.") and len(h["text"]) <= 300
     assert h["year"] == 2021 and h["venue"] == "NeurIPS"
     assert "gate" not in out                                  # no query gate, ever
-    one = env.execute("a", 1, Action("search", {"query": "@0", "k": 1}))
-    assert [h["node_id"] for h in one["hits"]] == ["c0"]
+    assert out["page"] == 1 and out["total"] == 4 and out["pages"] == 1
+    assert all(set(h) >= {"relevance"} and "score" not in h for h in out["hits"])
+    one = env.execute("a", 1, Action("search", {"query": "@0", "k": 1}))   # old k ignored
+    assert [h["node_id"] for h in one["hits"]] == ["c0", "c1", "c2", "c3"]
 
 
 def test_closed_search_is_refused(tmp_path):
@@ -117,8 +119,12 @@ def test_browse_gates_the_target_and_lists_all_readable_neighbours(tmp_path):
     assert v["title"] == "Title c0" and v["text"].startswith("Abstract of c0.")
     assert v["text"].endswith("word ")                        # the full abstract
     assert v["year"] == 2020 and v["venue"] == "ICML"
-    assert [c["node_id"] for c in v["cites"]] == ["c2", "c1"]  # c4 hidden
-    assert v["cites"][1] == {"node_id": "c1", "title": "Title c1", "year": 2021}
+    assert [c["node_id"] for c in v["cites"]] == ["c1", "c2"]  # c4 hidden; c1 (20 deg) nearer than c2 (-28)
+    assert v["cites"][0] == {"node_id": "c1", "title": "Title c1", "year": 2021,
+                             "relevance": "high"}           # cos 20 deg = 0.94
+    assert v["cites"][1]["relevance"] == "high"             # cos 28 deg = 0.88
+    assert v["cites_total"] == 2 and v["cites_pages"] == 1
+    assert v["cited_by_total"] == 0 and v["cited_by_pages"] == 0
     assert v["cited_by"] == []                                 # c5 hidden
     assert v["filtered"] == {"region": 2}
     w = env.execute("b", 2, Action("browse", {"node_id": "c1"}))
@@ -149,8 +155,10 @@ def test_related_ranks_readable_neighbours_excluding_the_source(tmp_path):
     assert out["node_id"] == "c1"
     assert [h["node_id"] for h in out["related"]] == ["c0", "c2", "c3"]
     assert out["related"][0]["title"] == "Title c0" and out["related"][0]["venue"] == "ICML"
-    one = env.execute("b", 1, Action("related", {"node_id": "c1", "k": 1}))
-    assert [h["node_id"] for h in one["related"]] == ["c4"]
+    assert out["total"] == 3 and out["pages"] == 1 and "notice" in out
+    assert [h["relevance"] for h in out["related"]] == ["high", "low", "low"]  # 20, 48, 50 deg
+    one = env.execute("b", 1, Action("related", {"node_id": "c1", "k": 1}))   # old k ignored
+    assert [h["node_id"] for h in one["related"]] == ["c4", "c5", "c6"]
     assert env.execute("a", 2, Action("related", {"node_id": "c4"}))["gate"] == "result"
     assert "error" in env.execute("a", 2, Action("related", {"node_id": "zzz"}))
     env.nav = Navigation(corpus_search=False)
@@ -185,14 +193,15 @@ def test_board_reads_are_gated_by_vector(tmp_path):
     pb = post(env, "b", "idea @60", ["c4"])["node_id"]
     s = env.execute("a", 1, Action("search_board", {"query": "@60", "k": 5}))
     assert [h["node_id"] for h in s["hits"]] == [pa] and s["filtered"] == {"region": 1}
-    assert s["hits"][0]["store"] == "board" and "score" in s["hits"][0]
+    assert s["hits"][0]["store"] == "board" and "score" not in s["hits"][0]
+    assert s["hits"][0]["relevance"] == "low" and s["total"] == 1   # 55 deg apart
     assert env.execute("a", 2, Action("browse_board", {"node_id": pb}))["gate"] == "result"
     assert all(env.execute("a", k, Action("sample_board", {}))["node_id"] == pa
                for k in range(5))
     v = env.execute("a", 3, Action("browse_board", {"node_id": pa}))
     assert v["text"] == "idea @5"
     assert v["cites"] == [{"node_id": "c0", "store": "corpus", "title": "Title c0",
-                           "year": 2020}]
+                           "year": 2020, "relevance": "high"}]
 
 
 def test_browse_board_hides_unreadable_neighbours(tmp_path):
@@ -202,7 +211,8 @@ def test_browse_board_hides_unreadable_neighbours(tmp_path):
     v = env.execute("a", 1, Action("browse_board", {"node_id": pa}))
     assert v["cited_by"] == []                               # pb hidden from a
     w = env.execute("b", 2, Action("browse_board", {"node_id": pb}))
-    assert [c["node_id"] for c in w["cites"]] == [pa, "c4"]
+    assert [c["node_id"] for c in w["cites"]] == ["c4", pa]   # ranked: 10 deg, then 35
+    assert [c["relevance"] for c in w["cites"]] == ["high", "medium"]
     assert env.execute("a", 3, Action("browse_board", {"node_id": "c0"}))["error"]
 
 

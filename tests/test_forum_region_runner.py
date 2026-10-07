@@ -58,7 +58,8 @@ def test_region_run_end_to_end_records_each_agents_region(tmp_path):
         region = build_region(seed, ids, vecs, 0.5)
         assert rec == {"seed_id": seed, "seed_title": f"Title {seed}",
                        "coverage": 0.5, "achieved_coverage": 0.5,
-                       "radius": region.radius, "n_members": 4}
+                       "radius": region.radius, "n_members": 4,
+                       "topics": []}                  # no topic namer given
     assert meta["mean_achieved_coverage"] == 0.5
     assert "topic_assignments" not in meta
 

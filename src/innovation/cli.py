@@ -310,9 +310,20 @@ def cmd_run(cfg, seed=None, run_id=None, resume=False):
             run_cfg = ForumRunConfig(**common,
                                      literature=cfg.get("literature", "corpus"),
                                      topic_pool=[] if region else _topic_pool(cfg))
+            extra = {}
+            if region:
+                # The model that names each region's topics for the prompt
+                # (region_topics.py). A fresh region run without it would
+                # silently describe no area, so refuse; resume reads the
+                # topics from run_meta and never calls it.
+                namer = cfg.get("models", {}).get("topic_namer")
+                if namer is None and not resume:
+                    raise SystemExit("gating: region needs models.topic_namer "
+                                     "(see configs/p2_forum/base-region.yaml)")
+                extra["topic_namer"] = namer
             out = forum(run_cfg, corpus=corpus, corpus_index=index, embedder=emb,
                         llm=_llm(cfg), model=cfg["models"]["agent"],
-                        out_dir=cfg["out_dir"])
+                        out_dir=cfg["out_dir"], **extra)
         # spec §8: a completed run produces headline AND structural metrics.
         # The headline ones need the judge (cmd_evaluate); the structural ones
         # are a pure replay of the log we just wrote, so write them here.

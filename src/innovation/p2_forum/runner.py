@@ -5,9 +5,11 @@ and recorded in run_meta.json. Agents may share topics — with N agents and a
 128-topic pool that is unavoidable above a certain N, and it is the substrate
 collaboration needs, not a defect.
 
-Region mode (gating: region) draws no topics: each agent gets a seeded seed
-paper and a nearest-neighbour ball at its coverage (region.py), recorded in
-run_meta.json and rebuilt from there on resume.
+Region mode (gating: region) draws no topics from a pool: each agent gets a
+seeded seed paper and a nearest-neighbour ball at its coverage (region.py),
+recorded in run_meta.json and rebuilt from there on resume. Its prompt lists
+the region's own topics (k-means clusters named by the topic namer,
+region_topics.py), computed once at the start and recorded in run_meta.
 """
 import json
 from dataclasses import asdict, dataclass, field
@@ -20,11 +22,12 @@ from innovation.core.network.graph import IdeaGraph
 from innovation.core.network.index import VectorIndex
 from innovation.p2_forum.agent import (GATED_ACTIONS_DOC, GATED_SYSTEM,
                                        REGION_ACTIONS_DOC, REGION_SYSTEM,
-                                       ForumAgentPolicy)
+                                       REGION_SYSTEM_NO_TOPICS, ForumAgentPolicy)
 from innovation.p2_forum.env import ForumEnvironment, Navigation
 from innovation.p2_forum.gated_env import GatedForumEnvironment
 from innovation.p2_forum.region import Region, build_region, draw_seeds
 from innovation.p2_forum.region_env import RegionGatedEnvironment
+from innovation.p2_forum.region_topics import region_topics
 from innovation.p2_forum.workspace import Workspace
 
 
@@ -246,8 +249,13 @@ def _build_env(cfg: ForumRunConfig, *, run_dir, corpus, corpus_index, embedder,
                             navigation=cfg.navigation)
 
 
+def _topic_lines(topics: list[dict]) -> list[str]:
+    return [f"{t['name']} — {t['description']}" for t in topics]
+
+
 def _build_policies(cfg: ForumRunConfig, *, llm, model, assignments: dict,
-                    display_orders: dict | None = None) -> dict[str, ForumAgentPolicy]:
+                    display_orders: dict | None = None,
+                    region_topic_lists: dict | None = None) -> dict[str, ForumAgentPolicy]:
     if cfg.online:
         return {
             a["agent_id"]: ForumAgentPolicy(
@@ -261,17 +269,21 @@ def _build_policies(cfg: ForumRunConfig, *, llm, model, assignments: dict,
                 latest_result_chars=LATEST_RESULT_CHARS)
             for a in cfg.agents}
     if cfg.region:
-        # The prompt states the rule but never the agent's area (user decision
-        # 2026-10-06): no topics.
-        return {
-            a["agent_id"]: ForumAgentPolicy(
-                llm=llm, model=model, topics=[],
+        # The prompt lists the region's topics (R5, 2026-10-07). A run recorded
+        # without topics falls back to stating the rule alone.
+        lists = region_topic_lists or {}
+        policies = {}
+        for a in cfg.agents:
+            topics = _topic_lines(lists.get(a["agent_id"], []))
+            policies[a["agent_id"]] = ForumAgentPolicy(
+                llm=llm, model=model, topics=topics,
                 memory_size=a.get("memory_size", 20),
                 identity=f"{cfg.run_id}:{a['agent_id']}",
                 total_steps=cfg.total_steps,
-                system_template=REGION_SYSTEM, actions_doc=REGION_ACTIONS_DOC,
+                system_template=REGION_SYSTEM if topics else REGION_SYSTEM_NO_TOPICS,
+                actions_doc=REGION_ACTIONS_DOC,
                 latest_result_chars=LATEST_RESULT_CHARS)
-            for a in cfg.agents}
+        return policies
     return {
         a["agent_id"]: ForumAgentPolicy(
             llm=llm, model=model, topics=assignments[a["agent_id"]],
@@ -293,14 +305,15 @@ def _drive(cfg: ForumRunConfig, env, policies, order, last_result,
 
 
 def run_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None, embedder,
-              llm, model, out_dir, literature=None, tagger=None) -> dict:
+              llm, model, out_dir, literature=None, tagger=None,
+              topic_namer: str | None = None) -> dict:
     rng = np.random.default_rng(cfg.seed)
     run_dir = Path(out_dir) / cfg.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     if cfg.region:
         return _run_region(cfg, rng=rng, run_dir=run_dir, corpus=corpus,
                            corpus_index=corpus_index, embedder=embedder,
-                           llm=llm, model=model)
+                           llm=llm, model=model, topic_namer=topic_namer)
 
     assignments = draw_topics(cfg.agents, cfg.topic_pool, rng,
                               scheme=cfg.topic_draw, seed=cfg.seed)
@@ -335,24 +348,46 @@ def run_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None, embedder,
     return out
 
 
+def _region_topic_lists(cfg: ForumRunConfig, regions: dict[str, Region], corpus,
+                        corpus_index, llm, topic_namer: str | None) -> dict[str, list[dict]]:
+    """Each agent's topics (region_topics.py), one namer call per cluster
+    through the run's (cached) llm. No namer: no topics, and the prompt falls
+    back to stating the rule alone."""
+    if topic_namer is None:
+        return {a["agent_id"]: [] for a in cfg.agents}
+
+    def text_of(pid):
+        title, _, abstract = corpus.node(pid).text.partition("\n\n")
+        return title, abstract
+    return {a["agent_id"]: region_topics(llm, topic_namer, regions[a["agent_id"]],
+                                         corpus_index.ids, corpus_index.vecs,
+                                         cfg.seed, text_of)
+            for a in cfg.agents}
+
+
 def _run_region(cfg: ForumRunConfig, *, rng, run_dir, corpus, corpus_index,
-                embedder, llm, model) -> dict:
-    """Region mode has no topics: seeds are drawn from the corpus (seeded, one
-    distinct paper per agent) and each agent's ball is built at its coverage."""
+                embedder, llm, model, topic_namer: str | None = None) -> dict:
+    """Seeds are drawn from the corpus (seeded, one distinct paper per agent),
+    each agent's ball is built at its coverage, and its topics are named."""
     seeds = draw_seeds(len(cfg.agents), corpus_index.ids, cfg.seed)
     regions = _regions(cfg, corpus_index, seeds)
+    topic_lists = _region_topic_lists(cfg, regions, corpus, corpus_index, llm,
+                                      topic_namer)
     meta = {"run_id": cfg.run_id, "seed": cfg.seed, "arch": "p2_forum",
             "total_steps": cfg.total_steps,
             "navigation": asdict(cfg.navigation),
             "literature": cfg.literature, "gating": cfg.gating,
             **_region_meta(cfg, regions, corpus, len(corpus_index.ids))}
+    for aid, topics in topic_lists.items():
+        meta["regions"][aid]["topics"] = topics
     # Written BEFORE driving, as in run_forum: resume rebuilds the regions
     # from these seeds instead of re-drawing them.
     (run_dir / "run_meta.json").write_text(json.dumps(meta, indent=1))
     env = _build_env(cfg, run_dir=run_dir, corpus=corpus,
                      corpus_index=corpus_index, embedder=embedder, rng=rng,
                      regions=regions)
-    policies = _build_policies(cfg, llm=llm, model=model, assignments={})
+    policies = _build_policies(cfg, llm=llm, model=model, assignments={},
+                               region_topic_lists=topic_lists)
     order = [a["agent_id"] for a in cfg.agents]
     return _drive(cfg, env, policies, order, {aid: {} for aid in order}, 0)
 
@@ -383,7 +418,7 @@ def _recorded_regions(cfg: ForumRunConfig, meta: dict, corpus_index,
 
 def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
                  embedder, llm, model, out_dir, literature=None,
-                 tagger=None) -> dict:
+                 tagger=None, topic_namer: str | None = None) -> dict:
     """Continue an existing paper-2 run up to cfg.total_steps (raise it in the
     config to extend), mirroring p1_dial.runner.resume_simulation.
 
@@ -394,7 +429,11 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
     re-sampled. Each agent's rolling memory and last result are reconstructed.
     The resumed segment draws from a fresh rng stream seeded by
     (seed, start_step): reproducible, but not bit-identical to an
-    uninterrupted run."""
+    uninterrupted run.
+
+    Region topics are read from run_meta, never re-named (topic_namer is
+    accepted for a uniform call signature and unused); a run recorded without
+    them resumes with the no-topics prompt."""
     run_dir = Path(out_dir) / cfg.run_id
     events = load_events(run_dir / "events.jsonl")
     if not events:
@@ -421,9 +460,11 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
         raise SystemExit(
             f"cannot resume {run_dir}: it was run with literature: {recorded}, "
             f"the config says {cfg.literature}")
-    topic_ids = display_orders = regions = None
+    topic_ids = display_orders = regions = topic_lists = None
     if cfg.region:
         regions = _recorded_regions(cfg, meta, corpus_index, run_dir)
+        topic_lists = {aid: rec.get("topics", [])
+                       for aid, rec in meta["regions"].items()}
     if cfg.online:
         # Reuse what the run recorded; never re-derive the gate's topic sets.
         topic_ids = meta["topic_ids"]
@@ -442,7 +483,8 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
 
     policies = _build_policies(cfg, llm=llm, model=model,
                                assignments=assignments,
-                               display_orders=display_orders)
+                               display_orders=display_orders,
+                               region_topic_lists=topic_lists)
     order = [a["agent_id"] for a in cfg.agents]
     last_result: dict[str, dict] = {}
     by_agent = {aid: [e for e in events if e["agent_id"] == aid] for aid in order}

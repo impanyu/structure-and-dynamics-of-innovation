@@ -7,7 +7,9 @@ In soft mode, the agent's topics appear only in its system prompt. Nothing in
 the environment enforces them: the agent sees every result and decides for
 itself what is worth following. In hard mode, the environment gates all results
 (papers and posts): in online mode to those matching the agent's topics, in
-region mode to the agent's semantic region, which its prompt never describes.
+region mode to the agent's semantic region. Region mode combines both: the
+prompt describes the region as a list of topics (k-means clusters of its papers,
+named by an LLM; region_topics.py) and the gate enforces the region itself.
 """
 import json
 from collections import deque
@@ -85,10 +87,11 @@ GATED_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, no
 {"action": "add_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- add reference links from a post to what it builds on
 {"action": "remove_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- remove reference links from a post that do not actually support it"""
 
-# Region mode (region_env.py): the agent is told the rule but never its area,
-# which it discovers by reading. No {topics} placeholder: format() leaves the
-# text unchanged.
-REGION_SYSTEM = """You are a research agent. Two things are in front of you.
+# Region mode (region_env.py): the prompt describes the agent's area as its
+# region's topics (region_topics.py, recorded in run_meta) and states the rule
+# the gate enforces. REGION_SYSTEM_NO_TOPICS is the fallback for runs recorded
+# before topics existed: it states the rule without describing the area.
+_REGION_INTRO = """You are a research agent. Two things are in front of you.
 
 The LITERATURE is a fixed collection of published papers from top AI venues \
 (2020-2024), each citing the papers it builds on. You can read it but never \
@@ -103,21 +106,32 @@ Your goal is to find promising unexplored directions and publish genuinely new \
 ideas to the board. Ground them: cite the papers they build on, and cite other \
 agents' posts when your idea builds on theirs.
 
-You can only find, read, cite and publish within your own research area; papers \
-and posts outside it are hidden from you and an idea outside it will not be \
-published."""
+"""
+
+REGION_SYSTEM = _REGION_INTRO + """Your research area is defined by the following \
+topics (each a cluster of papers you can read):
+{topics}
+
+You can only find, read, cite and publish within these topics. Searches return \
+only papers in them; papers and posts outside them are hidden from you, and an \
+idea outside them will not be published. Plan your work inside these topics."""
+
+REGION_SYSTEM_NO_TOPICS = _REGION_INTRO + """You can only find, read, cite and \
+publish within your own research area; papers and posts outside it are hidden \
+from you and an idea outside it will not be published."""
 
 REGION_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
-{"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "k": 5}} -- semantic search over the literature (do not paste lists of keywords)
-{"action": "browse", "args": {"node_id": "<paper id>"}} -- open a paper by its id (from a search result or a reference list) to read its abstract, its full reference list and the papers citing it
-{"action": "related", "args": {"node_id": "<paper id>", "k": 10}} -- list the papers most similar to a paper
+{"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "page": 1}} -- semantic search over the literature (do not paste lists of keywords)
+{"action": "browse", "args": {"node_id": "<paper id>", "ref_page": 1, "cited_by_page": 1}} -- open a paper by its id (from a search result or a reference list) to read its abstract, its reference list and the papers citing it
+{"action": "related", "args": {"node_id": "<paper id>", "page": 1}} -- list the papers most similar to a paper
 {"action": "sample_frontier", "args": {}} -- jump to a random paper
-{"action": "search_board", "args": {"query": "<text>", "k": 5}} -- semantic search over the board
-{"action": "browse_board", "args": {"node_id": "<post id>"}} -- read a post and its reference neighbors
+{"action": "search_board", "args": {"query": "<text>", "page": 1}} -- semantic search over the board
+{"action": "browse_board", "args": {"node_id": "<post id>", "ref_page": 1, "cited_by_page": 1}} -- read a post and its reference neighbors
 {"action": "sample_board", "args": {}} -- jump to a random post
 {"action": "generate", "args": {"text": "<3-4 sentence new idea paragraph>", "cited_ids": ["<id>", ...]}} -- publish your new idea to the board, citing what it builds on (papers or posts)
 {"action": "add_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- add reference links from a post to what it builds on
-{"action": "remove_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- remove reference links from a post that do not actually support it"""
+{"action": "remove_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- remove reference links from a post that do not actually support it
+Listings (search, related, search_board, and the reference and citing lists of browse and browse_board) show 10 results per page, most relevant first, each tagged high/medium/low relevance; ask for a later page to see more."""
 
 
 class ForumAgentPolicy(Policy):

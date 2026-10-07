@@ -29,6 +29,9 @@ embedding_model: BAAI/bge-small-en-v1.5
 models:
   agent: openai:gpt-5:medium
   judge: claude-opus-5-5
+  # Names each region's k-means topic clusters for the agent's prompt
+  # (src/innovation/p2_forum/region_topics.py); cached like every LLM call.
+  topic_namer: openai:gpt-5-mini:low
 eval:
   exclude_workshops: true
 run:

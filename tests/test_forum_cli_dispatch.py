@@ -354,8 +354,23 @@ def test_online_stale_scope_keys_are_refused(key, val):
         cli._load_online_world(_online_cfg(**{key: val}))
 
 
+NAMED = json.dumps({"name": "Synthetic test topic", "description": "Papers T0-T3."})
+
+
+class _AgentAndNamer(FakeLLM):
+    """Agent turns get `default`; the topic namer (model "namer") gets NAMED."""
+
+    def complete(self, *, model, system, user, max_tokens=1024):
+        if model == "namer":
+            self.calls.append({"model": model, "system": system, "user": user})
+            return NAMED
+        return super().complete(model=model, system=system, user=user,
+                                max_tokens=max_tokens)
+
+
 def _region(forum_cfg, coverage):
     forum_cfg.update(gating="region", literature="corpus")
+    forum_cfg["models"]["topic_namer"] = "namer"
     del forum_cfg["topics_file"]          # region mode draws no topics
     for a in forum_cfg["run"]["agents"]:
         del a["k_topics"]
@@ -367,7 +382,7 @@ def test_region_mode_dispatches_with_the_corpus_world(forum_cfg, monkeypatch):
     """cmd_run in region mode builds the balls from the frozen corpus and its
     embeddings, runs, and replays the log into board_metrics.json."""
     cfg = _region(forum_cfg, 0.5)
-    llm = FakeLLM(default=POST)
+    llm = _AgentAndNamer(default=POST)
     _use_llm(monkeypatch, llm)
 
     cli.cmd_run(cfg)
@@ -377,7 +392,11 @@ def test_region_mode_dispatches_with_the_corpus_world(forum_cfg, monkeypatch):
     assert meta["gating"] == "region" and meta["corpus_size"] == 4
     assert {r["n_members"] for r in meta["regions"].values()} == {2}
     assert {r["achieved_coverage"] for r in meta["regions"].values()} == {0.5}
-    assert "within your own research area" in llm.calls[0]["system"]
+    for r in meta["regions"].values():               # 2 members -> 2 clusters
+        assert [t["n_papers"] for t in r["topics"]] == [1, 1]
+        assert all(t["name"] == "Synthetic test topic" for t in r["topics"])
+    agent_calls = [c for c in llm.calls if c["model"] != "namer"]
+    assert "- Synthetic test topic — Papers T0-T3." in agent_calls[0]["system"]
     events = load_events(run_dir / "events.jsonl")
     posted = [e for e in events if "node_id" in e["result"]]
     final = json.loads((run_dir / "board_metrics.json").read_text())["final"]
@@ -390,7 +409,7 @@ def test_region_runs_evaluate_on_the_corpus_path(forum_cfg, monkeypatch):
     eval.exclude_workshops."""
     from innovation.core.eval.search_verify import Verdict
     cfg = _region(forum_cfg, 1.0)             # full coverage: every post is published
-    _use_llm(monkeypatch, FakeLLM(default=POST))
+    _use_llm(monkeypatch, _AgentAndNamer(default=POST))
     cli.cmd_run(cfg)
     cfg.update(cutoff_date="2024-09-30", mailto="x@y",
                recognized_venues=[{"name": "ICML", "aliases": ["icml"]}])
@@ -415,6 +434,14 @@ def test_region_runs_evaluate_on_the_corpus_path(forum_cfg, monkeypatch):
     assert len(verdicts) == 4 and all("dup_flag" in v for v in verdicts)
 
 
+def test_fresh_region_run_needs_a_topic_namer(forum_cfg, monkeypatch):
+    cfg = _region(forum_cfg, 0.5)
+    del cfg["models"]["topic_namer"]
+    _use_llm(monkeypatch, FakeLLM(default=POST))
+    with pytest.raises(SystemExit, match="topic_namer"):
+        cli.cmd_run(cfg)
+
+
 def test_region_configs_load():
     from innovation.core.config import load_config
     files = sorted(Path("configs/p2_forum/experiments/region").glob("*.yaml"))
@@ -432,6 +459,7 @@ def test_region_configs_load():
         assert cfg["literature"] == "corpus" and cfg["gating"] == "region"
         assert cfg["models"]["agent"] == "openai:gpt-5:medium"
         assert cfg["models"]["judge"] == "claude-opus-5-5"
+        assert cfg["models"]["topic_namer"] == "openai:gpt-5-mini:low"
         assert cfg["eval"]["exclude_workshops"] is True
         assert cfg["eval"]["recognized_min_citations"] == 50   # inherited
         assert cfg["eval"]["realized_min_date"] == "2025-06-01"
