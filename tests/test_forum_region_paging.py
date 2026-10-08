@@ -11,6 +11,8 @@ from innovation.p2_forum.region import build_region
 from innovation.p2_forum.region_env import (PAGE_SIZE, PAPER_TIERS, QUERY_TIERS,
                                             SEARCH_NOTICE, RegionGatedEnvironment,
                                             _tier)
+
+# R6: search / related put papers under out["papers"]["items"].
 from innovation.p2_forum.workspace import Workspace
 from test_forum_region_env import AngleEmbedder, unit
 
@@ -38,10 +40,12 @@ def make(tmp_path, coverage=1.0, angles=ANG, cites=None):
 
 
 def search(env, page=None, query="@0", **extra):
+    """The papers section of a search, plus its notice."""
     args = {"query": query, **extra}
     if page is not None:
         args["page"] = page
-    return env.execute("a", 0, Action("search", args))
+    out = env.execute("a", 0, Action("search", args))
+    return {**out["papers"], "hits": out["papers"]["items"], "notice": out["notice"]}
 
 
 def ids(items):
@@ -64,8 +68,10 @@ def test_search_pages_are_disjoint_ordered_and_report_totals(tmp_path):
 @pytest.mark.parametrize("bad", [0, -2, "x", None, 1.0, "1"])
 def test_invalid_page_is_page_one(tmp_path, bad):
     env = make(tmp_path)
-    out = env.execute("a", 0, Action("search", {"query": "@0", "page": bad}))
-    assert out["page"] == 1 and ids(out["hits"])[0] == "p00"
+    out = env.execute("a", 0, Action("search", {"query": "@0", "page": bad,
+                                                "post_page": bad}))
+    assert out["papers"]["page"] == 1 and ids(out["papers"]["items"])[0] == "p00"
+    assert out["posts"]["page"] == 1
 
 
 def test_notice_is_on_every_search_and_old_k_is_ignored(tmp_path):
@@ -74,7 +80,7 @@ def test_notice_is_on_every_search_and_old_k_is_ignored(tmp_path):
                 search(env, query="@180")):
         assert out["notice"] == SEARCH_NOTICE and "error" not in out
     assert len(search(env, k=3)["hits"]) == PAGE_SIZE
-    assert "outside your topics" in SEARCH_NOTICE
+    assert "outside your topics" in SEARCH_NOTICE and "papers and posts" in SEARCH_NOTICE
 
 
 def test_search_is_still_gated_to_the_region(tmp_path):
@@ -106,7 +112,7 @@ def test_search_and_related_tiers_follow_cosine(tmp_path):
     angles = {"p00": 0, "r31": 31, "r32": 32, "r38": 38, "r39": 39}
     env = make(tmp_path / "x", angles=angles, cites={"p00": ["r39", "r31", "r38", "r32"]})
     rel = env.execute("a", 0, Action("related", {"node_id": "p00"}))
-    assert [(h["node_id"], h["relevance"]) for h in rel["related"]] == [
+    assert [(h["node_id"], h["relevance"]) for h in rel["papers"]["items"]] == [
         ("r31", "high"), ("r32", "medium"), ("r38", "medium"), ("r39", "low")]
     v = env.execute("a", 1, Action("browse", {"node_id": "p00"}))
     assert [(c["node_id"], c["relevance"]) for c in v["cites"]] == [
@@ -117,9 +123,9 @@ def test_related_paginates_and_excludes_the_paper(tmp_path):
     env = make(tmp_path)
     p1 = env.execute("a", 0, Action("related", {"node_id": "p00"}))
     p3 = env.execute("a", 0, Action("related", {"node_id": "p00", "page": 3, "k": 4}))
-    assert ids(p1["related"]) == [f"p{i:02d}" for i in range(1, 11)]
-    assert ids(p3["related"]) == ["p21", "p22", "p23", "p24"]
-    assert (p1["total"], p1["pages"]) == (24, 3) and "notice" in p3
+    assert ids(p1["papers"]["items"]) == [f"p{i:02d}" for i in range(1, 11)]
+    assert ids(p3["papers"]["items"]) == ["p21", "p22", "p23", "p24"]
+    assert (p1["papers"]["total"], p1["papers"]["pages"]) == (24, 3) and "notice" in p3
 
 
 def test_browse_ranks_and_paginates_each_neighbour_list(tmp_path):
@@ -129,7 +135,7 @@ def test_browse_ranks_and_paginates_each_neighbour_list(tmp_path):
     assert ids(v1["cites"]) == [f"p{i:02d}" for i in range(1, 11)]
     assert ids(v3["cites"]) == [f"p{i:02d}" for i in range(21, 25)]
     assert (v1["cites_total"], v1["cites_pages"]) == (24, 3)
-    assert v1["filtered"] == {"region": 0}
+    assert v1["filtered"] == {"region": 0, "region_posts": 0}
     w = env.execute("a", 0, Action("browse", {"node_id": "p07", "cited_by_page": 2}))
     assert w["cited_by"] == [] and (w["cited_by_total"], w["cited_by_pages"]) == (1, 1)
     assert ids(env.execute("a", 0, Action("browse", {"node_id": "p07"}))["cited_by"]) == ["p00"]
@@ -139,20 +145,21 @@ def test_browse_filtered_counts_are_unchanged_by_paging(tmp_path):
     env = make(tmp_path, coverage=0.5)                     # p00..p11 readable
     v = env.execute("a", 0, Action("browse", {"node_id": "p00", "ref_page": 2}))
     assert ids(v["cites"]) == ["p11"]
-    assert v["cites_total"] == 11 and v["filtered"] == {"region": 13}
+    assert v["cites_total"] == 11 and v["filtered"] == {"region": 13, "region_posts": 0}
 
 
 def test_board_search_and_browse_board_paginate_with_tiers(tmp_path):
+    """The pre-R6 names still work: search_board's page pages the posts."""
     env = make(tmp_path)
     posts = [env.execute("a", 0, Action("generate", {"text": f"idea @{3 * i}",
                                                       "cited_ids": list(ANG)[:12]}))["node_id"]
              for i in range(12)]
-    s1 = env.execute("a", 1, Action("search_board", {"query": "@0", "k": 2}))
-    s2 = env.execute("a", 1, Action("search_board", {"query": "@0", "page": 2}))
-    assert ids(s1["hits"]) == posts[:10] and ids(s2["hits"]) == posts[10:]
-    assert (s1["total"], s1["pages"]) == (12, 2) and s1["filtered"] == {"region": 0}
-    assert "score" not in s1["hits"][0] and s1["hits"][0]["relevance"] == "high"
-    assert "posts within your allowed topics" in s1["notice"]
+    s1 = env.execute("a", 1, Action("search_board", {"query": "@0", "k": 2}))["posts"]
+    s2 = env.execute("a", 1, Action("search_board", {"query": "@0", "page": 2}))["posts"]
+    s3 = env.execute("a", 1, Action("search_board", {"query": "@0", "page": 3}))["posts"]
+    assert ids(s1["items"] + s2["items"] + s3["items"]) == posts
+    assert (s1["total"], s1["pages"]) == (12, 3) and s2["page"] == 2
+    assert "score" not in s1["items"][0] and s1["items"][0]["relevance"] == "high"
     b1 = env.execute("a", 2, Action("browse_board", {"node_id": posts[0]}))
     b2 = env.execute("a", 2, Action("browse_board", {"node_id": posts[0], "ref_page": 2}))
     assert ids(b1["cites"]) == list(ANG)[:10] and ids(b2["cites"]) == list(ANG)[10:12]

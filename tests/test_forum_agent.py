@@ -15,7 +15,7 @@ class ScriptedLLM:
 
 
 def test_every_action_name_is_available_to_the_agent():
-    assert VALID_ACTIONS == {"search", "browse", "related", "sample_frontier",
+    assert VALID_ACTIONS == {"search", "browse", "related", "random", "sample_frontier",
                              "search_board", "browse_board", "sample_board",
                              "generate", "add_links", "remove_links"}
 
@@ -162,21 +162,67 @@ def test_region_fallback_prompt_states_the_hard_rule_without_describing_the_area
     assert REGION_ACTIONS_DOC in llm.prompts[0][1]
 
 
-def test_region_actions_doc_lists_every_action_once():
+def test_region_actions_doc_lists_exactly_the_seven_unified_actions():
     from innovation.p2_forum.agent import REGION_ACTIONS_DOC
     lines = REGION_ACTIONS_DOC.splitlines()
     names = [re.match(r'\{"action": "(\w+)"', l).group(1) for l in lines[1:-1]]
-    assert sorted(names) == sorted(VALID_ACTIONS) and len(names) == len(set(names))
-    assert '"query": "<a paper title or a short meaningful phrase>", "page": 1' in lines[1]
+    assert names == ["search", "browse", "related", "random",
+                     "generate", "add_links", "remove_links"]
+    assert set(names) <= VALID_ACTIONS
+    for old in ("search_board", "browse_board", "sample_frontier", "sample_board"):
+        assert old not in REGION_ACTIONS_DOC                    # aliases stay undocumented
+    search = lines[1]
+    assert '"query": "<a paper title or a short meaningful phrase>", "page": 1, "post_page": 1' in search
+    assert "do not paste lists of keywords" in search
+    assert '"papers" (10 per page' in search and '"posts" (5 per page' in search
     browse = next(l for l in lines if '"browse"' in l)
-    assert "reference list" in browse and "citing" in browse
-    assert '"ref_page": 1, "cited_by_page": 1' in browse
-    assert "10 results per page, most relevant first" in lines[-1]
+    assert '"<paper or post id>", "ref_page": 1, "cited_by_page": 1, "post_page": 1' in browse
+    assert "posts citing it" in browse
+    related = next(l for l in lines if '"related"' in l)
+    assert '"<paper or post id>", "page": 1, "post_page": 1' in related
+    rnd = next(l for l in lines if '"random"' in l)
+    assert '"kind": "paper"' in rnd and '"kind": "post"' in rnd
     assert "high/medium/low relevance" in lines[-1]
+    assert "10 papers and 5 posts per page" in lines[-1]
     assert '"k"' not in REGION_ACTIONS_DOC
     generate = next(l for l in lines if '"generate"' in l)
     assert "3-4 sentence" in generate
     assert "topic" not in REGION_ACTIONS_DOC
+
+
+def test_region_prompt_describes_both_stores_symmetrically():
+    from innovation.p2_forum.agent import REGION_SYSTEM, REGION_SYSTEM_NO_TOPICS
+    pol = ForumAgentPolicy(llm=ScriptedLLM([]), model="m", topics=["T1: d1", "T2: d2"],
+                           system_template=REGION_SYSTEM)
+    flat = " ".join(pol.system.split())
+    assert ("The LITERATURE is a fixed collection of published papers from top AI venues "
+            "(2020-2024), each citing the papers it builds on. You can read it but never "
+            "change it.") in flat
+    assert ("The BOARD is a growing collection of new research ideas posted by you and "
+            "other researchers working alongside you, each a short paragraph citing the "
+            "papers and posts it builds on. Anyone may adjust a post's reference links.") in flat
+    assert ("One search covers both: it returns matching papers and matching posts in "
+            "separate lists.") in flat
+    assert "including posts that cite a paper" in flat
+    assert ("keep up with both the published literature and the new ideas your peers "
+            "post; build on either, and cite the papers and posts your idea builds on") in flat
+    assert "find promising unexplored directions and publish genuinely new ideas" in flat
+    assert ("Searches return only papers and posts in these topics; papers and posts "
+            "outside them are hidden from you. You may publish any idea, but you can cite "
+            "only what you can read.") in flat
+    assert "- T1: d1\n- T2: d2" in pol.system
+    for p in (REGION_SYSTEM, REGION_SYSTEM_NO_TOPICS):
+        assert "starts empty" not in p and "agents publish" not in p
+    no_topics = " ".join(REGION_SYSTEM_NO_TOPICS.split())
+    assert "keep up with both the published literature" in no_topics
+    assert "papers and posts outside it are hidden from you" in no_topics
+
+
+def test_the_parser_accepts_random():
+    llm = ScriptedLLM([json.dumps({"action": "random", "args": {"kind": "post"}})])
+    pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"])
+    action = pol.act({"step": 0, "last_result": {}})
+    assert (action.name, action.args) == ("random", {"kind": "post"})
 
 
 def test_old_prompts_do_not_mention_regions():

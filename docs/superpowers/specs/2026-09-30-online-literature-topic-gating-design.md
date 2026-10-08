@@ -52,6 +52,26 @@ The shared board, wiki link semantics, the action set and the evaluation
 > Same day, the user unified the read rule: a post is readable by an agent under exactly the rule that makes a paper a
 > member, i.e. iff its cosine to the agent's seed is at least the ball's radius (region.contains_vec), plus authors always
 > read their own posts. The nearest-neighbour majority rule (K=5, M=3) is retired.
+>
+> **2026-10-08 R6 (one tool set over papers and posts; symmetric prompt).** In run forum-region-c20-s0c agents searched the
+> literature 160 times but the board only 9 times, and never opened a teammate's post (0 cross-agent citations): the prompt
+> described the board far more thinly than the literature, and board search was a separate tool to remember. A single merged
+> ranking would bury the posts (simulated on that run: a readable teammate post reaches the top 10 in only 6 of 123 searches;
+> median best-post rank 488). So, like a scholar search engine listing papers and preprints side by side:
+> - **Unified tools with sectioned results.** Region mode documents exactly `search`, `browse`, `related`, `random`,
+>   `generate`, `add_links`, `remove_links`. Papers and posts share one id space (posts start with `gen:`) and every item
+>   carries `kind`. `search(query, page, post_page)` and `related(node_id, page, post_page)` return two separately ranked
+>   sections, `papers` (10 per page) and `posts` (5 per page, the agent's own marked `author: "you"`), with one notice;
+>   each section honours its store's search switch. Query tiers serve both sections (query -> cited papers and query -> the
+>   next post both median 0.77; random post 0.67, random paper 0.64). `random(kind)` jumps to a readable paper or post with
+>   the same rng draws as before. `search_board`, `browse_board`, `sample_frontier`, `sample_board` remain as undocumented
+>   aliases, so old logs restore and pre-R6 runs resume.
+> - **cited_by_posts.** `browse` opens a paper (abstract, `cites`, `cited_by`, and `cited_by_posts`: readable board posts
+>   citing it, ranked by cosine to the paper, 10 per page on `post_page`; hidden ones counted in `filtered.region_posts`) or
+>   a post (full text, author, mixed `cites` with kinds, `cited_by`).
+> - **Symmetric prompt.** The LITERATURE and the BOARD get parallel descriptions ("starts empty" is gone), one sentence
+>   explains that one search covers both, the goal asks the agent to keep up with both the literature and its peers' posts
+>   and cite either, and the topic rule speaks of "papers and posts". Gate rules are unchanged.
 
 ## 1. Why
 

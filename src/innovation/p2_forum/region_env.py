@@ -1,5 +1,6 @@
 """Paper 2's environment over the frozen corpus with semantic-region gating
-(spec, REVISION 2026-10-06; ranking and pagination R5 2026-10-07).
+(spec, REVISION 2026-10-06; ranking and pagination R5 2026-10-07; one tool set
+over papers and posts R6 2026-10-08).
 
 Each agent has a Region (region.py): a nearest-neighbour ball around its seed
 paper. A corpus paper is readable iff it is a member. A board post is readable
@@ -12,12 +13,23 @@ with a "gate" field (as in gated_env.py), so gate activity can be counted from
 the event log. An agent may publish any idea; only its cites are restricted to
 what it can read. There is no query gate.
 
-Every listing (search, related, search_board, and the reference / cited-by
-lists of browse and browse_board) is ranked by cosine, paginated PAGE_SIZE to
-a page and tagged with a coarse relevance tier, never a raw score. Searches
-carry a notice that results are restricted to the agent's topics, so an agent
-whose query lies outside its area learns that from the low tiers instead of
-repeating the search.
+One tool set covers both stores (R6). Papers (S2 hex ids) and posts (`gen:`
+ids) share one id space and every result item carries `"kind": "paper"` or
+`"kind": "post"`:
+- search / related return two separately ranked sections, `papers` (PAGE_SIZE
+  to a page, `page`) and `posts` (POST_PAGE_SIZE to a page, `post_page`), plus
+  one notice. A merged ranking would bury the posts (R6 simulation: a readable
+  teammate post reached the top 10 in 6 of 123 searches). Each section honours
+  its own store's Navigation search flag.
+- browse opens a paper (abstract, `cites`, `cited_by`, and `cited_by_posts`:
+  the board posts citing it) or a post (full text, mixed `cites`, `cited_by`).
+- random(kind) jumps to a random readable paper or post.
+The pre-R6 names stay as undocumented aliases (search_board -> search,
+browse_board -> browse, sample_frontier -> random(paper), sample_board ->
+random(post)), so old logs, resumed runs and stray replies still work.
+
+Every listing is ranked by cosine and tagged with a coarse relevance tier,
+never a raw score.
 
 Corpus node text is "title\\n\\nabstract"; year and venue come from the node.
 """
@@ -28,7 +40,8 @@ import numpy as np
 from innovation.p2_forum.env import ForumEnvironment
 from innovation.p2_forum.region import Region, _unit, contains_vec
 
-PAGE_SIZE = 10
+PAGE_SIZE = 10          # papers per page, and every browse list
+POST_PAGE_SIZE = 5      # posts per page in search / related
 
 # Relevance tiers over bge-small cosine, (high, medium) lower bounds; below
 # medium is low. Calibrated on data/p2_corpus (2026-10-07):
@@ -38,24 +51,29 @@ PAGE_SIZE = 10
 # - paper -> paper: cited pairs have median 0.81 (p25 0.78), random pairs 0.70,
 #   and a paper's 10th nearest neighbour is at 0.86. High is nearest-neighbour
 #   grade, medium is typical of a real citation, low is near random.
-QUERY_TIERS = (0.80, 0.72)     # search, search_board
-PAPER_TIERS = (0.85, 0.78)     # related, browse / browse_board neighbour lists
+# - query -> post (R6, run forum-region-c20-s0c): a query against the papers the
+#   agent's next post cited has median 0.77, against that next post itself also
+#   0.77; against a random post 0.67 (a random paper: 0.64). Queries meet posts
+#   at the same cosines as papers, so the query tiers serve both sections.
+QUERY_TIERS = (0.80, 0.72)     # search: both sections
+PAPER_TIERS = (0.85, 0.78)     # related (both sections), browse neighbour lists
 
 SEARCH_NOTICE = (
-    "These are the papers within your allowed topics that best match your query, "
-    "most relevant first. Papers outside your topics are never shown: if nothing "
-    "here is relevant (e.g. only low relevance), what you are looking for is outside "
-    "your topics — rephrase toward your topics rather than repeating the search.")
+    "These are the papers and posts within your allowed topics that best match your "
+    "query, most relevant first, in two separate lists. Papers and posts outside your "
+    "topics are never shown: if nothing here is relevant (e.g. only low relevance), "
+    "what you are looking for is outside your topics — rephrase toward your topics "
+    "rather than repeating the search. The posts list shows what other researchers "
+    "(and you) have recently proposed in your topics.")
 RELATED_NOTICE = (
-    "These are the papers within your allowed topics most related to this paper, "
-    "most relevant first. Papers outside your topics are never shown: if nothing "
-    "here is relevant (e.g. only low relevance), what you are looking for is outside "
-    "your topics — turn toward your topics rather than repeating the request.")
-BOARD_NOTICE = (
-    "These are the posts within your allowed topics that best match your query, "
-    "most relevant first. Posts outside your topics are never shown: if nothing "
-    "here is relevant (e.g. only low relevance), what you are looking for is outside "
-    "your topics — rephrase toward your topics rather than repeating the search.")
+    "These are the papers and posts within your allowed topics most related to this "
+    "item, most relevant first, in two separate lists. Papers and posts outside your "
+    "topics are never shown: if nothing here is relevant (e.g. only low relevance), "
+    "what you are looking for is outside your topics — turn toward your topics rather "
+    "than repeating the request. The posts list shows what other researchers (and you) "
+    "have recently proposed in your topics.")
+
+KINDS = ("paper", "post")
 
 
 def _split(text: str) -> tuple[str, str]:
@@ -77,13 +95,13 @@ def _page_number(page) -> int:
     return p if p >= 1 else 1
 
 
-def _paginate(ranked: list, page) -> tuple[int, list, dict]:
+def _paginate(ranked: list, page, size: int = PAGE_SIZE) -> tuple[int, list, dict]:
     """(page, the page's items, {"page", "total", "pages"}). A page past the
     end is empty but still reports the totals."""
     p = _page_number(page)
     total = len(ranked)
-    items = ranked[(p - 1) * PAGE_SIZE: p * PAGE_SIZE]
-    return p, items, {"page": p, "total": total, "pages": math.ceil(total / PAGE_SIZE)}
+    items = ranked[(p - 1) * size: p * size]
+    return p, items, {"page": p, "total": total, "pages": math.ceil(total / size)}
 
 
 class RegionGatedEnvironment(ForumEnvironment):
@@ -117,21 +135,47 @@ class RegionGatedEnvironment(ForumEnvironment):
     def _is_paper(self, node_id: str) -> bool:
         return self.ws.store_of(node_id) == "corpus" and self.ws.corpus.has_node(node_id)
 
+    def _is_post(self, node_id: str) -> bool:
+        return self.ws.store_of(node_id) == "board" and self.ws.board.has_node(node_id)
+
+    def _open(self, agent_id: str, node_id) -> tuple[str | None, dict | None]:
+        """(kind, None) for a readable paper or post, else (None, the error)."""
+        node_id = str(node_id)
+        kind = "paper" if self._is_paper(node_id) else "post" if self._is_post(node_id) else None
+        if kind is None:
+            return None, {"error": f"{node_id} is not a known paper or post"}
+        if not self.readable(agent_id, node_id):
+            return None, {"error": f"{node_id} is outside your research area", "gate": "result"}
+        return kind, None
+
     # --- views ---
+    def _author(self, agent_id: str, node_id: str) -> str:
+        author = self.ws.node(node_id).meta.get("agent_id")
+        return "you" if author == agent_id else author
+
     def _paper_hit(self, node_id: str) -> dict:
         node = self.ws.node(node_id)
         title, abstract = _split(node.text)
-        return {"node_id": node_id, "store": "corpus", "title": title,
+        return {"node_id": node_id, "kind": "paper", "title": title,
                 "text": abstract[:300], "year": node.year,
                 "venue": node.meta.get("venue")}
 
     def _paper_full(self, node_id: str) -> dict:
         return {**self._paper_hit(node_id), "text": _split(self.ws.node(node_id).text)[1]}
 
-    def _ref_entry(self, node_id: str) -> dict:
-        """A reference-list line: enough to recognise a paper and decide to open it."""
+    def _post_hit(self, agent_id: str, node_id: str, chars: int | None = 300) -> dict:
+        text = self.ws.node(node_id).text
+        return {"node_id": node_id, "kind": "post", "author": self._author(agent_id, node_id),
+                "text": text if chars is None else text[:chars]}
+
+    def _ref_entry(self, agent_id: str, node_id: str) -> dict:
+        """A reference-list line: enough to recognise a paper or post and
+        decide to open it."""
+        if self.ws.store_of(node_id) == "board":
+            return self._post_hit(agent_id, node_id, chars=200)
         node = self.ws.node(node_id)
-        return {"node_id": node_id, "title": _split(node.text)[0], "year": node.year}
+        return {"node_id": node_id, "kind": "paper", "title": _split(node.text)[0],
+                "year": node.year}
 
     # --- ranking ---
     def _vec(self, node_id: str):
@@ -144,6 +188,8 @@ class RegionGatedEnvironment(ForumEnvironment):
 
     def _rank(self, node_ids, vec) -> list[tuple[str, float]]:
         """node_ids ranked by cosine to vec, most similar first, ties by id."""
+        if vec is None:
+            return [(n, -1.0) for n in node_ids]
         q = _unit(vec)
         scored = []
         for n in node_ids:
@@ -160,115 +206,113 @@ class RegionGatedEnvironment(ForumEnvironment):
         members = self._members_sorted[agent_id]
         return [(members[i], float(sims[i])) for i in order if members[i] != exclude]
 
-    # --- literature ---
-    def _do_search(self, *, agent_id, step, query: str, page=1, **_ignored) -> dict:
-        if not self.nav.corpus_search:
-            return {"error": "semantic search over the literature is closed"}
-        vec = self.ws.embedder.encode([query])[0]
-        ranked = self._ranked_papers(agent_id, vec)
-        _, items, info = _paginate(ranked, page)
-        return {**info, "hits": [{**self._paper_hit(n), "relevance": _tier(s, QUERY_TIERS)}
-                                 for n, s in items],
-                "notice": SEARCH_NOTICE}
-
-    def _do_browse(self, *, agent_id, step, node_id: str, ref_page=1, cited_by_page=1,
-                   **_ignored) -> dict:
-        if not self._is_paper(node_id):
-            return {"error": f"{node_id} is not an available paper"}
-        if not self.readable(agent_id, node_id):
-            return {"error": f"{node_id} is outside your research area", "gate": "result"}
-        view = self._paper_full(node_id)
-        if not self.nav.corpus_edges:
-            out_ids, in_ids = [], []
-        else:
-            out_ids, in_ids = self.ws.corpus_neighbors(node_id)
-        cites = [n for n in out_ids if self.readable(agent_id, n)]
-        cited_by = [n for n in in_ids if self.readable(agent_id, n)]
-        hidden = len(out_ids) - len(cites) + len(in_ids) - len(cited_by)
-        return {**view,
-                **self._neighbour_pages(node_id, cites, cited_by, ref_page, cited_by_page,
-                                        self._ref_entry),
-                "filtered": {"region": hidden}}
-
-    def _neighbour_pages(self, node_id, cites, cited_by, ref_page, cited_by_page, view):
-        """cites / cited_by ranked by cosine to node_id (PAPER_TIERS), each
-        paginated on its own page argument."""
-        vec = self._vec(node_id)
-        out = {}
-        for key, ids, page in (("cites", cites, ref_page), ("cited_by", cited_by, cited_by_page)):
-            ranked = self._rank(ids, vec) if vec is not None else [(n, -1.0) for n in ids]
-            _, items, info = _paginate(ranked, page)
-            out[key] = [{**view(n), "relevance": _tier(s, PAPER_TIERS)} for n, s in items]
-            out[f"{key}_page"] = info["page"]
-            out[f"{key}_total"] = info["total"]
-            out[f"{key}_pages"] = info["pages"]
-        return out
-
-    def _do_related(self, *, agent_id, step, node_id: str, page=1, **_ignored) -> dict:
-        if not self.nav.corpus_search:
-            return {"error": "finding related papers is closed"}
-        if not self._is_paper(node_id):
-            return {"error": f"{node_id} is not an available paper"}
-        if not self.readable(agent_id, node_id):
-            return {"error": f"{node_id} is outside your research area", "gate": "result"}
-        ranked = self._ranked_papers(agent_id, self._vec(node_id), exclude=node_id)
-        _, items, info = _paginate(ranked, page)
-        return {"node_id": node_id, **info,
-                "related": [{**self._paper_hit(n), "relevance": _tier(s, PAPER_TIERS)}
-                            for n, s in items],
-                "notice": RELATED_NOTICE}
-
-    def _do_sample_frontier(self, *, agent_id, step) -> dict:
-        if not self.nav.corpus_jump:
-            return {"error": "random jumps into the literature are closed"}
-        members = self._members_sorted[agent_id]
-        return self._paper_full(members[int(self.rng.integers(len(members)))])
-
-    # --- board ---
-    def _post_view(self, nid) -> dict:
-        if self.ws.store_of(nid) == "board":
-            return {"node_id": nid, "store": "board", "text": self.ws.node(nid).text[:200]}
-        node = self.ws.node(nid)
-        return {"node_id": nid, "store": "corpus", "title": _split(node.text)[0],
-                "year": node.year}
-
     def _readable_posts(self, agent_id) -> list[str]:
         return [n for n in self.ws.board_post_ids() if self.readable(agent_id, n)]
 
-    def _do_search_board(self, *, agent_id, step, query: str, page=1, **_ignored) -> dict:
-        if not self.nav.board_search:
-            return {"error": "semantic search over the board is closed"}
+    def _sections(self, agent_id, vec, tiers, page, post_page, exclude=None) -> dict:
+        """The two sections of search / related: readable papers (PAGE_SIZE to
+        a page) and readable posts (POST_PAGE_SIZE), each ranked by cosine to
+        vec on its own, or an error where that store's search is closed."""
+        if self.nav.corpus_search:
+            _, items, info = _paginate(self._ranked_papers(agent_id, vec, exclude), page)
+            papers = {**info, "items": [{**self._paper_hit(n), "relevance": _tier(s, tiers)}
+                                        for n, s in items]}
+        else:
+            papers = {"error": "semantic search over the literature is closed"}
+        if self.nav.board_search:
+            posts = [n for n in self._readable_posts(agent_id) if n != exclude]
+            _, items, info = _paginate(self._rank(posts, vec), post_page, POST_PAGE_SIZE)
+            posts = {**info, "items": [{**self._post_hit(agent_id, n),
+                                        "relevance": _tier(s, tiers)} for n, s in items]}
+        else:
+            posts = {"error": "semantic search over the board is closed"}
+        return {"papers": papers, "posts": posts}
+
+    def _list(self, agent_id, ids, vec, page, key) -> dict:
+        """One browse list: ids ranked by cosine to vec (PAPER_TIERS), PAGE_SIZE
+        to a page, as `key` plus `key`_page / _total / _pages."""
+        _, items, info = _paginate(self._rank(ids, vec), page)
+        return {key: [{**self._ref_entry(agent_id, n), "relevance": _tier(s, PAPER_TIERS)}
+                      for n, s in items],
+                f"{key}_page": info["page"], f"{key}_total": info["total"],
+                f"{key}_pages": info["pages"]}
+
+    # --- reading: search, browse, related, random ---
+    def _do_search(self, *, agent_id, step, query: str, page=1, post_page=1,
+                   **_ignored) -> dict:
         vec = self.ws.embedder.encode([query])[0]
-        posts = self.ws.board_post_ids()
-        gated = self._readable_posts(agent_id)
-        _, items, info = _paginate(self._rank(gated, vec), page)
-        return {**info,
-                "hits": [{**self._post_view(n), "text": self.ws.node(n).text[:300],
-                          "relevance": _tier(s, QUERY_TIERS)} for n, s in items],
-                "filtered": {"region": len(posts) - len(gated)},
-                "notice": BOARD_NOTICE}
+        return {**self._sections(agent_id, vec, QUERY_TIERS, page, post_page),
+                "notice": SEARCH_NOTICE}
 
-    def _do_browse_board(self, *, agent_id, step, node_id: str, ref_page=1,
-                         cited_by_page=1, **_ignored) -> dict:
-        if self.ws.store_of(node_id) != "board" or not self.ws.board.has_node(node_id):
-            return {"error": f"{node_id} is not a board node"}
-        if not self.readable(agent_id, node_id):
-            return {"error": f"{node_id} is outside your research area", "gate": "result"}
-        out_ids, in_ids = (self.ws.board_neighbors(node_id) if self.nav.board_edges
-                           else ([], []))
+    def _do_browse(self, *, agent_id, step, node_id: str, ref_page=1, cited_by_page=1,
+                   post_page=1, **_ignored) -> dict:
+        kind, err = self._open(agent_id, node_id)
+        if err:
+            return err
+        vec = self._vec(node_id)
         keep = lambda ids: [n for n in ids if self.readable(agent_id, n)]
-        return {**self._post_view(node_id), "text": self.ws.node(node_id).text,
-                **self._neighbour_pages(node_id, keep(out_ids), keep(in_ids),
-                                        ref_page, cited_by_page, self._post_view)}
+        if kind == "post":
+            out_ids, in_ids = (self.ws.board_neighbors(node_id) if self.nav.board_edges
+                               else ([], []))
+            return {**self._post_hit(agent_id, node_id, chars=None),
+                    **self._list(agent_id, keep(out_ids), vec, ref_page, "cites"),
+                    **self._list(agent_id, keep(in_ids), vec, cited_by_page, "cited_by")}
+        out_ids, in_ids = (self.ws.corpus_neighbors(node_id) if self.nav.corpus_edges
+                           else ([], []))
+        # Posts citing a paper are in-edges of its corpus_ref stub on the board
+        # (every board edge has a post as its source).
+        citing_posts = (self.ws.board_neighbors(node_id)[1]
+                        if self.nav.board_edges and self.ws.board.has_node(node_id) else [])
+        cites, cited_by, by_posts = keep(out_ids), keep(in_ids), keep(citing_posts)
+        return {**self._paper_full(node_id),
+                **self._list(agent_id, cites, vec, ref_page, "cites"),
+                **self._list(agent_id, cited_by, vec, cited_by_page, "cited_by"),
+                **self._list(agent_id, by_posts, vec, post_page, "cited_by_posts"),
+                # region: hidden papers (cites + cited_by); region_posts: hidden citing posts
+                "filtered": {"region": len(out_ids) - len(cites) + len(in_ids) - len(cited_by),
+                             "region_posts": len(citing_posts) - len(by_posts)}}
 
-    def _do_sample_board(self, *, agent_id, step) -> dict:
-        if not self.nav.board_jump:
-            return {"error": "random jumps into the board are closed"}
-        posts = self._readable_posts(agent_id)
-        if not posts:
-            return {"error": "no readable posts on the board"}
-        nid = posts[int(self.rng.integers(len(posts)))]
-        return {**self._post_view(nid), "text": self.ws.node(nid).text}
+    def _do_related(self, *, agent_id, step, node_id: str, page=1, post_page=1,
+                    **_ignored) -> dict:
+        kind, err = self._open(agent_id, node_id)
+        if err:
+            return err
+        return {"node_id": node_id, "kind": kind,
+                **self._sections(agent_id, self._vec(node_id), PAPER_TIERS, page, post_page,
+                                 exclude=node_id),
+                "notice": RELATED_NOTICE}
+
+    def _do_random(self, *, agent_id, step, kind="paper", **_ignored) -> dict:
+        # One rng draw per call, exactly as the pre-R6 sample_frontier /
+        # sample_board handlers, so replays and resumed runs draw the same.
+        if kind == "paper":
+            if not self.nav.corpus_jump:
+                return {"error": "random jumps into the literature are closed"}
+            members = self._members_sorted[agent_id]
+            return self._paper_full(members[int(self.rng.integers(len(members)))])
+        if kind == "post":
+            if not self.nav.board_jump:
+                return {"error": "random jumps into the board are closed"}
+            posts = self._readable_posts(agent_id)
+            if not posts:
+                return {"error": "no readable posts on the board"}
+            return self._post_hit(agent_id, posts[int(self.rng.integers(len(posts)))],
+                                  chars=None)
+        return {"error": f"kind must be one of {list(KINDS)}; got {kind!r}"}
+
+    # --- pre-R6 names: undocumented aliases ---
+    def _do_search_board(self, *, agent_id, step, query: str, page=1, **_ignored) -> dict:
+        # Its `page` paged the posts, so it becomes post_page.
+        return self._do_search(agent_id=agent_id, step=step, query=query, post_page=page)
+
+    def _do_browse_board(self, **kw) -> dict:
+        return self._do_browse(**kw)
+
+    def _do_sample_frontier(self, *, agent_id, step, **_ignored) -> dict:
+        return self._do_random(agent_id=agent_id, step=step, kind="paper")
+
+    def _do_sample_board(self, *, agent_id, step, **_ignored) -> dict:
+        return self._do_random(agent_id=agent_id, step=step, kind="post")
 
     # --- writes ---
     def _do_generate(self, *, agent_id, step, text: str, cited_ids: list[str]) -> dict:
@@ -303,7 +347,10 @@ class RegionGatedEnvironment(ForumEnvironment):
         return self._links_gate(agent_id, src_id, dst_ids) or super()._do_remove_links(
             agent_id=agent_id, step=step, src_id=src_id, dst_ids=dst_ids)
 
-    # restore(): the base class's replay is exact here. Posts replay with their
-    # kept cites (_kept_cites honours dropped_cites); refused posts and links
-    # carry no node_id / added / removed and are skipped. Regions are fixed
-    # per run, so no gate state needs rebuilding and no LLM is called.
+    # restore(): the base class's replay is exact here. Only generate /
+    # add_links / remove_links are replayed, so reads under the pre-R6 names
+    # (search_board, browse_board, sample_frontier, sample_board) need nothing.
+    # Posts replay with their kept cites (_kept_cites honours dropped_cites);
+    # refused posts and links carry no node_id / added / removed and are
+    # skipped. Regions are fixed per run, so no gate state needs rebuilding
+    # and no LLM is called.

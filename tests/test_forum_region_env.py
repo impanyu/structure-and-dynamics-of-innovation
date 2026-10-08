@@ -90,44 +90,50 @@ def test_readable_corpus_by_membership_and_posts_by_vector(tmp_path):
 def test_search_returns_only_readable_papers_ranked_with_paper_fields(tmp_path):
     env = make(tmp_path)
     out = env.execute("a", 0, Action("search", {"query": "near @95", "k": 5}))
-    assert [h["node_id"] for h in out["hits"]] == ["c1", "c0", "c2", "c3"]   # b's papers hidden
-    h = out["hits"][0]
-    assert h["store"] == "corpus" and h["title"] == "Title c1"
+    papers = out["papers"]
+    assert [h["node_id"] for h in papers["items"]] == ["c1", "c0", "c2", "c3"]   # b's papers hidden
+    h = papers["items"][0]
+    assert h["kind"] == "paper" and h["title"] == "Title c1" and "store" not in h
     assert h["text"].startswith("Abstract of c1.") and len(h["text"]) <= 300
     assert h["year"] == 2021 and h["venue"] == "NeurIPS"
     assert "gate" not in out                                  # no query gate, ever
-    assert out["page"] == 1 and out["total"] == 4 and out["pages"] == 1
-    assert all(set(h) >= {"relevance"} and "score" not in h for h in out["hits"])
+    assert papers["page"] == 1 and papers["total"] == 4 and papers["pages"] == 1
+    assert all(set(h) >= {"relevance"} and "score" not in h for h in papers["items"])
+    assert out["posts"] == {"page": 1, "total": 0, "pages": 0, "items": []}
     one = env.execute("a", 1, Action("search", {"query": "@0", "k": 1}))   # old k ignored
-    assert [h["node_id"] for h in one["hits"]] == ["c0", "c1", "c2", "c3"]
+    assert [h["node_id"] for h in one["papers"]["items"]] == ["c0", "c1", "c2", "c3"]
 
 
 def test_closed_search_is_refused(tmp_path):
     env = make(tmp_path)
     env.nav = Navigation(corpus_search=False)
     out = env.execute("a", 0, Action("search", {"query": "@0"}))
-    assert "closed" in out["error"] and "hits" not in out
+    assert "closed" in out["papers"]["error"] and "items" not in out["papers"]
+    assert "items" in out["posts"] and "error" not in out
 
 
 def test_browse_gates_the_target_and_lists_all_readable_neighbours(tmp_path):
     env = make(tmp_path)
     assert env.execute("a", 0, Action("browse", {"node_id": "c4"}))["gate"] == "result"
     unknown = env.execute("a", 0, Action("browse", {"node_id": "zzz"}))
-    assert "error" in unknown and "gate" not in unknown
+    assert unknown == {"error": "zzz is not a known paper or post"}
+    assert env.execute("a", 0, Action("browse", {"node_id": "gen:t:9"}))["error"]
     v = env.execute("a", 1, Action("browse", {"node_id": "c0"}))
     assert v["title"] == "Title c0" and v["text"].startswith("Abstract of c0.")
     assert v["text"].endswith("word ")                        # the full abstract
     assert v["year"] == 2020 and v["venue"] == "ICML"
     assert [c["node_id"] for c in v["cites"]] == ["c1", "c2"]  # c4 hidden; c1 (20 deg) nearer than c2 (-28)
-    assert v["cites"][0] == {"node_id": "c1", "title": "Title c1", "year": 2021,
-                             "relevance": "high"}           # cos 20 deg = 0.94
+    assert v["kind"] == "paper"
+    assert v["cites"][0] == {"node_id": "c1", "kind": "paper", "title": "Title c1",
+                             "year": 2021, "relevance": "high"}   # cos 20 deg = 0.94
     assert v["cites"][1]["relevance"] == "high"             # cos 28 deg = 0.88
     assert v["cites_total"] == 2 and v["cites_pages"] == 1
     assert v["cited_by_total"] == 0 and v["cited_by_pages"] == 0
     assert v["cited_by"] == []                                 # c5 hidden
-    assert v["filtered"] == {"region": 2}
+    assert v["filtered"] == {"region": 2, "region_posts": 0}
+    assert v["cited_by_posts"] == [] and v["cited_by_posts_total"] == 0
     w = env.execute("b", 2, Action("browse", {"node_id": "c1"}))
-    assert w["cited_by"] == [] and w["filtered"] == {"region": 1}   # c0 is outside b
+    assert w["cited_by"] == [] and w["filtered"]["region"] == 1     # c0 is outside b
 
 
 def test_browse_with_closed_edges_shows_no_neighbours(tmp_path):
@@ -135,7 +141,7 @@ def test_browse_with_closed_edges_shows_no_neighbours(tmp_path):
     env.nav = Navigation(corpus_edges=False)
     v = env.execute("a", 0, Action("browse", {"node_id": "c0"}))
     assert v["cites"] == [] and v["cited_by"] == [] and v["title"] == "Title c0"
-    assert v["filtered"] == {"region": 0}                     # same keys as the open path
+    assert v["filtered"] == {"region": 0, "region_posts": 0}  # same keys as the open path
 
 
 def test_sample_frontier_stays_in_the_region_and_covers_it(tmp_path):
@@ -143,7 +149,7 @@ def test_sample_frontier_stays_in_the_region_and_covers_it(tmp_path):
     seen = {env.execute("a", s, Action("sample_frontier", {}))["node_id"] for s in range(60)}
     assert seen == {"c0", "c1", "c2", "c3"}
     out = env.execute("a", 0, Action("sample_frontier", {}))
-    assert out["store"] == "corpus" and out["title"] and out["text"].endswith("word ")
+    assert out["kind"] == "paper" and out["title"] and out["text"].endswith("word ")
     env.nav = Navigation(corpus_jump=False)
     assert "closed" in env.execute("a", 0, Action("sample_frontier", {}))["error"]
 
@@ -151,17 +157,19 @@ def test_sample_frontier_stays_in_the_region_and_covers_it(tmp_path):
 def test_related_ranks_readable_neighbours_excluding_the_source(tmp_path):
     env = make(tmp_path)
     out = env.execute("a", 0, Action("related", {"node_id": "c1", "k": 10}))
-    assert out["node_id"] == "c1"
-    assert [h["node_id"] for h in out["related"]] == ["c0", "c2", "c3"]
-    assert out["related"][0]["title"] == "Title c0" and out["related"][0]["venue"] == "ICML"
-    assert out["total"] == 3 and out["pages"] == 1 and "notice" in out
-    assert [h["relevance"] for h in out["related"]] == ["high", "low", "low"]  # 20, 48, 50 deg
+    assert out["node_id"] == "c1" and out["kind"] == "paper"
+    papers = out["papers"]
+    assert [h["node_id"] for h in papers["items"]] == ["c0", "c2", "c3"]
+    assert papers["items"][0]["title"] == "Title c0" and papers["items"][0]["venue"] == "ICML"
+    assert papers["total"] == 3 and papers["pages"] == 1 and "notice" in out
+    assert [h["relevance"] for h in papers["items"]] == ["high", "low", "low"]  # 20, 48, 50 deg
     one = env.execute("b", 1, Action("related", {"node_id": "c1", "k": 1}))   # old k ignored
-    assert [h["node_id"] for h in one["related"]] == ["c4", "c5", "c6"]
+    assert [h["node_id"] for h in one["papers"]["items"]] == ["c4", "c5", "c6"]
     assert env.execute("a", 2, Action("related", {"node_id": "c4"}))["gate"] == "result"
     assert "error" in env.execute("a", 2, Action("related", {"node_id": "zzz"}))
     env.nav = Navigation(corpus_search=False)
-    assert "closed" in env.execute("a", 3, Action("related", {"node_id": "c0"}))["error"]
+    closed = env.execute("a", 3, Action("related", {"node_id": "c0"}))
+    assert "closed" in closed["papers"]["error"] and "items" in closed["posts"]
 
 
 def test_post_outside_the_authors_ball_is_published_and_only_its_author_and_region_read_it(tmp_path):
@@ -192,16 +200,18 @@ def test_board_reads_are_gated_by_vector(tmp_path):
     env = make(tmp_path)
     pa = post(env, "a", "idea @5", ["c0"])["node_id"]
     pb = post(env, "b", "idea @60", ["c4"])["node_id"]
-    s = env.execute("a", 1, Action("search_board", {"query": "@60", "k": 5}))
-    assert [h["node_id"] for h in s["hits"]] == [pa] and s["filtered"] == {"region": 1}
-    assert s["hits"][0]["store"] == "board" and "score" not in s["hits"][0]
-    assert s["hits"][0]["relevance"] == "low" and s["total"] == 1   # 55 deg apart
+    s = env.execute("a", 1, Action("search", {"query": "@60", "k": 5}))["posts"]
+    assert [h["node_id"] for h in s["items"]] == [pa]               # pb hidden
+    assert s["items"][0]["kind"] == "post" and "score" not in s["items"][0]
+    assert s["items"][0]["author"] == "you"
+    assert s["items"][0]["relevance"] == "low" and s["total"] == 1   # 55 deg apart
     assert env.execute("a", 2, Action("browse_board", {"node_id": pb}))["gate"] == "result"
     assert all(env.execute("a", k, Action("sample_board", {}))["node_id"] == pa
                for k in range(5))
     v = env.execute("a", 3, Action("browse_board", {"node_id": pa}))
     assert v["text"] == "idea @5"
-    assert v["cites"] == [{"node_id": "c0", "store": "corpus", "title": "Title c0",
+    assert v["kind"] == "post" and v["author"] == "you"
+    assert v["cites"] == [{"node_id": "c0", "kind": "paper", "title": "Title c0",
                            "year": 2020, "relevance": "high"}]
 
 
@@ -214,7 +224,7 @@ def test_browse_board_hides_unreadable_neighbours(tmp_path):
     w = env.execute("b", 2, Action("browse_board", {"node_id": pb}))
     assert [c["node_id"] for c in w["cites"]] == ["c4", pa]   # ranked: 10 deg, then 35
     assert [c["relevance"] for c in w["cites"]] == ["high", "medium"]
-    assert env.execute("a", 3, Action("browse_board", {"node_id": "c0"}))["error"]
+    assert env.execute("a", 3, Action("browse_board", {"node_id": "c4"}))["gate"] == "result"
 
 
 def test_sample_board_with_nothing_readable(tmp_path):

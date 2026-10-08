@@ -69,7 +69,7 @@ def test_region_run_end_to_end_records_each_agents_region(tmp_path):
     for e in events:
         seed = meta["regions"][e["agent_id"]]["seed_id"]
         members = build_region(seed, ids, vecs, 0.5).members
-        for h in e["result"]["hits"]:
+        for h in e["result"]["papers"]["items"]:
             assert h["node_id"] in members
             hits += 1
     assert hits == 6 * 4                      # every search returns the whole region
@@ -98,7 +98,7 @@ def test_region_resume_rebuilds_regions_from_run_meta_without_redrawing(tmp_path
     a_members = build_region("c7", ids, vecs, 0.5).members
     resumed = [e for e in load_events(tmp_path / "r" / "events.jsonl")
                if e["step"] >= 4 and e["agent_id"] == "a"]
-    assert resumed and all({h["node_id"] for h in e["result"]["hits"]} == a_members
+    assert resumed and all({h["node_id"] for h in e["result"]["papers"]["items"]} == a_members
                            for e in resumed)
 
 
