@@ -144,7 +144,7 @@ def test_region_mode_accepts_full_coverage():
 
 def test_region_resume_rebuilds_the_same_compact_history(tmp_path):
     """The resumed prompts equal those of an uninterrupted run: resume builds
-    each history entry with the policy's own (compact, 3000-char) form."""
+    each history entry with the policy's own (compact, 4000-char) form."""
     gen = lambda d: json.dumps({"action": "generate",
                                 "args": {"text": f"idea @{d} " + "w" * 400, "cited_ids": []}})
     browse = json.dumps({"action": "browse", "args": {"node_id": "c1"}})

@@ -42,11 +42,12 @@ LITERATURES = ("corpus", "online")
 GATINGS = ("none", "topics", "region")
 MODES = (("corpus", "none"), ("online", "topics"), ("corpus", "region"))
 # Online and region modes: how much of an agent's newest result its prompt shows in full
-# (older results stay in the history at 1500 characters each).
+# (older results stay in the history at 1500 characters each; region mode
+# uses the compact form below instead).
 LATEST_RESULT_CHARS = 20000
 # Region mode: a history entry is the compact form of a result (agent.py,
 # compact_result), cut at this many characters (R6).
-REGION_HISTORY_CHARS = 3000
+REGION_HISTORY_CHARS = 4000
 
 
 @dataclass

@@ -261,7 +261,7 @@ def test_compact_history_of_a_full_search_keeps_every_post_and_paper(tmp_path):
     pol = ForumAgentPolicy(llm=None, model="m", topics=[], compact_history=True,
                            history_chars=REGION_HISTORY_CHARS)
     entry = pol.history_entry(out)
-    assert REGION_HISTORY_CHARS == 3000 and len(entry) < 3000
+    assert REGION_HISTORY_CHARS == 4000 and len(entry) < 3000
     assert all(p in entry for p in pids)
     assert all(f'"{h["node_id"]}"' in entry for h in out["papers"]["items"])
     assert SEARCH_NOTICE not in entry and "Abstract of" not in entry
