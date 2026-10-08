@@ -112,13 +112,13 @@ REGION_SYSTEM = _REGION_INTRO + """Your research area is defined by the followin
 topics (each a cluster of papers you can read):
 {topics}
 
-You can only find, read, cite and publish within these topics. Searches return \
-only papers in them; papers and posts outside them are hidden from you, and an \
-idea outside them will not be published. Plan your work inside these topics."""
+You can only find, read and cite within these topics. Searches return only \
+papers in them, and papers and posts outside them are hidden from you. You may \
+publish any idea, but you can cite only what you can read."""
 
-REGION_SYSTEM_NO_TOPICS = _REGION_INTRO + """You can only find, read, cite and \
-publish within your own research area; papers and posts outside it are hidden \
-from you and an idea outside it will not be published."""
+REGION_SYSTEM_NO_TOPICS = _REGION_INTRO + """You can only find, read and cite \
+within your own research area; papers and posts outside it are hidden from you. \
+You may publish any idea, but you can cite only what you can read."""
 
 REGION_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
 {"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "page": 1}} -- semantic search over the literature (do not paste lists of keywords)

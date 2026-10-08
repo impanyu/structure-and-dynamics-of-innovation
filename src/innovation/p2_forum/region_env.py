@@ -3,10 +3,13 @@
 
 Each agent has a Region (region.py): a nearest-neighbour ball around its seed
 paper. A corpus paper is readable iff it is a member; a board post is readable
-iff at least 3 of its 5 nearest corpus papers are members (region.post_in_region). Every action is gated: results are
-filtered to readable items, and reads, posts and links that would leave the
-region are refused with a "gate" field (as in gated_env.py), so gate activity
-can be counted from the event log. There is no query gate.
+by its author, and by any other agent iff at least 3 of its 5 nearest corpus
+papers are members of that agent's region (region.post_in_region). Reading is
+gated, publishing is not (user decision 2026-10-08): results are filtered to
+readable items, and reads and links that would leave the region are refused
+with a "gate" field (as in gated_env.py), so gate activity can be counted from
+the event log. An agent may publish any idea; only its cites are restricted to
+what it can read. There is no query gate.
 
 Every listing (search, related, search_board, and the reference / cited-by
 lists of browse and browse_board) is ranked by cosine, paginated PAGE_SIZE to
@@ -116,6 +119,9 @@ class RegionGatedEnvironment(ForumEnvironment):
     def readable(self, agent_id: str, node_id: str) -> bool:
         region = self.regions[agent_id]
         if self.ws.store_of(node_id) == "board":
+            if (self.ws.board.has_node(node_id)
+                    and self.ws.node(node_id).meta.get("agent_id") == agent_id):
+                return True   # an author can always reread its own posts
             nearest = self._post_nearest(node_id)
             return nearest is not None and post_in_region(region, nearest)
         # Corpus papers, and the corpus_ref stubs the board keeps for them,
@@ -283,10 +289,8 @@ class RegionGatedEnvironment(ForumEnvironment):
         if self.generation_budget is not None and self.generation_budget <= 0:
             return {"error": "generation budget exhausted"}
         vec = self.ws.embedder.encode([text])[0]
+        # No publish gate: the nearest papers only decide who else can read it.
         nearest = self._nearest_papers(vec)
-        if not post_in_region(self.regions[agent_id], nearest):
-            return {"error": "this idea is outside your research area; it was not published",
-                    "gate": "post"}
         kept = [c for c in cited_ids if self.ws.has_node(c) and self.readable(agent_id, c)]
         dropped = [c for c in cited_ids if c not in kept]
         node_id = self.ws.post_idea(text, kept, meta=self._meta(agent_id, step))

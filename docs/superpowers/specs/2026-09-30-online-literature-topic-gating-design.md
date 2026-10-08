@@ -19,8 +19,8 @@ The shared board, wiki link semantics, the action set and the evaluation
 > - **Specialization = paper 1's semantic-region mechanism, as a nearest-neighbour ball**: each agent gets a seed corpus paper
 >   (seeded random); its readable region at coverage c is the c x N corpus papers most similar to the seed (exact coverage,
 >   nested across c). A board post is in an agent's region iff at least 3 of its 5 nearest corpus papers (cosine, K=5, M=3) are
->   members of that region (nearest-neighbour majority), and is readable by that agent iff so; a post may be published only inside
->   its author's region. Why: posts are idea paragraphs and papers are abstracts, so seed similarity wrongly refused posts
+>   members of that region (nearest-neighbour majority), and is readable by that agent iff so (its author can always read it; since 2026-10-08
+>   there is no publish gate). Why: posts are idea paragraphs and papers are abstracts, so seed similarity wrongly refused posts
 >   whose nearest papers lay inside the region (live smoke, coverage 1%).
 > - Every action stays gated (search = local semantic search over the agent's readable papers; browse lists only readable
 >   references/citations; random jumps and `related` stay within the ball; links need readable ends). No query gate.
@@ -42,6 +42,13 @@ The shared board, wiki link semantics, the action set and the evaluation
 >   relevance instead of a raw score (query tiers 0.80/0.72, paper tiers 0.85/0.78, calibrated on data/p2_corpus).
 > - **Search notice.** Every search (and related) result says the results are restricted to the agent's topics, and that
 >   only low-relevance hits mean the target is outside them: rephrase toward the topics rather than repeat the search.
+>
+> **2026-10-08 (read gate only; publishing is free).** In run forum-region-c20-s0b, 14 of 50 posts were refused although every
+> refused post cited only in-region papers: combining what an agent read often lands an idea at the region's edge, where
+> fewer than 3 of its 5 nearest papers are members. Researchers are limited in what they read, not in what they may publish,
+> so the publish gate is removed. A post's cites must still be readable by its author (others are dropped). Its author can
+> always reread it; any other agent can read it iff the nearest-neighbour majority rule places it in that agent's region.
+> The prompt now says the agent may publish any idea but can cite only what it can read.
 
 ## 1. Why
 

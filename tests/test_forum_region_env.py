@@ -165,11 +165,13 @@ def test_related_ranks_readable_neighbours_excluding_the_source(tmp_path):
     assert "closed" in env.execute("a", 3, Action("related", {"node_id": "c0"}))["error"]
 
 
-def test_post_outside_the_authors_ball_is_not_published(tmp_path):
+def test_post_outside_the_authors_ball_is_published_and_only_its_author_and_region_read_it(tmp_path):
     env = make(tmp_path)
-    out = post(env, "a", "idea @60", ["c0"])
-    assert out["gate"] == "post" and "node_id" not in out
-    assert env.ws.board_post_ids() == []
+    out = post(env, "a", "idea @60", ["c0", "c4"])      # 2 of 5 nearest in a's region
+    assert "gate" not in out and env.ws.board_post_ids() == [out["node_id"]]
+    assert out["dropped_cites"] == ["c4"]               # cites stay limited to what a can read
+    assert env.readable("a", out["node_id"])            # its author can always reread it
+    assert env.readable("b", out["node_id"])            # 4 of 5 in b's region
 
 
 def test_post_drops_unreadable_cites(tmp_path):
@@ -273,7 +275,6 @@ def test_a_shared_post_never_shows_a_cited_paper_outside_the_readers_region(tmp_
 def test_restore_round_trip(tmp_path):
     env = make(tmp_path, budget=5)
     pa = post(env, "a", "idea @5", ["c0", "c4"])["node_id"]
-    post(env, "a", "idea @60")                                 # refused, must not replay
     pb = post(env, "b", "idea @60", ["c5"])["node_id"]
     env.execute("a", 1, Action("add_links", {"src_id": pa, "dst_ids": ["c1"]}))
     events = env.event_log.read_all()
@@ -294,9 +295,10 @@ def test_post_membership_counts_the_five_nearest_papers(tmp_path):
     both = post(env, "a", "idea @25")["node_id"]
     assert sum(n in env.regions["a"].members for n in env._post_nn[both]) == 3
     assert env.readable("a", both) and env.readable("b", both)          # exactly 3 passes
-    refused = post(env, "a", "idea @60")                                # 2 of 5 for a
-    assert refused["gate"] == "post"
-    assert post(env, "b", "idea @60")["node_id"]                        # 4 of 5 for b
+    by_b = post(env, "b", "idea @60")["node_id"]                        # 2 of 5 for a, 4 for b
+    assert env.readable("b", by_b) and not env.readable("a", by_b)
+    by_a = post(env, "a", "idea @60")["node_id"]                        # no publish gate
+    assert env.readable("a", by_a) and env.readable("b", by_a)          # author always reads it
 
 
 def test_restore_recomputes_post_neighbours(tmp_path):

@@ -127,7 +127,7 @@ def test_run_meta_records_topics_and_the_prompt_lists_them(tmp_path):
     system = llm.calls[0]["system"]
     assert ("- Sparse attention for long documents — Making transformer attention "
             "cheaper on long inputs.") in system
-    assert "Plan your work inside these topics" in system
+    assert "You may publish any idea" in system
 
 
 def test_resume_reuses_recorded_topics_without_calling_the_namer(tmp_path):

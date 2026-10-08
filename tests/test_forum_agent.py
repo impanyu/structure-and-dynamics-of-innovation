@@ -153,9 +153,9 @@ def test_region_fallback_prompt_states_the_hard_rule_without_describing_the_area
     assert pol.system == REGION_SYSTEM_NO_TOPICS             # nothing is filled in
     assert ("LITERATURE is a fixed collection of published papers from top AI venues "
             "(2020-2024)") in flat
-    assert ("You can only find, read, cite and publish within your own research area; papers "
-            "and posts outside it are hidden from you and an idea outside it will not be "
-            "published.") in flat
+    assert ("You can only find, read and cite within your own research area; papers and "
+            "posts outside it are hidden from you. You may publish any idea, but you can "
+            "cite only what you can read.") in flat
     for leak in ("topic", "{", "seed", "radius", "coverage", "Your area"):
         assert leak not in pol.system
     assert pol.act({"step": 0, "last_result": {}}).name == "related"
