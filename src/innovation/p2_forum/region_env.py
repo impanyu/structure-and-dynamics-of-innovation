@@ -2,9 +2,10 @@
 (spec, REVISION 2026-10-06; ranking and pagination R5 2026-10-07).
 
 Each agent has a Region (region.py): a nearest-neighbour ball around its seed
-paper. A corpus paper is readable iff it is a member; a board post is readable
-by its author, and by any other agent iff at least 3 of its 5 nearest corpus
-papers are members of that agent's region (region.post_in_region). Reading is
+paper. A corpus paper is readable iff it is a member. A board post is readable
+by its author, and by any other agent under the same rule as a paper: iff it
+lies inside that agent's ball, i.e. its cosine to the seed is at least the
+radius (region.contains_vec; user decision 2026-10-08). Reading is
 gated, publishing is not (user decision 2026-10-08): results are filtered to
 readable items, and reads and links that would leave the region are refused
 with a "gate" field (as in gated_env.py), so gate activity can be counted from
@@ -25,7 +26,7 @@ import math
 import numpy as np
 
 from innovation.p2_forum.env import ForumEnvironment
-from innovation.p2_forum.region import NN_K, Region, _unit, post_in_region
+from innovation.p2_forum.region import Region, _unit, contains_vec
 
 PAGE_SIZE = 10
 
@@ -99,21 +100,6 @@ class RegionGatedEnvironment(ForumEnvironment):
         self._corpus_unit = _unit(ci.vecs)
         self._member_rows = {a: np.array([self._corpus_row[m] for m in ms], dtype=int)
                              for a, ms in self._members_sorted.items()}
-        # post id -> its NN_K nearest corpus paper ids, fixed when the post is
-        # created. A pure function of the post text, so restore() refills it
-        # lazily and identically (no LLM).
-        self._post_nn: dict[str, tuple[str, ...]] = {}
-
-    def _nearest_papers(self, vec) -> tuple[str, ...]:
-        return tuple(n for n, _ in self.ws.corpus_search(np.asarray(vec), k=NN_K))
-
-    def _post_nearest(self, node_id: str) -> tuple[str, ...] | None:
-        if node_id not in self._post_nn:
-            vec = self.ws.board_index.vec(node_id)
-            if vec is None:
-                return None
-            self._post_nn[node_id] = self._nearest_papers(vec)
-        return self._post_nn[node_id]
 
     # --- the gate ---
     def readable(self, agent_id: str, node_id: str) -> bool:
@@ -122,8 +108,8 @@ class RegionGatedEnvironment(ForumEnvironment):
             if (self.ws.board.has_node(node_id)
                     and self.ws.node(node_id).meta.get("agent_id") == agent_id):
                 return True   # an author can always reread its own posts
-            nearest = self._post_nearest(node_id)
-            return nearest is not None and post_in_region(region, nearest)
+            vec = self.ws.board_index.vec(node_id)
+            return vec is not None and contains_vec(region, vec)
         # Corpus papers, and the corpus_ref stubs the board keeps for them,
         # share the paper's id.
         return node_id in region.members
@@ -288,13 +274,9 @@ class RegionGatedEnvironment(ForumEnvironment):
     def _do_generate(self, *, agent_id, step, text: str, cited_ids: list[str]) -> dict:
         if self.generation_budget is not None and self.generation_budget <= 0:
             return {"error": "generation budget exhausted"}
-        vec = self.ws.embedder.encode([text])[0]
-        # No publish gate: the nearest papers only decide who else can read it.
-        nearest = self._nearest_papers(vec)
         kept = [c for c in cited_ids if self.ws.has_node(c) and self.readable(agent_id, c)]
         dropped = [c for c in cited_ids if c not in kept]
         node_id = self.ws.post_idea(text, kept, meta=self._meta(agent_id, step))
-        self._post_nn[node_id] = nearest
         if self.generation_budget is not None:
             self.generation_budget -= 1
         out = {"node_id": node_id}

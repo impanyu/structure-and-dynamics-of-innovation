@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from innovation.p2_forum.region import NN_K, NN_MAJORITY, build_region, draw_seeds, post_in_region
+from innovation.p2_forum.region import build_region, contains_vec, draw_seeds
 
 
 def _corpus(n=200, dim=8, seed=0):
@@ -39,15 +39,12 @@ def test_radius_separates_members_from_the_rest():
     assert max(outside) <= r.radius
 
 
-def test_post_membership_is_a_nearest_neighbour_majority():
+def test_contains_vec_agrees_with_membership_for_every_paper():
     ids, vecs = _corpus()
     r = build_region("p0", ids, vecs, 0.1)
-    inside = sorted(r.members)
-    outside = [i for i in ids if i not in r.members]
-    assert (NN_K, NN_MAJORITY) == (5, 3)
-    assert post_in_region(r, inside[:3] + outside[:2])
-    assert not post_in_region(r, inside[:2] + outside[:3])
-    assert not post_in_region(r, [])
+    assert [contains_vec(r, v) for v in vecs] == [i in r.members for i in ids]
+    assert contains_vec(r, 3.0 * r.seed_vec)            # scale does not matter
+    assert not contains_vec(r, -r.seed_vec)
 
 
 def test_unnormalized_corpus_vectors_rank_by_cosine():
@@ -61,7 +58,7 @@ def test_full_coverage_is_everything_and_every_post_is_inside():
     ids, vecs = _corpus()
     r = build_region("p5", ids, vecs, 1.0)
     assert r.members == frozenset(ids)
-    assert post_in_region(r, ids[:NN_K])
+    assert contains_vec(r, -r.seed_vec)
 
 
 def test_tiny_coverage_is_the_seed_alone():

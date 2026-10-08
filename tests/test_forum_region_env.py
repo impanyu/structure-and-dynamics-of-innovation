@@ -35,10 +35,9 @@ class AngleEmbedder:
 # Corpus papers on the unit circle (degrees). At coverage 0.5 (4 of 8):
 #   agent a, seed c0:  {c0, c1, c2, c3}
 #   agent b, seed c4:  {c4, c5, c1, c6}
-# c1 is shared; c7 is nobody's. A post is in a region iff >= 3 of its 5 nearest
-# papers are members. @5 -> c0 c1 c2 c3 c4: a has 4, b has 2 (a-only).
-# @25 -> c1 c0 c4 c5 c2: a has 3, b has 3 (both). @60 -> c4 c5 c6 c1 c0: b has 4,
-# a has 2 (b-only).
+# c1 is shared; c7 is nobody's. A post is in a region iff it lies inside the
+# ball, as a paper must: a's radius is 30 deg (c3), b's is 35 deg (c6).
+# @5: a only (5 vs 45 deg). @25: both (25 vs 25). @60: b only (60 vs 10).
 ANGLES = {"c0": 0, "c1": 20, "c2": -28, "c3": -30, "c4": 50, "c5": 75, "c6": 85, "c7": 180}
 CITES = {"c0": ["c2", "c4", "c1"], "c5": ["c0"]}
 VENUES = {"c0": "ICML", "c1": "NeurIPS", "c2": "ACL", "c3": "CVPR", "c4": "ICLR",
@@ -287,21 +286,21 @@ def test_restore_round_trip(tmp_path):
     assert post(fresh, "a", "idea @7")["node_id"] not in (pa, pb)
 
 
-def test_post_membership_counts_the_five_nearest_papers(tmp_path):
+def test_post_readability_uses_the_paper_rule_plus_authorship(tmp_path):
     env = make(tmp_path)
     only_a = post(env, "a", "idea @5")["node_id"]
-    assert env._post_nn[only_a] == ("c0", "c1", "c2", "c3", "c4")      # stored at creation
-    assert env.readable("a", only_a) and not env.readable("b", only_a)  # 4 vs 2 in region
-    both = post(env, "a", "idea @25")["node_id"]
-    assert sum(n in env.regions["a"].members for n in env._post_nn[both]) == 3
-    assert env.readable("a", both) and env.readable("b", both)          # exactly 3 passes
-    by_b = post(env, "b", "idea @60")["node_id"]                        # 2 of 5 for a, 4 for b
+    assert env.readable("a", only_a) and not env.readable("b", only_a)  # 5 vs 45 deg
+    both = post(env, "b", "idea @30")["node_id"]                        # exactly a's radius
+    assert env.readable("a", both) and env.readable("b", both)
+    by_b = post(env, "b", "idea @60")["node_id"]
     assert env.readable("b", by_b) and not env.readable("a", by_b)
     by_a = post(env, "a", "idea @60")["node_id"]                        # no publish gate
     assert env.readable("a", by_a) and env.readable("b", by_a)          # author always reads it
+    far = post(env, "b", "idea @180")["node_id"]                        # outside both balls
+    assert env.readable("b", far) and not env.readable("a", far)
 
 
-def test_restore_recomputes_post_neighbours(tmp_path):
+def test_restore_reproduces_post_readability(tmp_path):
     env = make(tmp_path)
     pa = post(env, "a", "idea @5")["node_id"]
     pb = post(env, "b", "idea @60")["node_id"]
@@ -309,8 +308,6 @@ def test_restore_recomputes_post_neighbours(tmp_path):
     fresh.restore(env.event_log.read_all())
     assert fresh.readable("a", pa) and not fresh.readable("b", pa)
     assert fresh.readable("b", pb) and not fresh.readable("a", pb)
-    assert fresh._post_nearest(pa) == env._post_nn[pa]
-    assert fresh._post_nearest(pb) == env._post_nn[pb]
 
 
 def test_full_coverage_publishes_and_reads_anything(tmp_path):

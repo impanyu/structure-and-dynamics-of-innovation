@@ -49,6 +49,9 @@ The shared board, wiki link semantics, the action set and the evaluation
 > so the publish gate is removed. A post's cites must still be readable by its author (others are dropped). Its author can
 > always reread it; any other agent can read it iff the nearest-neighbour majority rule places it in that agent's region.
 > The prompt now says the agent may publish any idea but can cite only what it can read.
+> Same day, the user unified the read rule: a post is readable by an agent under exactly the rule that makes a paper a
+> member, i.e. iff its cosine to the agent's seed is at least the ball's radius (region.contains_vec), plus authors always
+> read their own posts. The nearest-neighbour majority rule (K=5, M=3) is retired.
 
 ## 1. Why
 
