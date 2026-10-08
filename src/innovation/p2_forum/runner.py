@@ -44,6 +44,9 @@ MODES = (("corpus", "none"), ("online", "topics"), ("corpus", "region"))
 # Online and region modes: how much of an agent's newest result its prompt shows in full
 # (older results stay in the history at 1500 characters each).
 LATEST_RESULT_CHARS = 20000
+# Region mode: a history entry is the compact form of a result (agent.py,
+# compact_result), cut at this many characters (R6).
+REGION_HISTORY_CHARS = 3000
 
 
 @dataclass
@@ -282,7 +285,8 @@ def _build_policies(cfg: ForumRunConfig, *, llm, model, assignments: dict,
                 total_steps=cfg.total_steps,
                 system_template=REGION_SYSTEM if topics else REGION_SYSTEM_NO_TOPICS,
                 actions_doc=REGION_ACTIONS_DOC,
-                latest_result_chars=LATEST_RESULT_CHARS)
+                latest_result_chars=LATEST_RESULT_CHARS,
+                compact_history=True, history_chars=REGION_HISTORY_CHARS)
         return policies
     return {
         a["agent_id"]: ForumAgentPolicy(
@@ -496,7 +500,7 @@ def resume_forum(cfg: ForumRunConfig, *, corpus=None, corpus_index=None,
             # back through last_result instead.
             pol.memory.append(("(none)", "{}"))
             for e in mine[:-1]:
-                pol.memory.append((e["action"], json.dumps(e["result"])[:1500]))
+                pol.memory.append((e["action"], pol.history_entry(e["result"])))
             pol._last_action = mine[-1]["action"]
         last_result[aid] = mine[-1]["result"] if mine else {}
 

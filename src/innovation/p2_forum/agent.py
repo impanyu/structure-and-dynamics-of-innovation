@@ -126,12 +126,12 @@ topics (each a cluster of papers you can read):
 {topics}
 
 You can only find, read and cite within these topics. Searches return only \
-papers and posts in these topics; papers and posts outside them are hidden from \
-you. You may publish any idea, but you can cite only what you can read."""
+papers and posts in these topics; papers and other researchers' posts outside \
+them are hidden from you. You may publish any idea, but you can cite only what you can read."""
 
 REGION_SYSTEM_NO_TOPICS = _REGION_INTRO + """You can only find, read and cite \
-within your own research area; papers and posts outside it are hidden from you. \
-You may publish any idea, but you can cite only what you can read."""
+within your own research area; papers and other researchers' posts outside it \
+are hidden from you. You may publish any idea, but you can cite only what you can read."""
 
 REGION_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
 {"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "page": 1, "post_page": 1}} -- semantic search over papers and posts (do not paste lists of keywords); returns two lists: "papers" (10 per page, `page`) and "posts" (5 per page, `post_page`)
@@ -144,12 +144,53 @@ REGION_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, n
 Every item says its "kind" ("paper" or "post"); post ids start with "gen:". Every list is most relevant first and each item is tagged high/medium/low relevance; ask for a later page to see more. Search and related show 10 papers and 5 posts per page; browse lists show 10 per page."""
 
 
+# Compact history (region mode, R6): with posts listed before papers, a
+# 1500-character cut of a raw search result held ~3.5 posts and no papers. A
+# history entry instead keeps, for every item of every list in the result,
+# only what identifies it and how relevant it was (plus a post's opening);
+# abstract snippets and the notice are dropped, and a browsed item's own text
+# is cut. The newest result is still shown in full.
+_HISTORY_ITEM_KEYS = ("node_id", "kind", "store", "title", "author", "relevance")
+HISTORY_POST_CHARS = 120
+HISTORY_OWN_TEXT_CHARS = 300
+
+
+def _compact_item(item: dict) -> dict:
+    out = {k: item[k] for k in _HISTORY_ITEM_KEYS if k in item}
+    if (item.get("kind") == "post" or item.get("store") == "board") and "text" in item:
+        out["text"] = str(item["text"])[:HISTORY_POST_CHARS]
+    return out
+
+
+def compact_result(result, top: bool = True):
+    """The history form of a result: lists of items (dicts with a node_id)
+    are compacted item by item, nested sections recursively; the notice is
+    dropped and the top-level (browsed item's) text cut."""
+    if not isinstance(result, dict):
+        return result
+    out = {}
+    for k, v in result.items():
+        if k == "notice":
+            continue
+        if top and k == "text" and isinstance(v, str):
+            out[k] = v[:HISTORY_OWN_TEXT_CHARS]
+        elif isinstance(v, list) and v and all(isinstance(x, dict) and "node_id" in x
+                                               for x in v):
+            out[k] = [_compact_item(x) for x in v]
+        elif isinstance(v, dict):
+            out[k] = compact_result(v, top=False)
+        else:
+            out[k] = v
+    return out
+
+
 class ForumAgentPolicy(Policy):
     def __init__(self, *, llm: LLM, model: str, topics: list[str],
                  memory_size: int = 20, identity: str = "",
                  total_steps: int = 0,
                  system_template: str = FORUM_SYSTEM, actions_doc: str = ACTIONS_DOC,
-                 latest_result_chars: int | None = None):
+                 latest_result_chars: int | None = None,
+                 compact_history: bool = False, history_chars: int = 1500):
         self.llm = llm
         self.model = model
         self.topics = list(topics)
@@ -164,12 +205,23 @@ class ForumAgentPolicy(Policy):
         # An int: it is also shown in full, up to this many characters, so a
         # long read (abstract plus a full reference list) is not cut off.
         self.latest_result_chars = latest_result_chars
+        # How a past result appears in the history: by default the raw JSON
+        # cut to history_chars; with compact_history, compact_result() first.
+        self.compact_history = compact_history
+        self.history_chars = history_chars
         self.memory: deque[tuple[str, str]] = deque(maxlen=memory_size)
         self._last_action: str = "(none)"
 
+    def history_entry(self, result: dict) -> str:
+        """A past result as the history shows it (also used by resume)."""
+        if self.compact_history:
+            return json.dumps(compact_result(result),
+                              separators=(",", ":"))[:self.history_chars]
+        return json.dumps(result)[:self.history_chars]
+
     def act(self, obs: dict) -> Action:
         latest = json.dumps(obs.get("last_result", {}))
-        self.memory.append((self._last_action, latest[:1500]))
+        self.memory.append((self._last_action, self.history_entry(obs.get("last_result", {}))))
         history = "\n".join(f"{a} -> {r}" for a, r in self.memory)
         header = f"[agent {self.identity}]\n\n" if self.identity else ""
         user = header + self.actions_doc + "\n\nRecent history (oldest first):\n" + history

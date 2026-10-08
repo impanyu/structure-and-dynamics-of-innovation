@@ -140,3 +140,22 @@ def test_region_mode_combinations_are_validated(kw, agents):
 def test_region_mode_accepts_full_coverage():
     c = cfg(coverage=1.0)
     assert c.region and not c.online
+
+
+def test_region_resume_rebuilds_the_same_compact_history(tmp_path):
+    """The resumed prompts equal those of an uninterrupted run: resume builds
+    each history entry with the policy's own (compact, 3000-char) form."""
+    gen = lambda d: json.dumps({"action": "generate",
+                                "args": {"text": f"idea @{d} " + "w" * 400, "cited_ids": []}})
+    browse = json.dumps({"action": "browse", "args": {"node_id": "c1"}})
+    script = [gen(5), gen(25), SEARCH, browse, SEARCH, SEARCH, browse, SEARCH]
+    full = FakeLLM(list(script), default=SEARCH)
+    run(tmp_path / "full", cfg(8), full)
+    first = FakeLLM(script[:4], default=SEARCH)
+    run(tmp_path / "split", cfg(4), first)
+    second = FakeLLM(script[4:], default=SEARCH)
+    run(tmp_path / "split", cfg(8), second, fn=resume_forum)
+    assert [c["user"] for c in second.calls] == [c["user"] for c in full.calls[4:]]
+    history = full.calls[4]["user"].split("Recent history (oldest first):\n")[1]
+    history = history.split("\n\nLatest result (full):")[0]
+    assert '"notice"' not in history and '"kind":"post"' in history

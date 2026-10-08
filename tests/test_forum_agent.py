@@ -154,7 +154,7 @@ def test_region_fallback_prompt_states_the_hard_rule_without_describing_the_area
     assert ("LITERATURE is a fixed collection of published papers from top AI venues "
             "(2020-2024)") in flat
     assert ("You can only find, read and cite within your own research area; papers and "
-            "posts outside it are hidden from you. You may publish any idea, but you can "
+            "other researchers' posts outside it are hidden from you. You may publish any idea, but you can "
             "cite only what you can read.") in flat
     for leak in ("topic", "{", "seed", "radius", "coverage", "Your area"):
         assert leak not in pol.system
@@ -207,15 +207,15 @@ def test_region_prompt_describes_both_stores_symmetrically():
     assert ("keep up with both the published literature and the new ideas your peers "
             "post; build on either, and cite the papers and posts your idea builds on") in flat
     assert "find promising unexplored directions and publish genuinely new ideas" in flat
-    assert ("Searches return only papers and posts in these topics; papers and posts "
-            "outside them are hidden from you. You may publish any idea, but you can cite "
+    assert ("Searches return only papers and posts in these topics; papers and other "
+            "researchers' posts outside them are hidden from you. You may publish any idea, but you can cite "
             "only what you can read.") in flat
     assert "- T1: d1\n- T2: d2" in pol.system
     for p in (REGION_SYSTEM, REGION_SYSTEM_NO_TOPICS):
         assert "starts empty" not in p and "agents publish" not in p
     no_topics = " ".join(REGION_SYSTEM_NO_TOPICS.split())
     assert "keep up with both the published literature" in no_topics
-    assert "papers and posts outside it are hidden from you" in no_topics
+    assert "papers and other researchers' posts outside it are hidden from you" in no_topics
 
 
 def test_the_parser_accepts_random():
@@ -229,3 +229,30 @@ def test_old_prompts_do_not_mention_regions():
     from innovation.p2_forum.agent import ACTIONS_DOC, FORUM_SYSTEM, GATED_ACTIONS_DOC, GATED_SYSTEM
     for p in (ACTIONS_DOC, FORUM_SYSTEM, GATED_ACTIONS_DOC, GATED_SYSTEM):
         assert "research area" not in p
+
+
+def test_default_history_is_the_raw_result_cut_at_1500_characters():
+    """Corpus and online modes: history entries are byte-identical to before."""
+    pol = ForumAgentPolicy(llm=ScriptedLLM([]), model="m", topics=["t"])
+    big = {"hits": [{"node_id": f"n{i}", "text": "x" * 300, "notice": "y"} for i in range(9)],
+           "notice": "z"}
+    assert pol.history_entry(big) == json.dumps(big)[:1500]
+
+
+def test_compact_history_keeps_ids_and_relevance_and_drops_snippets():
+    from innovation.p2_forum.agent import compact_result
+    browse = {"node_id": "p1", "kind": "paper", "title": "T", "text": "a" * 900,
+              "year": 2021, "venue": "ICML",
+              "cited_by_posts": [{"node_id": "gen:r:3", "kind": "post", "author": "you",
+                                  "text": "b" * 200, "relevance": "high"}],
+              "cites": [{"node_id": "p2", "kind": "paper", "title": "U", "year": 2020,
+                         "relevance": "low"}],
+              "cites_page": 1, "cites_total": 1, "cites_pages": 1, "cited_by": [],
+              "filtered": {"region": 2, "region_posts": 0}}
+    c = compact_result(browse)
+    assert c["text"] == "a" * 300 and c["year"] == 2021 and c["venue"] == "ICML"
+    assert c["cited_by_posts"] == [{"node_id": "gen:r:3", "kind": "post", "author": "you",
+                                    "relevance": "high", "text": "b" * 120}]
+    assert c["cites"] == [{"node_id": "p2", "kind": "paper", "title": "U", "relevance": "low"}]
+    assert c["filtered"] == browse["filtered"] and c["cites_total"] == 1
+    assert compact_result({"error": "x", "gate": "result"}) == {"error": "x", "gate": "result"}

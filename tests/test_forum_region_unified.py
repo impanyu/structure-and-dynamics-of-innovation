@@ -246,3 +246,23 @@ def test_posts_section_counts_the_posts_the_gate_hides(tmp_path):
     assert rel["posts"]["filtered"] == 2 and rel["posts"]["total"] == 2
     env.nav = Navigation(board_search=False)
     assert "filtered" not in search(env, "a")["posts"]
+
+
+def test_compact_history_of_a_full_search_keeps_every_post_and_paper(tmp_path):
+    from innovation.p2_forum.agent import ForumAgentPolicy
+    from innovation.p2_forum.runner import REGION_HISTORY_CHARS
+    env = make_wide(tmp_path)                                    # 25 papers
+    pids = [post(env, "z", f"idea @{i} " + "w" * 400)["node_id"] for i in range(5)]
+    out = search(env)
+    assert [len(h["text"]) for h in out["posts"]["items"]] == [300] * 5   # full-length posts
+    assert len(out["papers"]["items"]) == 10
+    raw = json.dumps(out)[:1500]
+    assert not any(h["node_id"] in raw for h in out["papers"]["items"])  # the old cut lost them
+    pol = ForumAgentPolicy(llm=None, model="m", topics=[], compact_history=True,
+                           history_chars=REGION_HISTORY_CHARS)
+    entry = pol.history_entry(out)
+    assert REGION_HISTORY_CHARS == 3000 and len(entry) < 3000
+    assert all(p in entry for p in pids)
+    assert all(f'"{h["node_id"]}"' in entry for h in out["papers"]["items"])
+    assert SEARCH_NOTICE not in entry and "Abstract of" not in entry
+    assert json.loads(entry)["posts"]["filtered"] == 0
