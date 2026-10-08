@@ -80,7 +80,8 @@ def test_notice_is_on_every_search_and_old_k_is_ignored(tmp_path):
                 search(env, query="@180")):
         assert out["notice"] == SEARCH_NOTICE and "error" not in out
     assert len(search(env, k=3)["hits"]) == PAGE_SIZE
-    assert "outside your topics" in SEARCH_NOTICE and "papers and posts" in SEARCH_NOTICE
+    assert "Only papers and posts in your topics are shown" in SEARCH_NOTICE
+    assert "rephrase toward your topics" in SEARCH_NOTICE and len(SEARCH_NOTICE) < 250
 
 
 def test_search_is_still_gated_to_the_region(tmp_path):

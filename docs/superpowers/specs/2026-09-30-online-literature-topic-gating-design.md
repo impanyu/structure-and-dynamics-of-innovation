@@ -66,6 +66,9 @@ The shared board, wiki link semantics, the action set and the evaluation
 >   next post both median 0.77; random post 0.67, random paper 0.64). `random(kind)` jumps to a readable paper or post with
 >   the same rng draws as before. `search_board`, `browse_board`, `sample_frontier`, `sample_board` remain as undocumented
 >   aliases, so old logs restore and pre-R6 runs resume.
+>   Result key order is posts, a short notice, then papers (and a paper's `cited_by_posts` before `cites`/`cited_by`),
+>   because the agent's rolling history keeps only the first 1500 characters of each result. The posts section also carries
+>   `filtered`: the number of board posts the agent cannot read.
 > - **cited_by_posts.** `browse` opens a paper (abstract, `cites`, `cited_by`, and `cited_by_posts`: readable board posts
 >   citing it, ranked by cosine to the paper, 10 per page on `post_page`; hidden ones counted in `filtered.region_posts`) or
 >   a post (full text, author, mixed `cites` with kinds, `cited_by`).

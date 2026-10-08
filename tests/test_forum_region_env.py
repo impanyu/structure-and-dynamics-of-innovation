@@ -99,7 +99,7 @@ def test_search_returns_only_readable_papers_ranked_with_paper_fields(tmp_path):
     assert "gate" not in out                                  # no query gate, ever
     assert papers["page"] == 1 and papers["total"] == 4 and papers["pages"] == 1
     assert all(set(h) >= {"relevance"} and "score" not in h for h in papers["items"])
-    assert out["posts"] == {"page": 1, "total": 0, "pages": 0, "items": []}
+    assert out["posts"] == {"page": 1, "total": 0, "pages": 0, "filtered": 0, "items": []}
     one = env.execute("a", 1, Action("search", {"query": "@0", "k": 1}))   # old k ignored
     assert [h["node_id"] for h in one["papers"]["items"]] == ["c0", "c1", "c2", "c3"]
 

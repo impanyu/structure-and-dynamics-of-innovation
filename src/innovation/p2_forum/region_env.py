@@ -58,20 +58,17 @@ POST_PAGE_SIZE = 5      # posts per page in search / related
 QUERY_TIERS = (0.80, 0.72)     # search: both sections
 PAPER_TIERS = (0.85, 0.78)     # related (both sections), browse neighbour lists
 
+# Short, and placed right after the posts section: the agent's rolling history
+# keeps only the first 1500 characters of each result, so the posts section
+# and the notice come first and the (long) papers section last.
 SEARCH_NOTICE = (
-    "These are the papers and posts within your allowed topics that best match your "
-    "query, most relevant first, in two separate lists. Papers and posts outside your "
-    "topics are never shown: if nothing here is relevant (e.g. only low relevance), "
-    "what you are looking for is outside your topics — rephrase toward your topics "
-    "rather than repeating the search. The posts list shows what other researchers "
-    "(and you) have recently proposed in your topics.")
+    "Only papers and posts in your topics are shown, most relevant first; posts are "
+    "what you and other researchers have recently proposed. If only low relevance, "
+    "rephrase toward your topics rather than repeating the search.")
 RELATED_NOTICE = (
-    "These are the papers and posts within your allowed topics most related to this "
-    "item, most relevant first, in two separate lists. Papers and posts outside your "
-    "topics are never shown: if nothing here is relevant (e.g. only low relevance), "
-    "what you are looking for is outside your topics — turn toward your topics rather "
-    "than repeating the request. The posts list shows what other researchers (and you) "
-    "have recently proposed in your topics.")
+    "Only papers and posts in your topics are shown, most relevant first; posts are "
+    "what you and other researchers have recently proposed. If only low relevance, "
+    "turn toward your topics rather than repeating the request.")
 
 KINDS = ("paper", "post")
 
@@ -209,10 +206,13 @@ class RegionGatedEnvironment(ForumEnvironment):
     def _readable_posts(self, agent_id) -> list[str]:
         return [n for n in self.ws.board_post_ids() if self.readable(agent_id, n)]
 
-    def _sections(self, agent_id, vec, tiers, page, post_page, exclude=None) -> dict:
-        """The two sections of search / related: readable papers (PAGE_SIZE to
-        a page) and readable posts (POST_PAGE_SIZE), each ranked by cosine to
-        vec on its own, or an error where that store's search is closed."""
+    def _sections(self, agent_id, vec, tiers, page, post_page, notice,
+                  exclude=None) -> dict:
+        """The two sections of search / related: readable posts
+        (POST_PAGE_SIZE to a page, plus how many board posts the gate hid) and
+        readable papers (PAGE_SIZE), each ranked by cosine to vec on its own,
+        or an error where that store's search is closed. Key order is posts,
+        notice, papers, so a truncated history entry still shows the posts."""
         if self.nav.corpus_search:
             _, items, info = _paginate(self._ranked_papers(agent_id, vec, exclude), page)
             papers = {**info, "items": [{**self._paper_hit(n), "relevance": _tier(s, tiers)}
@@ -220,13 +220,16 @@ class RegionGatedEnvironment(ForumEnvironment):
         else:
             papers = {"error": "semantic search over the literature is closed"}
         if self.nav.board_search:
-            posts = [n for n in self._readable_posts(agent_id) if n != exclude]
-            _, items, info = _paginate(self._rank(posts, vec), post_page, POST_PAGE_SIZE)
-            posts = {**info, "items": [{**self._post_hit(agent_id, n),
-                                        "relevance": _tier(s, tiers)} for n, s in items]}
+            readable = self._readable_posts(agent_id)
+            hidden = len(self.ws.board_post_ids()) - len(readable)
+            ranked = self._rank([n for n in readable if n != exclude], vec)
+            _, items, info = _paginate(ranked, post_page, POST_PAGE_SIZE)
+            posts = {**info, "filtered": hidden,
+                     "items": [{**self._post_hit(agent_id, n),
+                                "relevance": _tier(s, tiers)} for n, s in items]}
         else:
             posts = {"error": "semantic search over the board is closed"}
-        return {"papers": papers, "posts": posts}
+        return {"posts": posts, "notice": notice, "papers": papers}
 
     def _list(self, agent_id, ids, vec, page, key) -> dict:
         """One browse list: ids ranked by cosine to vec (PAPER_TIERS), PAGE_SIZE
@@ -241,8 +244,7 @@ class RegionGatedEnvironment(ForumEnvironment):
     def _do_search(self, *, agent_id, step, query: str, page=1, post_page=1,
                    **_ignored) -> dict:
         vec = self.ws.embedder.encode([query])[0]
-        return {**self._sections(agent_id, vec, QUERY_TIERS, page, post_page),
-                "notice": SEARCH_NOTICE}
+        return self._sections(agent_id, vec, QUERY_TIERS, page, post_page, SEARCH_NOTICE)
 
     def _do_browse(self, *, agent_id, step, node_id: str, ref_page=1, cited_by_page=1,
                    post_page=1, **_ignored) -> dict:
@@ -264,10 +266,11 @@ class RegionGatedEnvironment(ForumEnvironment):
         citing_posts = (self.ws.board_neighbors(node_id)[1]
                         if self.nav.board_edges and self.ws.board.has_node(node_id) else [])
         cites, cited_by, by_posts = keep(out_ids), keep(in_ids), keep(citing_posts)
+        # cited_by_posts before cites / cited_by, for the same truncation reason.
         return {**self._paper_full(node_id),
+                **self._list(agent_id, by_posts, vec, post_page, "cited_by_posts"),
                 **self._list(agent_id, cites, vec, ref_page, "cites"),
                 **self._list(agent_id, cited_by, vec, cited_by_page, "cited_by"),
-                **self._list(agent_id, by_posts, vec, post_page, "cited_by_posts"),
                 # region: hidden papers (cites + cited_by); region_posts: hidden citing posts
                 "filtered": {"region": len(out_ids) - len(cites) + len(in_ids) - len(cited_by),
                              "region_posts": len(citing_posts) - len(by_posts)}}
@@ -279,8 +282,7 @@ class RegionGatedEnvironment(ForumEnvironment):
             return err
         return {"node_id": node_id, "kind": kind,
                 **self._sections(agent_id, self._vec(node_id), PAPER_TIERS, page, post_page,
-                                 exclude=node_id),
-                "notice": RELATED_NOTICE}
+                                 RELATED_NOTICE, exclude=node_id)}
 
     def _do_random(self, *, agent_id, step, kind="paper", **_ignored) -> dict:
         # One rng draw per call, exactly as the pre-R6 sample_frontier /

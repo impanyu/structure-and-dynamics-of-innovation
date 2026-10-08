@@ -2,6 +2,8 @@
 related return two separately ranked sections (papers 10 to a page, posts 5);
 browse opens either kind and lists the posts citing a paper; random(kind)
 replaces the two jumps; the pre-R6 names stay as aliases."""
+import json
+
 import numpy as np
 
 from innovation.p2_forum.env import Action, Navigation
@@ -212,3 +214,35 @@ def test_old_names_are_aliases_and_old_logs_restore(tmp_path):
     fresh.restore(events)
     assert fresh.ws.board_post_ids() == [pa]
     assert sorted(fresh.ws.board_neighbors(pa)[0]) == ["c0", "c1"]
+
+
+def test_posts_come_first_so_a_truncated_history_entry_still_shows_them(tmp_path):
+    """The rolling history keeps json.dumps(result)[:1500]: posts and the short
+    notice lead, the long papers section comes last."""
+    env = make_wide(tmp_path)                                    # 25 papers
+    pid = post(env, "a", "idea @0", ["p05"])["node_id"]
+    for out in (search(env), env.execute("a", 1, Action("related", {"node_id": "p03"}))):
+        dumped = json.dumps(out)
+        tail = dumped[dumped.index('"posts"'):]
+        assert tail.startswith('"posts": {"page": 1')
+        assert pid in dumped[:1500] and '"notice"' in dumped[:1500]
+        keys = [k for k in out if k in ("posts", "notice", "papers")]
+        assert keys == ["posts", "notice", "papers"]
+    assert json.dumps(search(env)).startswith('{"posts": {')
+    v = env.execute("a", 2, Action("browse", {"node_id": "p05"}))
+    order = list(v)
+    assert order.index("cited_by_posts") < order.index("cites") < order.index("cited_by")
+
+
+def test_posts_section_counts_the_posts_the_gate_hides(tmp_path):
+    env = make_two(tmp_path)
+    post(env, "a", "idea @5")                                    # a only
+    post(env, "b", "idea @25")                                   # both
+    post(env, "b", "idea @60")                                   # b only
+    post(env, "b", "idea @180")                                  # b only (author)
+    assert search(env, "a")["posts"]["filtered"] == 2
+    assert search(env, "b")["posts"]["filtered"] == 1
+    rel = env.execute("a", 0, Action("related", {"node_id": "c0"}))
+    assert rel["posts"]["filtered"] == 2 and rel["posts"]["total"] == 2
+    env.nav = Navigation(board_search=False)
+    assert "filtered" not in search(env, "a")["posts"]
