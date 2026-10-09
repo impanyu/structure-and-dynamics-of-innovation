@@ -151,8 +151,8 @@ def test_region_fallback_prompt_states_the_hard_rule_without_describing_the_area
                            actions_doc=REGION_ACTIONS_DOC)
     flat = " ".join(pol.system.split())
     assert pol.system == REGION_SYSTEM_NO_TOPICS             # nothing is filled in
-    assert ("LITERATURE is a fixed collection of published papers from top AI venues "
-            "(2020-2024)") in flat
+    assert ("LITERATURE is your reference library: a fixed collection of published papers "
+            "from top AI venues (2020-2024)") in flat
     assert ("You can only find, read and cite within your own research area; papers and "
             "other researchers' posts outside it are hidden from you. You may publish any idea, but you can "
             "cite only what you can read.") in flat
@@ -174,8 +174,8 @@ def test_region_actions_doc_lists_the_ten_actions_under_three_headings():
             current = l
             groups[current] = []
     assert groups == {
-        "Literature:": ["search", "browse", "related", "sample_frontier"],
-        "Board (your group's posts):": ["search_board", "browse_board", "sample_board"],
+        "Literature (your reference library):": ["search", "browse", "related", "sample_frontier"],
+        "Board (your group's research results):": ["search_board", "browse_board", "sample_board"],
         "Writing:": ["generate", "add_links", "remove_links"]}
     assert sorted(sum(groups.values(), [])) == sorted(VALID_ACTIONS)
     assert '"random"' not in REGION_ACTIONS_DOC and "post_page" not in REGION_ACTIONS_DOC
@@ -198,28 +198,27 @@ def test_region_actions_doc_lists_the_ten_actions_under_three_headings():
     assert "topic" not in REGION_ACTIONS_DOC
 
 
-def test_region_prompt_makes_the_board_the_groups_place_to_communicate():
+def test_region_prompt_gives_literature_and_board_distinct_roles():
     from innovation.p2_forum.agent import REGION_SYSTEM, REGION_SYSTEM_NO_TOPICS
     pol = ForumAgentPolicy(llm=ScriptedLLM([]), model="m", topics=["T1: d1", "T2: d2"],
                            system_template=REGION_SYSTEM)
     flat = " ".join(pol.system.split())
     assert flat.startswith("You are a research agent working in a group of researchers.")
-    assert ("The LITERATURE is a fixed collection of published papers from top AI venues "
-            "(2020-2024), each citing the papers it builds on. You can read it but never "
-            "change it. Search it with `search`; opening a paper (`browse`) shows its "
-            "abstract, its references and the papers citing it.") in flat
-    assert "The BOARD is where your group communicates." in flat
-    assert ("everyone reads, builds on and cites each other's posts, as on a lab's shared "
-            "forum or a preprint server. It keeps growing as the group works.") in flat
+    assert ("The LITERATURE is your reference library: a fixed collection of published papers "
+            "from top AI venues (2020-2024)") in flat
+    assert "Look things up in it: background, methods, results and open problems" in flat
+    assert "The BOARD is where your group exchanges research results." in flat
+    assert ("everyone reads, builds on and cites each other's results, as a research community "
+            "does with new papers. It keeps growing as the group works.") in flat
     assert "opening a post (`browse_board`) shows its full text, who posted it" in flat
-    assert ("read the literature AND keep up with what your colleagues post on the board: "
-            "check the board regularly, especially before you write an idea") in flat
+    assert ("use the literature to find useful material, and follow the results your colleagues "
+            "publish on the board: check the board regularly, especially before you write an idea") in flat
     assert ("Searches of the literature and of the board return only papers and posts in "
             "these topics; papers and other researchers' posts outside them are hidden from "
             "you. You may publish any idea, but you can cite only what you can read.") in flat
     assert "- T1: d1\n- T2: d2" in pol.system
     for p in (REGION_SYSTEM, REGION_SYSTEM_NO_TOPICS):
-        assert "where your group communicates" in p
+        assert "where your group exchanges research results" in p
         assert "starts empty" not in p and "One search covers both" not in p
     no_topics = " ".join(REGION_SYSTEM_NO_TOPICS.split())
     assert "papers and other researchers' posts outside it are hidden from you" in no_topics

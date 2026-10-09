@@ -12,7 +12,8 @@ prompt describes the region as a list of topics (k-means clusters of its papers,
 named by an LLM; region_topics.py) and the gate enforces the region itself.
 Region mode keeps separate literature tools and board tools (R7, 2026-10-08;
 R6's unified tools are retired); its prompt presents the board as the place
-where the group of researchers communicates.
+where the group of researchers exchanges research results; the literature
+is their reference library.
 """
 import json
 from collections import deque
@@ -95,30 +96,33 @@ GATED_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, no
 # the gate enforces. REGION_SYSTEM_NO_TOPICS is the fallback for runs recorded
 # before topics existed: it states the rule without describing the area.
 # Since R7 (2026-10-08) the literature and the board are read with separate
-# tools, and the board is presented as the group's place to communicate:
+# tools; the literature is presented as a reference library and the board as
+# the place where the group exchanges research results:
 # keeping up with colleagues' posts is part of the goal, on a par with reading
 # the literature.
 _REGION_INTRO = """You are a research agent working in a group of researchers. \
 Two things are in front of you.
 
-The LITERATURE is a fixed collection of published papers from top AI venues \
-(2020-2024), each citing the papers it builds on. You can read it but never \
-change it. Search it with `search`; opening a paper (`browse`) shows its \
-abstract, its references and the papers citing it.
+The LITERATURE is your reference library: a fixed collection of published \
+papers from top AI venues (2020-2024), each citing the papers it builds on. \
+Look things up in it: background, methods, results and open problems useful \
+for your work. You can read it but never change it. Search it with `search`; \
+opening a paper (`browse`) shows its abstract, its references and the papers \
+citing it.
 
-The BOARD is where your group communicates. Every researcher, you included, \
-posts new ideas there as they have them, and everyone reads, builds on and \
-cites each other's posts, as on a lab's shared forum or a preprint server. It \
-keeps growing as the group works. Search it with `search_board`; opening a post \
-(`browse_board`) shows its full text, who posted it, what it cites and the \
-posts citing it.
+The BOARD is where your group exchanges research results. Every researcher, \
+you included, publishes new ideas there, and everyone reads, builds on and \
+cites each other's results, as a research community does with new papers. It \
+keeps growing as the group works. Search it with `search_board`; opening a \
+post (`browse_board`) shows its full text, who posted it, what it cites and \
+the posts citing it.
 
 Your goal is to find promising unexplored directions and publish genuinely new \
-ideas to the board. Like a real researcher, read the literature AND keep up \
-with what your colleagues post on the board: check the board regularly, \
-especially before you write an idea, and when a colleague's post is relevant, \
-build on it and cite it. Ground every idea: cite the papers and posts it \
-builds on.
+ideas to the board. Like a real researcher, use the literature to find useful \
+material, and follow the results your colleagues publish on the board: check \
+the board regularly, especially before you write an idea, and when a \
+colleague's result is relevant, build on it and cite it. Ground every idea: \
+cite the papers and posts it builds on.
 
 """
 
@@ -136,12 +140,12 @@ within your own research area; papers and other researchers' posts outside it \
 are hidden from you. You may publish any idea, but you can cite only what you can read."""
 
 REGION_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
-Literature:
+Literature (your reference library):
 {"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "page": 1}} -- search the published papers (do not paste lists of keywords)
 {"action": "browse", "args": {"node_id": "<paper id>", "ref_page": 1, "cited_by_page": 1}} -- open a paper: its abstract, its references and the papers citing it
 {"action": "related", "args": {"node_id": "<paper id>", "page": 1}} -- list the papers most similar to a paper
 {"action": "sample_frontier", "args": {}} -- jump to a random paper
-Board (your group's posts):
+Board (your group's research results):
 {"action": "search_board", "args": {"query": "<an idea, a method or a short meaningful phrase>", "page": 1}} -- search your colleagues' and your own posts (do not paste lists of keywords)
 {"action": "browse_board", "args": {"node_id": "<post id>", "ref_page": 1, "cited_by_page": 1}} -- open a post: its full text, who posted it, what it cites and the posts citing it
 {"action": "sample_board", "args": {}} -- jump to a random post

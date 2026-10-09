@@ -85,10 +85,13 @@ The shared board, wiki link semantics, the action set and the evaluation
 > - **Authors.** Every board post view says who posted it: `author` is the poster's agent id, or `"you"` for the reader's
 >   own posts, in search_board hits, browse_board (the post and its board neighbours) and sample_board. The board search
 >   notice speaks of "posts by you and your colleagues".
-> - **Prompt.** The agent is "a research agent working in a group of researchers". The BOARD "is where your group
->   communicates": everyone posts ideas there and reads, builds on and cites each other's posts, as on a lab's shared forum
->   or a preprint server. Each store's description names its tools. The goal asks the agent to read the literature AND keep
->   up with its colleagues' posts, check the board regularly (especially before writing an idea) and cite relevant posts.
+> - **Prompt.** The agent is "a research agent working in a group of researchers". The two stores have distinct roles
+>   (user, 2026-10-08): the LITERATURE "is your reference library", where the agent looks up background, methods, results
+>   and open problems; the BOARD "is where your group exchanges research results": everyone publishes new ideas there and
+>   reads, builds on and cites each other's results, as a research community does with new papers. Each store's
+>   description names its tools; the actions doc headings are "Literature (your reference library)" and "Board (your
+>   group's research results)". The goal asks the agent to use the literature to find useful material and to follow its
+>   colleagues' results on the board, check the board regularly (especially before writing an idea) and cite relevant posts.
 >   The topic rule speaks of searches "of the literature and of the board".
 > - **Compact history (kept from R6).** A past result enters the agent's rolling history in compact form (ids, titles,
 >   authors, relevance tiers, a post's first 120 characters; snippets and notices dropped), cut at 4000 characters, so a

@@ -21,8 +21,8 @@ repeating the search.
 
 The literature tools (search, browse, related, sample_frontier) and the board
 tools (search_board, browse_board, sample_board) stay separate (R7, user
-decision 2026-10-08; R6's unified tools are retired). The board is the group's
-place to communicate, so every post view says who posted it ("author": the
+decision 2026-10-08; R6's unified tools are retired). The board is where the
+group exchanges research results, so every post view says who posted it ("author": the
 agent id, or "you" for the reader's own posts).
 
 Corpus node text is "title\\n\\nabstract"; year and venue come from the node.
