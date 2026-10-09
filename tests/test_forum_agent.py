@@ -15,7 +15,7 @@ class ScriptedLLM:
 
 
 def test_every_action_name_is_available_to_the_agent():
-    assert VALID_ACTIONS == {"search", "browse", "related", "random", "sample_frontier",
+    assert VALID_ACTIONS == {"search", "browse", "related", "sample_frontier",
                              "search_board", "browse_board", "sample_board",
                              "generate", "add_links", "remove_links"}
 
@@ -162,67 +162,67 @@ def test_region_fallback_prompt_states_the_hard_rule_without_describing_the_area
     assert REGION_ACTIONS_DOC in llm.prompts[0][1]
 
 
-def test_region_actions_doc_lists_exactly_the_seven_unified_actions():
+def test_region_actions_doc_lists_the_ten_actions_under_three_headings():
     from innovation.p2_forum.agent import REGION_ACTIONS_DOC
     lines = REGION_ACTIONS_DOC.splitlines()
-    names = [re.match(r'\{"action": "(\w+)"', l).group(1) for l in lines[1:-1]]
-    assert names == ["search", "browse", "related", "random",
-                     "generate", "add_links", "remove_links"]
-    assert set(names) <= VALID_ACTIONS
-    for old in ("search_board", "browse_board", "sample_frontier", "sample_board"):
-        assert old not in REGION_ACTIONS_DOC                    # aliases stay undocumented
-    search = lines[1]
-    assert '"query": "<a paper title or a short meaningful phrase>", "page": 1, "post_page": 1' in search
+    groups, current = {}, None
+    for l in lines[1:-1]:
+        m = re.match(r'\{"action": "(\w+)"', l)
+        if m:
+            groups[current].append(m.group(1))
+        else:
+            current = l
+            groups[current] = []
+    assert groups == {
+        "Literature:": ["search", "browse", "related", "sample_frontier"],
+        "Board (your group's posts):": ["search_board", "browse_board", "sample_board"],
+        "Writing:": ["generate", "add_links", "remove_links"]}
+    assert sorted(sum(groups.values(), [])) == sorted(VALID_ACTIONS)
+    assert '"random"' not in REGION_ACTIONS_DOC and "post_page" not in REGION_ACTIONS_DOC
+    search = next(l for l in lines if '"search"' in l)
+    assert '"query": "<a paper title or a short meaningful phrase>", "page": 1' in search
     assert "do not paste lists of keywords" in search
-    assert '"papers" (10 per page' in search and '"posts" (5 per page' in search
+    board = next(l for l in lines if '"search_board"' in l)
+    assert "your colleagues' and your own posts" in board
+    assert "do not paste lists of keywords" in board
     browse = next(l for l in lines if '"browse"' in l)
-    assert '"<paper or post id>", "ref_page": 1, "cited_by_page": 1, "post_page": 1' in browse
-    assert "posts citing it" in browse
-    related = next(l for l in lines if '"related"' in l)
-    assert '"<paper or post id>", "page": 1, "post_page": 1' in related
-    rnd = next(l for l in lines if '"random"' in l)
-    assert '"kind": "paper"' in rnd and '"kind": "post"' in rnd
+    assert "references" in browse and "citing" in browse
+    assert '"ref_page": 1, "cited_by_page": 1' in browse
+    browse_board = next(l for l in lines if '"browse_board"' in l)
+    assert "who posted it" in browse_board and '"ref_page": 1, "cited_by_page": 1' in browse_board
+    assert "10 results per page, most relevant first" in lines[-1]
     assert "high/medium/low relevance" in lines[-1]
-    assert "10 papers and 5 posts per page" in lines[-1]
     assert '"k"' not in REGION_ACTIONS_DOC
     generate = next(l for l in lines if '"generate"' in l)
-    assert "3-4 sentence" in generate
+    assert "3-4 sentence" in generate and "post your new idea to the board" in generate
     assert "topic" not in REGION_ACTIONS_DOC
 
 
-def test_region_prompt_describes_both_stores_symmetrically():
+def test_region_prompt_makes_the_board_the_groups_place_to_communicate():
     from innovation.p2_forum.agent import REGION_SYSTEM, REGION_SYSTEM_NO_TOPICS
     pol = ForumAgentPolicy(llm=ScriptedLLM([]), model="m", topics=["T1: d1", "T2: d2"],
                            system_template=REGION_SYSTEM)
     flat = " ".join(pol.system.split())
+    assert flat.startswith("You are a research agent working in a group of researchers.")
     assert ("The LITERATURE is a fixed collection of published papers from top AI venues "
             "(2020-2024), each citing the papers it builds on. You can read it but never "
-            "change it.") in flat
-    assert ("The BOARD is a growing collection of new research ideas posted by you and "
-            "other researchers working alongside you, each a short paragraph citing the "
-            "papers and posts it builds on. Anyone may adjust a post's reference links.") in flat
-    assert ("One search covers both: it returns matching papers and matching posts in "
-            "separate lists.") in flat
-    assert "including posts that cite a paper" in flat
-    assert ("keep up with both the published literature and the new ideas your peers "
-            "post; build on either, and cite the papers and posts your idea builds on") in flat
-    assert "find promising unexplored directions and publish genuinely new ideas" in flat
-    assert ("Searches return only papers and posts in these topics; papers and other "
-            "researchers' posts outside them are hidden from you. You may publish any idea, but you can cite "
-            "only what you can read.") in flat
+            "change it. Search it with `search`; opening a paper (`browse`) shows its "
+            "abstract, its references and the papers citing it.") in flat
+    assert "The BOARD is where your group communicates." in flat
+    assert ("everyone reads, builds on and cites each other's posts, as on a lab's shared "
+            "forum or a preprint server. It keeps growing as the group works.") in flat
+    assert "opening a post (`browse_board`) shows its full text, who posted it" in flat
+    assert ("read the literature AND keep up with what your colleagues post on the board: "
+            "check the board regularly, especially before you write an idea") in flat
+    assert ("Searches of the literature and of the board return only papers and posts in "
+            "these topics; papers and other researchers' posts outside them are hidden from "
+            "you. You may publish any idea, but you can cite only what you can read.") in flat
     assert "- T1: d1\n- T2: d2" in pol.system
     for p in (REGION_SYSTEM, REGION_SYSTEM_NO_TOPICS):
-        assert "starts empty" not in p and "agents publish" not in p
+        assert "where your group communicates" in p
+        assert "starts empty" not in p and "One search covers both" not in p
     no_topics = " ".join(REGION_SYSTEM_NO_TOPICS.split())
-    assert "keep up with both the published literature" in no_topics
     assert "papers and other researchers' posts outside it are hidden from you" in no_topics
-
-
-def test_the_parser_accepts_random():
-    llm = ScriptedLLM([json.dumps({"action": "random", "args": {"kind": "post"}})])
-    pol = ForumAgentPolicy(llm=llm, model="m", topics=["t"])
-    action = pol.act({"step": 0, "last_result": {}})
-    assert (action.name, action.args) == ("random", {"kind": "post"})
 
 
 def test_old_prompts_do_not_mention_regions():
@@ -241,18 +241,54 @@ def test_default_history_is_the_raw_result_cut_at_1500_characters():
 
 def test_compact_history_keeps_ids_and_relevance_and_drops_snippets():
     from innovation.p2_forum.agent import compact_result
-    browse = {"node_id": "p1", "kind": "paper", "title": "T", "text": "a" * 900,
+    browse = {"node_id": "p1", "store": "corpus", "title": "T", "text": "a" * 900,
               "year": 2021, "venue": "ICML",
-              "cited_by_posts": [{"node_id": "gen:r:3", "kind": "post", "author": "you",
-                                  "text": "b" * 200, "relevance": "high"}],
-              "cites": [{"node_id": "p2", "kind": "paper", "title": "U", "year": 2020,
-                         "relevance": "low"}],
+              "cites": [{"node_id": "p2", "title": "U", "year": 2020, "relevance": "low"}],
               "cites_page": 1, "cites_total": 1, "cites_pages": 1, "cited_by": [],
-              "filtered": {"region": 2, "region_posts": 0}}
+              "filtered": {"region": 2}}
     c = compact_result(browse)
     assert c["text"] == "a" * 300 and c["year"] == 2021 and c["venue"] == "ICML"
-    assert c["cited_by_posts"] == [{"node_id": "gen:r:3", "kind": "post", "author": "you",
-                                    "relevance": "high", "text": "b" * 120}]
-    assert c["cites"] == [{"node_id": "p2", "kind": "paper", "title": "U", "relevance": "low"}]
+    assert c["cites"] == [{"node_id": "p2", "title": "U", "relevance": "low"}]
     assert c["filtered"] == browse["filtered"] and c["cites_total"] == 1
+    post = {"node_id": "gen:r:3", "store": "board", "author": "b", "text": "b" * 900,
+            "cites": [{"node_id": "gen:r:1", "store": "board", "author": "you",
+                       "text": "c" * 200, "relevance": "high"},
+                      {"node_id": "p2", "store": "corpus", "title": "U", "year": 2020,
+                       "relevance": "low"}],
+            "cited_by": []}
+    c = compact_result(post)
+    assert c["author"] == "b" and c["text"] == "b" * 300
+    assert c["cites"] == [{"node_id": "gen:r:1", "store": "board", "author": "you",
+                           "relevance": "high", "text": "c" * 120},
+                          {"node_id": "p2", "store": "corpus", "title": "U",
+                           "relevance": "low"}]
     assert compact_result({"error": "x", "gate": "result"}) == {"error": "x", "gate": "result"}
+
+
+def test_region_history_keeps_every_id_of_full_length_board_and_literature_searches():
+    """A search_board result with 5 full-length posts and a search with 10
+    papers keep all their ids in the history, within REGION_HISTORY_CHARS."""
+    from innovation.p2_forum.region_env import BOARD_NOTICE, SEARCH_NOTICE
+    from innovation.p2_forum.runner import REGION_HISTORY_CHARS
+    pol = ForumAgentPolicy(llm=ScriptedLLM([]), model="m", topics=["t"],
+                           compact_history=True, history_chars=REGION_HISTORY_CHARS)
+    board = {"page": 1, "total": 5, "pages": 1,
+             "hits": [{"node_id": f"gen:forum-region-c20-s0d:{100 + i}", "store": "board",
+                       "author": f"agent-{i:02d}", "text": "w" * 300, "relevance": "high"}
+                      for i in range(5)],
+             "filtered": {"region": 7}, "notice": BOARD_NOTICE}
+    lit = {"page": 1, "total": 812, "pages": 82,
+           "hits": [{"node_id": f"{i:040x}", "store": "corpus",
+                     "title": "A Long Paper Title About Federated Optimization Under "
+                              "Heterogeneous Client Drift And Privacy " + str(i),
+                     "text": "x" * 300, "year": 2022, "venue": "NeurIPS",
+                     "relevance": "medium"} for i in range(10)],
+           "notice": SEARCH_NOTICE}
+    for result in (board, lit):
+        entry = pol.history_entry(result)
+        assert len(entry) < REGION_HISTORY_CHARS
+        assert json.loads(entry)["hits"]                        # not cut: valid JSON
+        assert all(h["node_id"] in entry for h in result["hits"])
+        assert "notice" not in entry
+    board_entry = json.loads(pol.history_entry(board))
+    assert all(h["author"] and len(h["text"]) == 120 for h in board_entry["hits"])

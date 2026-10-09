@@ -86,9 +86,8 @@ def test_a_full_run_leaves_the_corpus_bit_identical(tmp_path, make_workspace,
     assert len(out["generated"]) == 2
 
     events = load_events(tmp_path / "inv" / "events.jsonl")
-    # the run really did drive all nine old-mode actions ("related" is online- and
-    # region-only, "random" region-only)
-    assert {e["action"] for e in events} == VALID_ACTIONS - {"related", "random"}
+    # the run really did drive all nine old-mode actions ("related" is online-only)
+    assert {e["action"] for e in events} == VALID_ACTIONS - {"related"}
     by_action = {}
     for e in events:
         by_action.setdefault(e["action"], []).append(e["result"])

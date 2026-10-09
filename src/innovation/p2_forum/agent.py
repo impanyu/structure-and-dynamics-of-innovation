@@ -10,8 +10,9 @@ itself what is worth following. In hard mode, the environment gates all results
 region mode to the agent's semantic region. Region mode combines both: the
 prompt describes the region as a list of topics (k-means clusters of its papers,
 named by an LLM; region_topics.py) and the gate enforces the region itself.
-Region mode also reads both stores with one tool set (R6): search / related
-return papers and posts in separate sections, browse opens either kind.
+Region mode keeps separate literature tools and board tools (R7, 2026-10-08;
+R6's unified tools are retired); its prompt presents the board as the place
+where the group of researchers communicates.
 """
 import json
 from collections import deque
@@ -20,10 +21,7 @@ from innovation.core.llm import LLM
 from innovation.core.policy import Policy
 from innovation.p2_forum.env import Action
 
-# "random" is region mode's jump (R6); there the four pre-R6 board/jump names
-# stay accepted as aliases. A reply naming anything else falls back to
-# sample_frontier, a valid jump in every mode.
-VALID_ACTIONS = {"search", "browse", "related", "random", "sample_frontier",
+VALID_ACTIONS = {"search", "browse", "related", "sample_frontier",
                  "search_board", "browse_board", "sample_board",
                  "generate", "add_links", "remove_links"}
 
@@ -96,28 +94,31 @@ GATED_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, no
 # region's topics (region_topics.py, recorded in run_meta) and states the rule
 # the gate enforces. REGION_SYSTEM_NO_TOPICS is the fallback for runs recorded
 # before topics existed: it states the rule without describing the area.
-# Since R6 (2026-10-08) the literature and the board are described in parallel
-# and read with one tool set (search / browse / related / random) whose
-# results list papers and posts in separate sections; following peers' posts
-# is part of the goal, on a par with reading the literature.
-_REGION_INTRO = """You are a research agent. Two things are in front of you.
+# Since R7 (2026-10-08) the literature and the board are read with separate
+# tools, and the board is presented as the group's place to communicate:
+# keeping up with colleagues' posts is part of the goal, on a par with reading
+# the literature.
+_REGION_INTRO = """You are a research agent working in a group of researchers. \
+Two things are in front of you.
 
 The LITERATURE is a fixed collection of published papers from top AI venues \
 (2020-2024), each citing the papers it builds on. You can read it but never \
-change it.
+change it. Search it with `search`; opening a paper (`browse`) shows its \
+abstract, its references and the papers citing it.
 
-The BOARD is a growing collection of new research ideas posted by you and other \
-researchers working alongside you, each a short paragraph citing the papers and \
-posts it builds on. Anyone may adjust a post's reference links.
-
-One search covers both: it returns matching papers and matching posts in \
-separate lists. Opening an item (browse) shows a paper's abstract or a post's \
-full text, what it cites, and what cites it, including posts that cite a paper.
+The BOARD is where your group communicates. Every researcher, you included, \
+posts new ideas there as they have them, and everyone reads, builds on and \
+cites each other's posts, as on a lab's shared forum or a preprint server. It \
+keeps growing as the group works. Search it with `search_board`; opening a post \
+(`browse_board`) shows its full text, who posted it, what it cites and the \
+posts citing it.
 
 Your goal is to find promising unexplored directions and publish genuinely new \
-ideas to the board. Like a real researcher, keep up with both the published \
-literature and the new ideas your peers post; build on either, and cite the \
-papers and posts your idea builds on.
+ideas to the board. Like a real researcher, read the literature AND keep up \
+with what your colleagues post on the board: check the board regularly, \
+especially before you write an idea, and when a colleague's post is relevant, \
+build on it and cite it. Ground every idea: cite the papers and posts it \
+builds on.
 
 """
 
@@ -125,28 +126,35 @@ REGION_SYSTEM = _REGION_INTRO + """Your research area is defined by the followin
 topics (each a cluster of papers you can read):
 {topics}
 
-You can only find, read and cite within these topics. Searches return only \
-papers and posts in these topics; papers and other researchers' posts outside \
-them are hidden from you. You may publish any idea, but you can cite only what you can read."""
+You can only find, read and cite within these topics. Searches of the \
+literature and of the board return only papers and posts in these topics; \
+papers and other researchers' posts outside them are hidden from you. You may \
+publish any idea, but you can cite only what you can read."""
 
 REGION_SYSTEM_NO_TOPICS = _REGION_INTRO + """You can only find, read and cite \
 within your own research area; papers and other researchers' posts outside it \
 are hidden from you. You may publish any idea, but you can cite only what you can read."""
 
 REGION_ACTIONS_DOC = """Available actions (reply with EXACTLY one JSON object, nothing else):
-{"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "page": 1, "post_page": 1}} -- semantic search over papers and posts (do not paste lists of keywords); returns two lists: "papers" (10 per page, `page`) and "posts" (5 per page, `post_page`)
-{"action": "browse", "args": {"node_id": "<paper or post id>", "ref_page": 1, "cited_by_page": 1, "post_page": 1}} -- open a paper or a post by its id (from any result or reference list): a paper's abstract or a post's full text, what it cites (`ref_page`) and what cites it (`cited_by_page`); for a paper also the posts citing it (`post_page`)
-{"action": "related", "args": {"node_id": "<paper or post id>", "page": 1, "post_page": 1}} -- the papers and posts most similar to a paper or post, in the same two lists as search
-{"action": "random", "args": {"kind": "paper"}} -- jump to a random paper ("kind": "paper") or a random post ("kind": "post")
-{"action": "generate", "args": {"text": "<3-4 sentence new idea paragraph>", "cited_ids": ["<id>", ...]}} -- publish your new idea to the board, citing what it builds on (papers or posts)
+Literature:
+{"action": "search", "args": {"query": "<a paper title or a short meaningful phrase>", "page": 1}} -- search the published papers (do not paste lists of keywords)
+{"action": "browse", "args": {"node_id": "<paper id>", "ref_page": 1, "cited_by_page": 1}} -- open a paper: its abstract, its references and the papers citing it
+{"action": "related", "args": {"node_id": "<paper id>", "page": 1}} -- list the papers most similar to a paper
+{"action": "sample_frontier", "args": {}} -- jump to a random paper
+Board (your group's posts):
+{"action": "search_board", "args": {"query": "<an idea, a method or a short meaningful phrase>", "page": 1}} -- search your colleagues' and your own posts (do not paste lists of keywords)
+{"action": "browse_board", "args": {"node_id": "<post id>", "ref_page": 1, "cited_by_page": 1}} -- open a post: its full text, who posted it, what it cites and the posts citing it
+{"action": "sample_board", "args": {}} -- jump to a random post
+Writing:
+{"action": "generate", "args": {"text": "<3-4 sentence new idea paragraph>", "cited_ids": ["<id>", ...]}} -- post your new idea to the board, citing the papers and posts it builds on
 {"action": "add_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- add reference links from a post to what it builds on
 {"action": "remove_links", "args": {"src_id": "<post id>", "dst_ids": ["<id>", ...]}} -- remove reference links from a post that do not actually support it
-Every item says its "kind" ("paper" or "post"); post ids start with "gen:". Every list is most relevant first and each item is tagged high/medium/low relevance; ask for a later page to see more. Search and related show 10 papers and 5 posts per page; browse lists show 10 per page."""
+Lists show 10 results per page, most relevant first, each tagged high/medium/low relevance; ask for a later page to see more."""
 
 
-# Compact history (region mode, R6): with posts listed before papers, a
-# 1500-character cut of a raw search result held ~3.5 posts and no papers. A
-# history entry instead keeps, for every item of every list in the result,
+# Compact history (region mode, R6, kept in R7): a 1500-character cut of a raw
+# result held only a few of its items (10 search hits with abstract snippets
+# exceed it). A history entry instead keeps, for every item of every list in the result,
 # only what identifies it and how relevant it was (plus a post's opening);
 # abstract snippets and the notice are dropped, and a browsed item's own text
 # is cut. The newest result is still shown in full.
@@ -157,6 +165,7 @@ HISTORY_OWN_TEXT_CHARS = 300
 
 def _compact_item(item: dict) -> dict:
     out = {k: item[k] for k in _HISTORY_ITEM_KEYS if k in item}
+    # Items name their store ("corpus" / "board"); R6-era items named a "kind".
     if (item.get("kind") == "post" or item.get("store") == "board") and "text" in item:
         out["text"] = str(item["text"])[:HISTORY_POST_CHARS]
     return out

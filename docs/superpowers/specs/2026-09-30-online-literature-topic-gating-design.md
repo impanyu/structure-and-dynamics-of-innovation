@@ -53,7 +53,7 @@ The shared board, wiki link semantics, the action set and the evaluation
 > member, i.e. iff its cosine to the agent's seed is at least the ball's radius (region.contains_vec), plus authors always
 > read their own posts. The nearest-neighbour majority rule (K=5, M=3) is retired.
 >
-> **2026-10-08 R6 (one tool set over papers and posts; symmetric prompt).** In run forum-region-c20-s0c agents searched the
+> **2026-10-08 R6 (one tool set over papers and posts; symmetric prompt). SUPERSEDED by R7 below; kept for the record.** In run forum-region-c20-s0c agents searched the
 > literature 160 times but the board only 9 times, and never opened a teammate's post (0 cross-agent citations): the prompt
 > described the board far more thinly than the literature, and board search was a separate tool to remember. A single merged
 > ranking would bury the posts (simulated on that run: a readable teammate post reaches the top 10 in only 6 of 123 searches;
@@ -75,6 +75,24 @@ The shared board, wiki link semantics, the action set and the evaluation
 > - **Symmetric prompt.** The LITERATURE and the BOARD get parallel descriptions ("starts empty" is gone), one sentence
 >   explains that one search covers both, the goal asks the agent to keep up with both the literature and its peers' posts
 >   and cite either, and the topic rule speaks of "papers and posts". Gate rules are unchanged.
+>
+> **2026-10-08 R7 (separate tools again; the board is the group's place to communicate).** At the user's request R6's
+> unified tools are retired and the literature and board tools stay separate, as before R6:
+> - **Tools.** Region mode documents `search`, `browse`, `related`, `sample_frontier` (literature), `search_board`,
+>   `browse_board`, `sample_board` (board), and `generate`, `add_links`, `remove_links` (writing), under the three headings
+>   Literature / Board (your group's posts) / Writing. Result shapes, ranking, tiers, pagination and notices are those of
+>   R5 (`random`, the sectioned results and `cited_by_posts` are gone); unknown args are ignored. Gate rules are unchanged.
+> - **Authors.** Every board post view says who posted it: `author` is the poster's agent id, or `"you"` for the reader's
+>   own posts, in search_board hits, browse_board (the post and its board neighbours) and sample_board. The board search
+>   notice speaks of "posts by you and your colleagues".
+> - **Prompt.** The agent is "a research agent working in a group of researchers". The BOARD "is where your group
+>   communicates": everyone posts ideas there and reads, builds on and cites each other's posts, as on a lab's shared forum
+>   or a preprint server. Each store's description names its tools. The goal asks the agent to read the literature AND keep
+>   up with its colleagues' posts, check the board regularly (especially before writing an idea) and cite relevant posts.
+>   The topic rule speaks of searches "of the literature and of the board".
+> - **Compact history (kept from R6).** A past result enters the agent's rolling history in compact form (ids, titles,
+>   authors, relevance tiers, a post's first 120 characters; snippets and notices dropped), cut at 4000 characters, so a
+>   page of 10 papers or of posts keeps every id. Resume rebuilds the history with the same form.
 
 ## 1. Why
 
